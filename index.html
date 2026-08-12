@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111418">
+<link rel="manifest" href="manifest.json">
+<title>서재</title>
+<style>
+  :root{
+    --bg:#111418; --panel:#191d23; --line:#2a3038;
+    --tx:#e6e9ee; --dim:#8b95a3; --acc:#6ea8fe;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:var(--bg); color:var(--tx);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  button,input,select{font:inherit;color:inherit}
+  button{background:none;border:none;cursor:pointer}
+
+  /* ── 서재 ── */
+  #library{display:flex;flex-direction:column;height:100%}
+  header{padding:calc(var(--safe-t) + 10px) 12px 8px;background:var(--bg);
+    border-bottom:1px solid var(--line);flex:0 0 auto}
+  .row{display:flex;gap:8px;align-items:center}
+  #q{flex:1;padding:11px 13px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);outline:none}
+  #q:focus{border-color:var(--acc)}
+  .iconbtn{padding:9px 11px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);font-size:16px}
+  #chips{display:flex;gap:6px;overflow-x:auto;padding:9px 0 2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;padding:6px 12px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:13px}
+  .chip.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+  #stat{padding:6px 2px 0;color:var(--dim);font-size:12px}
+
+  #grid{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+    gap:14px 10px;padding:14px 12px calc(var(--safe-b) + 24px)}
+  .card{cursor:pointer}
+  .cv{width:100%;aspect-ratio:2/3;border-radius:6px;background:var(--panel);
+    background-size:cover;background-position:center;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .cv span{font-size:11px;color:var(--dim);padding:6px;text-align:center;
+    display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+  .ti{font-size:12px;margin-top:6px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .au{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{position:relative}
+  .badge::after{content:"저장됨";position:absolute;left:4px;top:4px;
+    background:rgba(0,0,0,.65);color:#9fe3a0;font-size:9px;padding:2px 5px;border-radius:4px}
+
+  /* ── 리더 ── */
+  #reader{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:20}
+  #rbar{position:absolute;top:0;left:0;right:0;z-index:3;
+    padding:calc(var(--safe-t) + 8px) 10px 8px;background:linear-gradient(#111418ee,#11141800);
+    display:flex;gap:8px;align-items:center;transition:opacity .2s}
+  #rtitle{flex:1;font-size:13px;color:var(--dim);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  #view{flex:1;position:relative}
+  #rfoot{position:absolute;bottom:0;left:0;right:0;z-index:3;
+    padding:8px 12px calc(var(--safe-b) + 8px);color:var(--dim);font-size:11px;
+    text-align:center;background:linear-gradient(#11141800,#111418ee);transition:opacity .2s}
+  .hide{opacity:0;pointer-events:none}
+  #tapL,#tapR{position:absolute;top:0;bottom:0;width:32%;z-index:2}
+  #tapL{left:0} #tapR{right:0}
+
+  /* ── 공통 ── */
+  .sheet{position:fixed;inset:0;background:#0009;display:none;z-index:40;
+    align-items:center;justify-content:center;padding:18px}
+  .sheet.on{display:flex}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px;width:100%;max-width:420px;max-height:80vh;overflow:auto}
+  .box h3{margin:0 0 12px;font-size:16px}
+  .box label{display:block;font-size:12px;color:var(--dim);margin:12px 0 4px}
+  .box input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);outline:none}
+  .box .btns{display:flex;gap:8px;margin-top:16px}
+  .box .btns button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);
+    background:var(--bg)}
+  .box .btns .pri{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+
+  #toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 22px);transform:translateX(-50%);
+    background:#222831ee;border:1px solid var(--line);padding:10px 16px;border-radius:10px;
+    font-size:13px;z-index:60;display:none;max-width:88%;text-align:center}
+  #prog{position:fixed;left:0;top:0;height:3px;background:var(--acc);width:0;
+    z-index:70;transition:width .15s}
+</style>
+</head>
+<body>
+
+<div id="prog"></div>
+
+<!-- ══ 서재 ══ -->
+<div id="library">
+  <header>
+    <div class="row">
+      <input id="q" type="search" placeholder="제목 · 저자 · 분류로 검색" autocomplete="off">
+      <button class="iconbtn" id="btnSync" title="새로고침">⟳</button>
+      <button class="iconbtn" id="btnSet" title="설정">⚙</button>
+    </div>
+    <div id="chips"></div>
+    <div id="stat">불러오는 중…</div>
+  </header>
+  <div id="grid"></div>
+</div>
+
+<!-- ══ 리더 ══ -->
+<div id="reader">
+  <div id="rbar">
+    <button class="iconbtn" id="btnClose">‹ 서재</button>
+    <div id="rtitle"></div>
+    <button class="iconbtn" id="btnFontDn">A−</button>
+    <button class="iconbtn" id="btnFontUp">A+</button>
+  </div>
+  <div id="view">
+    <div id="tapL"></div><div id="tapR"></div>
+  </div>
+  <div id="rfoot"></div>
+</div>
+
+<!-- ══ 설정 ══ -->
+<div class="sheet" id="setSheet">
+  <div class="box">
+    <h3>설정</h3>
+    <label>Apps Script 웹앱 주소</label>
+    <input id="sUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    <label>토큰</label>
+    <input id="sTok">
+    <label>구글 클라이언트 ID</label>
+    <input id="sCid">
+    <div class="btns">
+      <button id="setCancel">닫기</button>
+      <button id="setSave" class="pri">저장</button>
+    </div>
+    <div class="btns">
+      <button id="btnClear">받아둔 책 비우기</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* ============================================================
+   전자책 서재 — 브라우저에서 바로 읽기
+   · 목록  : Apps Script 색인 (동기화 과정 없음)
+   · 파일  : 구글 드라이브 API 직접 호출 (중개 서버 없음)
+   · 저장  : 한 번 받은 책은 기기에 보관 → 두 번째부터 즉시
+   ============================================================ */
+
+const DEF = {
+  url : 'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
+  tok : 'maumpro-library-2026',
+  cid : '552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com'
+};
+const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+
+const $ = s => document.querySelector(s);
+const cfg = k => localStorage.getItem('ebl_' + k) || DEF[k];
+const setCfg = (k,v) => localStorage.setItem('ebl_' + k, v);
+
+let BOOKS = [], HAY = [], UPDATED = '', CAT = '', TOKEN = '', tokenClient = null;
+let saved = new Set();          // 기기에 받아둔 책 id
+
+/* ── 작은 도우미 ── */
+const nfc = s => { try { return String(s??'').normalize('NFC'); } catch(e){ return String(s??''); } };
+const norm = s => nfc(s).toLowerCase().replace(/\s+/g,'');
+function toast(m, ms=2600){ const t=$('#toast'); t.textContent=m; t.style.display='block';
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none', ms); }
+function prog(p){ $('#prog').style.width = (p<=0||p>=1) ? '0' : (p*100)+'%'; }
+
+/* ── 저장소 (IndexedDB) ── */
+const DB = (()=>{
+  let db;
+  const open = () => new Promise((ok,ng)=>{
+    if(db) return ok(db);
+    const r = indexedDB.open('ebl', 1);
+    r.onupgradeneeded = e => { const d=e.target.result;
+      if(!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
+      if(!d.objectStoreNames.contains('books')) d.createObjectStore('books'); };
+    r.onsuccess = e => { db=e.target.result; ok(db); };
+    r.onerror = () => ng(r.error);
+  });
+  const tx = async (store, mode, fn) => { const d = await open();
+    return new Promise((ok,ng)=>{ const t=d.transaction(store,mode); const s=t.objectStore(store);
+      const q=fn(s); t.oncomplete=()=>ok(q&&q.result); t.onerror=()=>ng(t.error); }); };
+  return {
+    get : (s,k)   => tx(s,'readonly',  st=>st.get(k)),
+    put : (s,k,v) => tx(s,'readwrite', st=>st.put(v,k)),
+    del : (s,k)   => tx(s,'readwrite', st=>st.delete(k)),
+    keys: (s)     => tx(s,'readonly',  st=>st.getAllKeys()),
+    clear:(s)     => tx(s,'readwrite', st=>st.clear())
+  };
+})();
+
+/* ── 구글 로그인 ── */
+function initToken(){
+  if(tokenClient || !window.google?.accounts?.oauth2) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: cfg('cid'), scope: SCOPE,
+    callback: r => { if(r.access_token){ TOKEN=r.access_token;
+      sessionStorage.setItem('ebl_at', TOKEN); (initToken._then||(()=>{}))(); } }
+  });
+}
+function needToken(){
+  return new Promise((ok,ng)=>{
+    if(TOKEN) return ok(TOKEN);
+    const cached = sessionStorage.getItem('ebl_at');
+    if(cached){ TOKEN=cached; return ok(TOKEN); }
+    initToken();
+    if(!tokenClient) return ng(new Error('구글 로그인 준비 중입니다. 잠시 후 다시 눌러주세요.'));
+    initToken._then = ()=>ok(TOKEN);
+    tokenClient.requestAccessToken({ prompt:'' });
+  });
+}
+
+/* ── 색인 ── */
+async function loadIndex(force){
+  if(!force){
+    const c = await DB.get('kv','index');
+    if(c){ apply(c); render(); refreshIndexQuiet(); return; }
+  }
+  $('#stat').textContent = '서재를 불러오는 중…';
+  await fetchIndex();
+  render();
+}
+async function refreshIndexQuiet(){ try{ await fetchIndex(true); render(); }catch(e){} }
+async function fetchIndex(quiet){
+  const u = cfg('url') + (cfg('url').includes('?')?'&':'?') + 'token=' + encodeURIComponent(cfg('tok'));
+  const r = await fetch(u);
+  if(!r.ok) throw new Error('색인을 받지 못했습니다 (' + r.status + ')');
+  const d = await r.json();
+  if(d.error) throw new Error(d.error);
+  await DB.put('kv','index',d);
+  apply(d);
+  if(!quiet) toast(d.count.toLocaleString() + '권을 불러왔습니다');
+}
+function apply(d){
+  BOOKS = d.books || []; UPDATED = d.updated || '';
+  BOOKS.forEach(b=>{ if(b.a) b.a = b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
+  HAY = BOOKS.map(b => norm([b.t,b.o,b.a,b.p,b.c].filter(Boolean).join('|')));
+  buildChips();
+}
+
+/* ── 화면 ── */
+function buildChips(){
+  const c = {};
+  BOOKS.forEach(b=>{ const k=b.m||b.b; if(k) c[k]=(c[k]||0)+1; });
+  const top = Object.keys(c).sort((a,b)=>c[b]-c[a]).slice(0,14);
+  const el = $('#chips'); el.innerHTML='';
+  [['','전체'],...top.map(k=>[k,k])].forEach(([v,label])=>{
+    const b=document.createElement('button');
+    b.className='chip'+(CAT===v?' on':''); b.textContent=label;
+    b.onclick=()=>{ CAT=v; buildChips(); render(); };
+    el.appendChild(b);
+  });
+}
+function filtered(){
+  const k = norm($('#q').value);
+  const out=[];
+  for(let i=0;i<BOOKS.length && out.length<300;i++){
+    const b=BOOKS[i];
+    if(CAT && !(b.m===CAT||b.b===CAT)) continue;
+    if(k && HAY[i].indexOf(k)<0) continue;
+    out.push(b);
+  }
+  return out;
+}
+function render(){
+  const rows = filtered();
+  $('#stat').textContent =
+    `${BOOKS.length.toLocaleString()}권 중 ${rows.length}권` +
+    (UPDATED?`  ·  갱신 ${UPDATED}`:'') + (saved.size?`  ·  받아둔 책 ${saved.size}`:'');
+  const g=$('#grid'); g.innerHTML='';
+  const f=document.createDocumentFragment();
+  rows.forEach(b=>{
+    const d=document.createElement('div'); d.className='card';
+    const cv=document.createElement('div');
+    cv.className='cv'+(saved.has(b.i)?' badge':'');
+    if(b.v) cv.style.backgroundImage=`url("${b.v}")`;
+    else cv.innerHTML=`<span>${esc(b.t||'')}</span>`;
+    const t=document.createElement('div'); t.className='ti'; t.textContent=b.t||'';
+    const a=document.createElement('div'); a.className='au'; a.textContent=b.a||'';
+    d.append(cv,t,a);
+    d.onclick=()=>openBook(b);
+    f.appendChild(d);
+  });
+  g.appendChild(f); g.scrollTop=0;
+}
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── 책 열기 ── */
+async function openBook(b){
+  const ext = (b.x||'').toLowerCase();
+  if(ext !== 'epub'){
+    // PDF 등은 드라이브가 이미 잘 보여줍니다
+    if(b.u) window.open(b.u,'_blank');
+    else toast('열 수 없는 형식입니다: ' + ext);
+    return;
+  }
+  try{
+    const buf = await getBook(b);
+    await showReader(b, buf);
+  }catch(e){ toast(e.message||'열지 못했습니다', 4000); prog(0); }
+}
+
+async function getBook(b){
+  const hit = await DB.get('books', b.i);
+  if(hit) return hit;
+  const at = await needToken();
+  const url = `https://www.googleapis.com/drive/v3/files/${b.i}?alt=media&supportsAllDrives=true`;
+  const res = await fetch(url, { headers:{ Authorization:'Bearer '+at } });
+  if(res.status===401){ TOKEN=''; sessionStorage.removeItem('ebl_at');
+    throw new Error('로그인이 만료됐습니다. 다시 눌러주세요.'); }
+  if(!res.ok) throw new Error('파일을 받지 못했습니다 ('+res.status+')');
+
+  const total = Number(res.headers.get('content-length')||0) || (b.z?b.z*1048576:0);
+  const reader = res.body.getReader();
+  const chunks=[]; let got=0;
+  for(;;){
+    const {done,value}=await reader.read();
+    if(done) break;
+    chunks.push(value); got+=value.length;
+    if(total) prog(got/total);
+  }
+  prog(0);
+  const buf = new Blob(chunks).arrayBuffer ? await new Blob(chunks).arrayBuffer() : null;
+  try{ await DB.put('books', b.i, buf); saved.add(b.i); }catch(e){ /* 용량 초과 등 */ }
+  return buf;
+}
+
+/* ── 리더 ── */
+let book=null, rend=null, cur=null, fsize=Number(localStorage.getItem('ebl_fs')||100);
+async function showReader(b, buf){
+  cur=b;
+  $('#library').style.display='none';
+  $('#reader').style.display='flex';
+  $('#rtitle').textContent = b.t||'';
+  $('#view').querySelectorAll('.epub-container,iframe').forEach(n=>n.remove());
+
+  book = ePub(buf);
+  rend = book.renderTo('view', { width:'100%', height:'100%', flow:'paginated', spread:'none' });
+  applyFont();
+  const cfi = localStorage.getItem('ebl_pos_'+b.i);
+  await rend.display(cfi||undefined);
+
+  rend.on('relocated', loc=>{
+    if(loc?.start?.cfi) localStorage.setItem('ebl_pos_'+b.i, loc.start.cfi);
+    const p = loc?.start?.percentage;
+    $('#rfoot').textContent = (p!=null? Math.round(p*100)+'%  ·  ':'') + (b.t||'');
+  });
+  rend.on('rendered', (s,i)=>{ try{
+    i.document.addEventListener('click', onTap); }catch(e){} });
+}
+function applyFont(){ if(rend) rend.themes.fontSize(fsize+'%'); }
+function onTap(e){
+  const w = window.innerWidth, x = e.clientX;
+  if(x < w*0.32) rend.prev();
+  else if(x > w*0.68) rend.next();
+  else { $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
+}
+function closeReader(){
+  $('#reader').style.display='none'; $('#library').style.display='flex';
+  try{ book && book.destroy(); }catch(e){}
+  book=null; rend=null; render();
+}
+
+/* ── 이벤트 ── */
+$('#q').addEventListener('input', ()=>{ clearTimeout($('#q')._t);
+  $('#q')._t=setTimeout(render,120); });
+$('#btnSync').onclick = async ()=>{ try{ toast('새로고침 중…'); await fetchIndex(); render(); }
+  catch(e){ toast(e.message,4000); } };
+$('#btnClose').onclick = closeReader;
+$('#tapL').onclick = ()=> rend && rend.prev();
+$('#tapR').onclick = ()=> rend && rend.next();
+$('#btnFontUp').onclick = ()=>{ fsize=Math.min(200,fsize+10);
+  localStorage.setItem('ebl_fs',fsize); applyFont(); };
+$('#btnFontDn').onclick = ()=>{ fsize=Math.max(60,fsize-10);
+  localStorage.setItem('ebl_fs',fsize); applyFont(); };
+document.addEventListener('keydown', e=>{
+  if($('#reader').style.display!=='flex') return;
+  if(e.key==='ArrowLeft') rend&&rend.prev();
+  if(e.key==='ArrowRight') rend&&rend.next();
+  if(e.key==='Escape') closeReader();
+});
+
+$('#btnSet').onclick = ()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
+  $('#sCid').value=cfg('cid'); $('#setSheet').classList.add('on'); };
+$('#setCancel').onclick = ()=> $('#setSheet').classList.remove('on');
+$('#setSave').onclick = ()=>{ setCfg('url',$('#sUrl').value.trim());
+  setCfg('tok',$('#sTok').value.trim()); setCfg('cid',$('#sCid').value.trim());
+  $('#setSheet').classList.remove('on'); location.reload(); };
+$('#btnClear').onclick = async ()=>{ await DB.clear('books'); saved.clear();
+  toast('받아둔 책을 모두 비웠습니다'); render(); };
+
+/* ── 시작 ── */
+(async ()=>{
+  try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
+  try{ await loadIndex(); }
+  catch(e){ $('#stat').textContent = e.message; toast(e.message,5000); }
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
