@@ -13,7 +13,7 @@
     --dim:#8b95a3; --acc:#6ea8fe; --bad:#ff8a8a; --ok:#7ee0a0;
     --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
     --paper:#fff; --ink:#16181c; --barbg:#ffffffee; --barfg:#4a5260;
-    --cw:104px; --tap:30%; --pv:16px; }
+    --cw:104px; --tap:30%; --pv:16px; --ph:6%; }
   body.sepia{ --paper:#f6efe2; --ink:#3b3228; --barbg:#f6efe2ee; --barfg:#6b5f4e; }
   body.night{ --paper:#15181c; --ink:#c7ccd4; --barbg:#15181cee; --barfg:#8b95a3; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -70,8 +70,9 @@
   /* ── 리더 ── */
   #reader{position:fixed;inset:0;background:var(--paper);display:none;flex-direction:column;z-index:20}
   #view{flex:1;position:relative;background:var(--paper)}
-  /* 본문 자리 — 상하 여백(--pv)만큼 더 띄웁니다 */
-  #page{position:absolute;left:0;right:0;
+  /* 본문 자리 — 여백은 '틀'에서 줍니다.
+     책 안쪽(body)에 padding 을 주면 epub.js 가 단을 나눌 때 무시해 버립니다. */
+  #page{position:absolute;left:var(--ph);right:var(--ph);
     top:calc(var(--st) + 46px + var(--pv)); bottom:calc(var(--sb) + 34px + var(--pv))}
   #rbar{position:absolute;top:0;left:0;right:0;z-index:5;padding:calc(var(--st) + 6px) 10px 6px;
     background:linear-gradient(var(--barbg) 70%,transparent);
@@ -201,6 +202,11 @@
       <button data-v="72">아주 작게</button><button data-v="104">작게</button>
       <button data-v="140">보통</button><button data-v="190">크게</button>
     </div></div>
+  <div class="grp"><div class="lb">보여줄 형식</div>
+    <div class="seg" id="segFmt">
+      <button data-v="epub">EPUB</button><button data-v="pdf">PDF</button>
+      <button data-v="etc">그 외</button>
+    </div></div>
   <div class="grp"><div class="lb">정렬</div>
     <div class="seg" id="segSort">
       <button data-v="t">제목</button><button data-v="a">저자</button>
@@ -247,7 +253,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v5';
+const BUILD='v8';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -264,8 +270,10 @@ const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
 /* 사용자 설정 (기기에 저장) */
 const P = Object.assign({
   theme:'light', fs:110, lh:170, pd:6, pv:16, font:'', nav:'both', tap:30,
-  mode:'g', size:104, sort:'t', cat:'tree'
+  mode:'g', size:104, sort:'t', cat:'tree',
+  fmt:{ epub:true, pdf:true, etc:false }     // 보여줄 형식 (그 외는 기본 감춤)
 }, JSON.parse(localStorage.getItem('ebl_pref')||'{}'));
+if(!P.fmt) P.fmt={ epub:true, pdf:true, etc:false };
 const savePref=()=>localStorage.setItem('ebl_pref',JSON.stringify(P));
 
 let BOOKS=[],HAY=[],UPDATED='',shown=0,rows=[];
@@ -339,12 +347,16 @@ function apply(d){
   HAY=BOOKS.map(b=>norm([b.t,b.o,b.a,b.p,b.c].filter(Boolean).join('|')));
 }
 
-/* ── 분류 ── */
+/* ── 분류 · 형식 ── */
 const folderOf=b=>String(b.f||'').split('/')[1]||'';
+// 형식을 세 갈래로 묶습니다: EPUB / PDF / 그 외(txt·mobi·cbz…)
+function fmtKey(b){ const x=(b.x||'').toLowerCase();
+  return x==='epub'?'epub' : x==='pdf'?'pdf' : 'etc'; }
 function chipSource(){
   // 현재 기준으로 [값 → 권수] 집계
   const c={};
   BOOKS.forEach(b=>{
+    if(!P.fmt[fmtKey(b)]) return;          // 감춘 형식은 분류 집계에서도 제외
     let k='';
     if(P.cat==='f') k=folderOf(b);
     else if(P.cat==='tree') k = PATH.length===0? b.b : PATH.length===1? (b.b===PATH[0]?b.m:'') : (b.m===PATH[1]?b.s:'');
@@ -374,6 +386,7 @@ let SEL='';
 
 /* ── 목록 ── */
 function match(b){
+  if(!P.fmt[fmtKey(b)]) return false;
   if(P.cat==='tree'){
     if(PATH[0]&&b.b!==PATH[0])return false;
     if(PATH[1]&&b.m!==PATH[1])return false;
@@ -482,8 +495,10 @@ function paperCss(){
            night:{bg:'#15181c',fg:'#c7ccd4',a:'#7fb3ff'}}[P.theme];
   const fam = P.font==='sans' ? '-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
             : P.font==='serif'? '"Apple SD Gothic Neo","Nanum Myeongjo",serif' : '';
+  // 좌우 여백은 바깥 틀(#page)에서 줍니다. 여기서 padding 을 주면 단 나누기가 어긋납니다.
   const body={ background:c.bg+' !important', color:c.fg+' !important',
-    'padding-left':P.pd+'% !important', 'padding-right':P.pd+'% !important',
+    'padding-left':'0 !important', 'padding-right':'0 !important',
+    'margin-left':'0 !important', 'margin-right':'0 !important',
     'line-height':(P.lh/100)+' !important' };
   if(fam) body['font-family']=fam+' !important';
   const txt={ color:c.fg+' !important', 'line-height':(P.lh/100)+' !important' };
@@ -498,11 +513,16 @@ function applyRead(){
   if(P.theme!=='light')document.body.classList.add(P.theme);
   document.documentElement.style.setProperty('--tap',P.tap+'%');
   document.documentElement.style.setProperty('--pv',P.pv+'px');
+  document.documentElement.style.setProperty('--ph',P.pd+'%');
   $('#tapL').style.display=$('#tapR').style.display=(P.nav==='swipe'?'none':'block');
   if(rend){ rend.themes.register('paper',paperCss()); rend.themes.select('paper');
     rend.themes.fontSize(P.fs+'%');
-    // 자리가 바뀌었으니 다시 계산 (안 하면 글이 잘립니다)
-    try{ rend.resize(); }catch(e){} }
+    // 틀 크기가 바뀌었으니 다시 계산 (안 하면 글이 잘립니다)
+    // 슬라이더를 미는 동안 수십 번 불리므로 잠깐 모아서 한 번만
+    clearTimeout(applyRead._r);
+    applyRead._r=setTimeout(()=>{ requestAnimationFrame(()=>{
+      try{ rend.resize(); }catch(e){} }); }, 120);
+  }
   $('#vFs').textContent=P.fs+'%'; $('#vLh').textContent=(P.lh/100).toFixed(2);
   $('#vPd').textContent=P.pd+'%'; $('#vPv').textContent=P.pv+'px'; $('#vTap').textContent=P.tap+'%';
   segSet('#segTheme',P.theme); segSet('#segFont',P.font); segSet('#segNav',P.nav);
@@ -520,25 +540,40 @@ async function showReader(b,buf){
   rend.on('relocated',loc=>{ if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
     const p=loc?.start?.percentage;
     $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')+(b.t||''); });
+  // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); }catch(e){} });
-  bindGestures(document);
+}
+
+const readerOn = () => $('#reader').style.display==='flex';
+function canPage(e){
+  // 리더가 열려 있고 책이 준비됐을 때만. 설정판·막대를 누른 건 제외합니다.
+  if(!rend || !readerOn()) return false;
+  const t = e.target;
+  if(t && t.closest && t.closest('.pan, #rbar, #rfoot, .sheet, #busy')) return false;
+  return true;
 }
 function bindGestures(doc){
   doc.addEventListener('click',e=>{
+    if(!canPage(e)) return;
     if(P.nav==='swipe'){ toggleBars(); return; }
     const w=window.innerWidth,x=e.clientX,t=P.tap/100;
     if(x<w*t)rend.prev(); else if(x>w*(1-t))rend.next(); else toggleBars();
   });
+  bindSwipe(doc);
+}
+function bindSwipe(doc){
   let sx=0,sy=0,st=0;
   doc.addEventListener('touchstart',e=>{ const t=e.changedTouches[0];
     sx=t.clientX; sy=t.clientY; st=Date.now(); },{passive:true});
   doc.addEventListener('touchend',e=>{
-    if(P.nav==='tap')return;
+    if(P.nav==='tap'||!canPage(e))return;
     const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
     if(Date.now()-st<600&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.6){
       dx<0?rend.next():rend.prev(); }
   },{passive:true});
 }
+/* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
+bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
 function closeReader(){ $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
@@ -553,8 +588,16 @@ function pan(id,on){ $(id).classList.toggle('on',on); $('#bd').classList.toggle(
 $('#bd').onclick=()=>{ pan('#panRead',false); pan('#panView',false); };
 $$('.pan [data-close]').forEach(b=>b.onclick=()=>{pan('#panRead',false);pan('#panView',false);});
 $('#btnAa').onclick=()=>{ applyRead(); pan('#panRead',true); };
+function segFmtPaint(){ $$('#segFmt button').forEach(b=>b.classList.toggle('on',!!P.fmt[b.dataset.v])); }
+$$('#segFmt button').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.v;
+  // 마지막 하나까지 끄면 빈 목록이 되니 막습니다
+  if(P.fmt[k] && Object.values(P.fmt).filter(Boolean).length===1){
+    toast('하나는 켜져 있어야 합니다'); return; }
+  P.fmt[k]=!P.fmt[k]; savePref(); segFmtPaint(); buildChips(); render(true);
+});
 $('#btnView').onclick=()=>{ segSet('#segMode',P.mode); segSet('#segSize',P.size);
-  segSet('#segSort',P.sort); segSet('#segCat',P.cat); pan('#panView',true); };
+  segSet('#segSort',P.sort); segSet('#segCat',P.cat); segFmtPaint(); pan('#panView',true); };
 
 seg('#segTheme','theme',applyRead);
 seg('#segFont','font',applyRead);
@@ -575,8 +618,8 @@ $('#grid').addEventListener('scroll',()=>{const g=$('#grid');
 $('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인됐습니다'); }
   catch(e){ toast(e.message,5000); } };
 $('#btnClose').onclick=closeReader;
-$('#tapL').onclick=()=>rend&&rend.prev();
-$('#tapR').onclick=()=>rend&&rend.next();
+$('#tapL').onclick=()=>{ if(rend&&readerOn()) rend.prev(); };
+$('#tapR').onclick=()=>{ if(rend&&readerOn()) rend.next(); };
 document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')return;
   if(e.key==='ArrowLeft')rend&&rend.prev(); if(e.key==='ArrowRight')rend&&rend.next();
   if(e.key==='Escape')closeReader(); });
