@@ -217,12 +217,7 @@
   <div id="home">
     <div class="hs" id="hqWrap"><div class="hrow" id="hq"></div></div>
 
-    <div class="hs" id="hsRead">
-      <div class="hh"><b>이어 읽기</b><button data-go="reading">모두 보기 ›</button></div>
-      <div class="hscr" id="hRead"></div>
-      <div class="hnone" id="hReadNone">아직 읽는 중인 책이 없습니다.
-        아래에서 한 권 골라 보세요.</div>
-    </div>
+    <div id="hRow1"></div>
 
     <div class="hs" id="hsPin">
       <div class="hh"><b>내 서가</b><button id="hPinEdit">고치기</button></div>
@@ -234,15 +229,9 @@
       <div class="hone" id="hToday"></div>
     </div>
 
-    <div class="hs" id="hsNew">
-      <div class="hh"><b>새로 담긴 책</b><button data-go="new">모두 보기 ›</button></div>
-      <div class="hscr" id="hNew"></div>
-    </div>
+    <div id="hRow2"></div>
 
     <div class="hlinks">
-      <button data-go="recent">최근 본 책 <span id="lkRecent"></span></button>
-      <button data-go="saved">받아둔 책 <span id="lkSaved"></span></button>
-      <button data-go="done">다 읽은 책 <span id="lkDone"></span></button>
       <button data-go="">전체 둘러보기 <span id="lkAll"></span></button>
     </div>
 
@@ -381,7 +370,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v11';
+const BUILD='v11a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -895,9 +884,27 @@ function hcards(el,arr){
   el.appendChild(f);
   P.mode=m;
 }
+/* 홈의 표지 줄 하나 — 제목(권수) + 모두 보기 + 표지 12권 */
+const HN=12;
+function hsec(host,title,tab,arr,total,none){
+  const d=document.createElement('div'); d.className='hs';
+  const hh=document.createElement('div'); hh.className='hh';
+  const t=document.createElement('b');
+  t.textContent=`${title} (${(total||0).toLocaleString()}권)`;
+  hh.appendChild(t);
+  if(total){ const m=document.createElement('button'); m.textContent='모두 보기 ›';
+    m.onclick=()=>goList(tab); hh.appendChild(m); }
+  d.appendChild(hh);
+  if(total){ const s=document.createElement('div'); s.className='hscr';
+    d.appendChild(s); hcards(s,arr.slice(0,HN)); }
+  else if(none){ const e=document.createElement('div'); e.className='hnone';
+    e.textContent=none; d.appendChild(e); }
+  host.appendChild(d);
+}
 function buildHome(){
   const vis = BOOKS.filter(b=>P.fmt[fmtKey(b)]);
   const n = counts();
+  $('#hRow1').innerHTML='';
 
   /* 최근 검색어 */
   const qw=$('#hqWrap'), qe=$('#hq');
@@ -910,13 +917,11 @@ function buildHome(){
       qe.appendChild(b); });
   }
 
-  /* 이어 읽기 */
-  const reading = vis.filter(b=>stOf(b)==='reading')
-    .sort((x,y)=>((RD[y.i]&&RD[y.i].t)||0)-((RD[x.i]&&RD[x.i].t)||0)).slice(0,12);
-  hcards($('#hRead'),reading);
-  $('#hRead').style.display = reading.length?'flex':'none';
-  $('#hReadNone').style.display = reading.length?'none':'block';
-  $('#hsRead').querySelector('[data-go]').style.display = reading.length?'':'none';
+  /* 표지 줄 — 최근 읽은 순으로 앞 12권만 */
+  const byRead = a => a.sort((x,y)=>((RD[y.i]&&RD[y.i].t)||0)-((RD[x.i]&&RD[x.i].t)||0));
+  hsec($('#hRow1'), '이어 읽기', 'reading',
+    byRead(vis.filter(b=>stOf(b)==='reading')), n.reading,
+    '아직 읽는 중인 책이 없습니다. 아래에서 한 권 골라 보세요.');
 
   /* 내 서가 */
   const pe=$('#hPin'); pe.innerHTML='';
@@ -950,17 +955,19 @@ function buildHome(){
     $('#hsToday').style.display='';
   } else $('#hsToday').style.display='none';
 
-  /* 새로 담긴 책 — 색인에 '담긴 날'이 있을 때만 */
-  const fresh = vis.filter(b=>b.g)
-    .sort((x,y)=>String(y.g).localeCompare(String(x.g))).slice(0,12);
-  if(fresh.length){ $('#hsNew').style.display=''; hcards($('#hNew'),fresh); }
-  else $('#hsNew').style.display='none';
+  /* 나머지 표지 줄 */
+  const r2=$('#hRow2'); r2.innerHTML='';
+  hsec(r2, '최근 본 책', 'recent', byRead(vis.filter(b=>RD[b.i])), n.recent,
+    '아직 열어본 책이 없습니다.');
+  hsec(r2, '받아둔 책', 'saved', byRead(vis.filter(b=>saved.has(b.i))), n.saved,
+    '받아둔 책이 없습니다. 책을 열면 그 기기에 자동으로 담깁니다.');
+  hsec(r2, '다 읽은 책', 'done', byRead(vis.filter(b=>stOf(b)==='done')), n.done,
+    '아직 다 읽은 책이 없습니다.');
+  // '새로 담긴 책'은 색인에 담긴 날이 없으면 줄째로 감춥니다
+  if(n.new) hsec(r2, '새로 담긴 책', 'new',
+    vis.filter(b=>b.g).sort((x,y)=>String(y.g).localeCompare(String(x.g))), n.new, '');
 
-  /* 바로가기 */
-  $('#lkRecent').textContent = n.recent?n.recent.toLocaleString()+'권 ›':'›';
-  $('#lkSaved').textContent  = n.saved ?n.saved.toLocaleString()+'권 ›':'›';
-  $('#lkDone').textContent   = n.done  ?n.done.toLocaleString()+'권 ›':'›';
-  $('#lkAll').textContent    = n[''].toLocaleString()+'권 ›';
+  $('#lkAll').textContent = n[''].toLocaleString()+'권 ›';
 
   /* 올해 */
   const yr=new Date().getFullYear();
