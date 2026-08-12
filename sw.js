@@ -2,7 +2,8 @@
    앱 껍데기(HTML·CSS·JS)만 캐시합니다.
    책 파일과 색인은 IndexedDB 가 따로 맡습니다. */
 
-const V = 'ebl-v1';
+/* 고칠 때마다 이 번호를 올리면 옛 캐시가 버려집니다 */
+const V = 'ebl-v2';
 const SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

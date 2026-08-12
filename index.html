@@ -291,7 +291,8 @@ function render(reset){
   if(reset){ rows=filter(); shown=0; $('#grid').innerHTML=''; $('#grid').scrollTop=0; }
   stat(`${BOOKS.length.toLocaleString()}권 중 ${rows.length.toLocaleString()}권`
      + (UPDATED?`  ·  갱신 ${UPDATED}`:'')
-     + (saved.size?`  ·  받아둔 책 ${saved.size}`:''));
+     + (saved.size?`  ·  받아둔 책 ${saved.size}`:'')
+     + `  ·  ${BUILD}`);
   const g=$('#grid'); const old=$('#more'); if(old) old.remove();
   const f=document.createDocumentFragment();
   const end=Math.min(shown+PAGE,rows.length);
@@ -452,9 +453,27 @@ $('#btnClearAll').onclick=async()=>{ await DB.clear('books'); await DB.clear('kv
 window.addEventListener('error',e=>log('오류: '+e.message));
 window.addEventListener('unhandledrejection',e=>log('오류(비동기): '+(e.reason?.message||e.reason)));
 
+/* 화면 아래 버전 표시 — 새 파일이 반영됐는지 눈으로 확인하는 용도 */
+const BUILD = 'v2  2026-08-12';
+log('빌드 ' + BUILD);
+
 markLogin(false);
 boot();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* 새 버전이 올라오면 곧바로 갈아끼웁니다 (캐시에 갇히지 않도록) */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.update();
+    reg.addEventListener('updatefound',()=>{
+      const w=reg.installing;
+      w && w.addEventListener('statechange',()=>{
+        if(w.state==='installed' && navigator.serviceWorker.controller){
+          toast('새 버전이 있습니다. 다시 열어주세요.',6000);
+        }
+      });
+    });
+  }).catch(()=>{});
+}
 </script>
 </body>
 </html>
