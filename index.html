@@ -59,6 +59,9 @@
   #grid.l .cvw{width:52px;flex:0 0 52px}
   #grid.l .meta{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   #grid.l .ti{-webkit-line-clamp:2;margin-top:0;font-size:14px}
+  /* 길게 누를 때 글자가 선택되거나 iOS 팝업이 뜨지 않도록 */
+  .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .card.held{opacity:.55}
   .cvw{position:relative;width:100%;aspect-ratio:2/3;border-radius:6px;overflow:hidden;
     background:var(--panel);box-shadow:0 2px 10px #0006;
     display:flex;align-items:center;justify-content:center}
@@ -187,6 +190,14 @@
   #pinList .cnt{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
   #pinList .lv{color:var(--dim);font-size:11px;margin-left:6px;font-weight:400}
 
+  /* 책 하나 손질하기 */
+  .acts{margin-top:4px}
+  .acts button{display:block;width:100%;text-align:left;padding:13px 2px;
+    border-bottom:1px solid var(--line);font-size:14px}
+  .acts button:last-child{border-bottom:none}
+  .acts button.warn{color:var(--bad)}
+  .acts button .h{display:block;font-size:11.5px;color:var(--dim);margin-top:2px}
+
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
     font-size:13px;z-index:90;display:none;max-width:88%;text-align:center;white-space:pre-wrap;color:var(--tx)}
@@ -282,7 +293,17 @@
     <div class="seg">
       <button id="mkReading">읽는 중으로</button>
       <button id="mkDone">다 읽음으로</button>
+    </div>
+    <div class="seg" style="margin-top:6px">
+      <button id="mkClear">읽은 기록 지우기</button>
     </div></div>
+</div>
+
+<!-- 책 하나에 대한 손질 (표지를 길게 누르면) -->
+<div class="pan" id="panBook">
+  <h4><span id="pbT">책</span> <button data-close>닫기</button></h4>
+  <div class="lb" id="pbS" style="font-size:12px;color:var(--dim);margin:-4px 0 4px"></div>
+  <div class="acts" id="pbActs"></div>
 </div>
 
 <!-- 보기 설정 -->
@@ -370,7 +391,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v11a';
+const BUILD='v12';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -648,7 +669,28 @@ function card(b){
     s.textContent=[mark,b.p,String(b.d||'').slice(0,4),b.s||b.m||b.b,x].filter(Boolean).join(' · ');
     m.append(t,a,s); d.append(w,m);
   } else d.append(w,t,a);
-  d.addEventListener('click',()=>openBook(b)); return d;
+  d.addEventListener('click',()=>{ if(d._hold){ d._hold=false; return; } openBook(b); });
+  hold(d,b);
+  return d;
+}
+
+/* 길게 누르기 — 0.5초.
+   손가락이 10px 넘게 움직이면 넘기기로 보고 취소합니다. */
+function hold(el,b){
+  let t=null;
+  const stop=()=>{ if(t)clearTimeout(t); t=null; el.classList.remove('held'); };
+  el.addEventListener('pointerdown',e=>{
+    if(e.button&&e.button!==0) return;
+    el._hold=false; const sx=e.clientX, sy=e.clientY;
+    el._mv=ev=>{ if(Math.abs(ev.clientX-sx)>10||Math.abs(ev.clientY-sy)>10) stop(); };
+    el.addEventListener('pointermove',el._mv);
+    stop();
+    t=setTimeout(()=>{ el._hold=true; el.classList.add('held');
+      setTimeout(()=>el.classList.remove('held'),160); openPanBook(b); },500);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(k=>el.addEventListener(k,()=>{
+    stop(); if(el._mv){ el.removeEventListener('pointermove',el._mv); el._mv=null; } }));
+  el.addEventListener('contextmenu',e=>{ e.preventDefault(); stop(); el._hold=true; openPanBook(b); });
 }
 
 /* ── 열기 ── */
@@ -694,6 +736,7 @@ async function getBook(b){
 
 /* ── 리더 ── */
 let book=null,rend=null,curB=null;
+let noMark=false;   // 이 책은 닫을 때까지 읽은 기록을 남기지 않습니다
 function paperCss(){
   const c={light:{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'},
            sepia:{bg:'#f6efe2',fg:'#3b3228',a:'#8a5a1f'},
@@ -735,7 +778,7 @@ function applyRead(){
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
 }
 async function showReader(b,buf){
-  curB=b;
+  curB=b; noMark=false;
   $('#library').style.display='none'; $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||''; $('#page').innerHTML='';
   book=ePub(buf);
@@ -745,12 +788,14 @@ async function showReader(b,buf){
   try{ await rend.display(cfi||undefined); }catch(e){ await rend.display(); }
   markRead(b.i,null);            // 연 것만으로 '읽는 중'에 들어갑니다
   rend.on('relocated',loc=>{
-    if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
     const p=loc?.start?.percentage;
-    markRead(b.i, p, loc&&loc.atEnd);
+    if(!noMark){
+      if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
+      markRead(b.i, p, loc&&loc.atEnd);
+    }
     const st=stOf(b);
     $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')
-      +(st==='done'?'다 읽음  ·  ':'')+(b.t||'');
+      +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+(b.t||'');
   });
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); }catch(e){} });
@@ -796,9 +841,46 @@ function segSet(sel,v){ $$(sel+' button').forEach(b=>b.classList.toggle('on',b.d
 function seg(sel,key,after){ $$(sel+' button').forEach(b=>b.onclick=()=>{
   P[key]=b.dataset.v==='' ? '' : (isNaN(b.dataset.v)?b.dataset.v:Number(b.dataset.v));
   savePref(); segSet(sel,P[key]); after&&after(); }); }
+const PANS=['#panRead','#panView','#panBook'];
 function pan(id,on){ $(id).classList.toggle('on',on); $('#bd').classList.toggle('on',on); }
-$('#bd').onclick=()=>{ pan('#panRead',false); pan('#panView',false); };
-$$('.pan [data-close]').forEach(b=>b.onclick=()=>{pan('#panRead',false);pan('#panView',false);});
+function panOff(){ PANS.forEach(p=>$(p).classList.remove('on')); $('#bd').classList.remove('on'); }
+$('#bd').onclick=panOff;
+$$('.pan [data-close]').forEach(b=>b.onclick=panOff);
+
+/* ── 책 하나 손질하기 ── */
+let panB=null;
+function clearRead(id){
+  delete RD[id]; saveRD();
+  try{ localStorage.removeItem('ebl_pos_'+id); }catch(e){}
+}
+function openPanBook(b){
+  panB=b;
+  $('#pbT').textContent=b.t||'제목 없음';
+  const st=stOf(b), pc=pctOf(b);
+  $('#pbS').textContent=[b.a, (b.x||'').toUpperCase(),
+    st==='done'?'다 읽음':(st==='reading'?(pc>0?Math.round(pc*100)+'% 읽음':'읽는 중'):''),
+    saved.has(b.i)?'받아둠':''].filter(Boolean).join(' · ');
+
+  const el=$('#pbActs'); el.innerHTML='';
+  const add=(label,hint,fn,cls)=>{ const x=document.createElement('button');
+    if(cls)x.className=cls;
+    x.innerHTML=esc(label)+(hint?`<span class="h">${esc(hint)}</span>`:'');
+    x.onclick=()=>{ panOff(); fn(); }; el.appendChild(x); };
+
+  add(st?'이어서 읽기':'읽기','',()=>openBook(b));
+  if(st!=='done') add('다 읽음으로 표시','',()=>{ markRead(b.i,1,true);
+    toast('다 읽음으로 표시했습니다'); paintTabs(); render(true); });
+  else add('읽는 중으로 되돌리기','',()=>{ markRead(b.i,null,false,true);
+    toast('읽는 중으로 되돌렸습니다'); paintTabs(); render(true); });
+  if(RD[b.i]) add('읽은 기록 지우기','이 책만. 목록에서 빠지고 진도도 사라집니다',
+    ()=>{ clearRead(b.i); toast('읽은 기록을 지웠습니다'); paintTabs(); render(true); },'warn');
+  if(saved.has(b.i)) add('받아둔 파일 지우기','읽은 기록은 그대로 남습니다',
+    async()=>{ try{ await DB.del('books',b.i); saved.delete(b.i); }catch(e){}
+      toast('파일을 지웠습니다'); paintTabs(); render(true); },'warn');
+  if(b.u) add('드라이브에서 열기','',()=>window.open(b.u,'_blank','noopener'));
+
+  pan('#panBook',true);
+}
 $('#btnAa').onclick=()=>{ applyRead(); pan('#panRead',true); };
 function segFmtPaint(){ $$('#segFmt button').forEach(b=>b.classList.toggle('on',!!P.fmt[b.dataset.v])); }
 $$('#segFmt button').forEach(b=>b.onclick=()=>{
@@ -1021,6 +1103,10 @@ $('#mkDone').onclick=()=>{ if(!curB)return; markRead(curB.i,1,true);
   toast('다 읽음으로 표시했습니다'); };
 $('#mkReading').onclick=()=>{ if(!curB)return; markRead(curB.i,null,false,true);
   toast('읽는 중으로 되돌렸습니다'); };
+/* 내용만 확인하려고 열어본 책을 목록에서 빼는 자리 */
+$('#mkClear').onclick=()=>{ if(!curB)return;
+  clearRead(curB.i); noMark=true;
+  toast('읽은 기록을 지웠습니다.\n이 책은 닫을 때까지 다시 기록되지 않습니다'); };
 
 /* ── 이벤트 ── */
 /* 검색 — 홈에서 글자를 넣으면 목록으로 넘어갑니다.
