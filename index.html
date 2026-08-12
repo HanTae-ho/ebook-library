@@ -462,10 +462,25 @@ const DB=(()=>{ let db;
     r.onupgradeneeded=e=>{const d=e.target.result;
       if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');
       if(!d.objectStoreNames.contains('books'))d.createObjectStore('books');};
-    r.onsuccess=e=>{db=e.target.result;ok(db)}; r.onerror=()=>ng(r.error); });
+    r.onsuccess=e=>{db=e.target.result;ok(db)};
+    r.onerror=()=>ng(r.error||new Error('저장소를 열지 못했습니다'));
+    r.onblocked=()=>ng(new Error('저장소가 다른 탭에 잡혀 있습니다'));
+    setTimeout(()=>ng(new Error('저장소 응답 없음')),8000); });
+  /* onabort 를 빠뜨리면 — 저장 공간이 모자라 취소됐을 때 —
+     성공도 실패도 아닌 채로 영영 멈춥니다. 예전에 '책을 받는 중'에서
+     멈춰 있던 원인이 이것이었습니다. */
   const tx=async(s,m,fn)=>{const d=await open();
-    return new Promise((ok,ng)=>{const t=d.transaction(s,m),o=t.objectStore(s),q=fn(o);
-      t.oncomplete=()=>ok(q&&q.result); t.onerror=()=>ng(t.error);});};
+    return new Promise((ok,ng)=>{
+      let done=false;
+      const fin=(f,v)=>{ if(!done){ done=true; f(v); } };
+      let t,o,q;
+      try{ t=d.transaction(s,m); o=t.objectStore(s); q=fn(o); }
+      catch(e){ return fin(ng,e); }
+      t.oncomplete=()=>fin(ok,q&&q.result);
+      t.onerror   =()=>fin(ng,t.error||new Error('저장소 오류'));
+      t.onabort   =()=>fin(ng,t.error||new Error('저장소가 가득 찼습니다'));
+      setTimeout(()=>fin(ng,new Error('저장소 시간 초과')),20000);
+    });};
   return{ get:(s,k)=>tx(s,'readonly',o=>o.get(k)), put:(s,k,v)=>tx(s,'readwrite',o=>o.put(v,k)),
     del:(s,k)=>tx(s,'readwrite',o=>o.delete(k)),
     keys:s=>tx(s,'readonly',o=>o.getAllKeys()), clear:s=>tx(s,'readwrite',o=>o.clear()) };
@@ -730,7 +745,11 @@ async function getBook(b){
         total?got/total:0); }
     buf=await new Blob(parts).arrayBuffer();
   } else buf=await res.arrayBuffer();
-  try{ await DB.put('books',b.i,buf); saved.add(b.i); }catch(e){ log('저장 실패: '+e.message); }
+  /* 기기에 담아두는 일은 읽기와 상관없습니다.
+     기다리지 않고 뒤에서 처리해, 저장이 실패해도 책은 열립니다. */
+  DB.put('books',b.i,buf).then(()=>{ saved.add(b.i); })
+    .catch(e=>{ log('받아두기 실패: '+(e.message||e));
+      toast('책은 열지만 기기에 담아두지는 못했습니다\n'+(e.message||e),5000); });
   return buf;
 }
 
