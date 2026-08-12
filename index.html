@@ -11,7 +11,10 @@
 <style>
   :root{ --bg:#111418; --panel:#191d23; --line:#2a3038; --tx:#e6e9ee;
     --dim:#8b95a3; --acc:#6ea8fe; --bad:#ff8a8a; --ok:#7ee0a0;
-    --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px); }
+    --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+    --paper:#ffffff; --ink:#16181c; --barbg:#ffffffee; --barfg:#4a5260; }
+  body.sepia{ --paper:#f6efe2; --ink:#3b3228; --barbg:#f6efe2ee; --barfg:#6b5f4e; }
+  body.night{ --paper:#15181c; --ink:#c7ccd4; --barbg:#15181cee; --barfg:#8b95a3; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden}
   body{background:var(--bg);color:var(--tx);
@@ -19,6 +22,7 @@
   button,input{font:inherit;color:inherit}
   button{background:none;border:none;cursor:pointer}
 
+  /* ── 서재 ── */
   #library{display:flex;flex-direction:column;height:100%}
   header{padding:calc(var(--st) + 10px) 12px 8px;border-bottom:1px solid var(--line);flex:0 0 auto}
   .row{display:flex;gap:8px;align-items:center}
@@ -55,22 +59,30 @@
   .au{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #more{grid-column:1/-1;padding:14px;text-align:center;color:var(--dim);font-size:13px}
 
-  #reader{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:20}
-  #rbar{position:absolute;top:0;left:0;right:0;z-index:3;padding:calc(var(--st) + 8px) 10px 8px;
-    background:linear-gradient(#111418ee,#11141800);display:flex;gap:8px;align-items:center;
-    transition:opacity .2s}
-  #rtitle{flex:1;font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;
+  /* ── 리더 ── */
+  #reader{position:fixed;inset:0;background:var(--paper);display:none;flex-direction:column;z-index:20}
+  #view{flex:1;position:relative;background:var(--paper)}
+  /* 본문이 그려지는 자리 — 위아래 막대만큼 비워둡니다 */
+  #page{position:absolute;left:0;right:0;
+    top:calc(var(--st) + 46px); bottom:calc(var(--sb) + 34px);}
+  #rbar{position:absolute;top:0;left:0;right:0;z-index:4;
+    padding:calc(var(--st) + 6px) 10px 6px;
+    background:linear-gradient(var(--barbg) 70%, transparent);
+    display:flex;gap:6px;align-items:center;transition:opacity .2s}
+  #rbar .ib{background:#00000010;border-color:#00000022;color:var(--barfg);padding:7px 10px}
+  body.night #rbar .ib{background:#ffffff12;border-color:#ffffff20}
+  #rtitle{flex:1;font-size:12px;color:var(--barfg);white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis}
-  #view{flex:1;position:relative}
-  #rfoot{position:absolute;bottom:0;left:0;right:0;z-index:3;
-    padding:8px 12px calc(var(--sb) + 8px);color:var(--dim);font-size:11px;text-align:center;
-    background:linear-gradient(#11141800,#111418ee);transition:opacity .2s}
+  #rfoot{position:absolute;bottom:0;left:0;right:0;z-index:4;
+    padding:6px 12px calc(var(--sb) + 6px);color:var(--barfg);font-size:11px;text-align:center;
+    background:linear-gradient(transparent, var(--barbg) 40%);transition:opacity .2s}
   .hide{opacity:0;pointer-events:none}
-  #tapL,#tapR{position:absolute;top:0;bottom:0;width:32%;z-index:2}
+  #tapL,#tapR{position:absolute;top:calc(var(--st) + 46px);bottom:calc(var(--sb) + 34px);
+    width:30%;z-index:3}
   #tapL{left:0} #tapR{right:0}
 
-  #busy{position:fixed;inset:0;background:#111418f2;z-index:50;display:none;
-    flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px}
+  #busy{position:fixed;inset:0;background:#111418f5;z-index:50;display:none;
+    flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;color:var(--tx)}
   #busy .t{font-size:14px;text-align:center;line-height:1.6}
   #busy .barw{width:min(280px,70%);height:5px;background:var(--panel);border-radius:99px;overflow:hidden}
   #busy .bar{height:100%;width:0;background:var(--acc);transition:width .15s}
@@ -81,7 +93,7 @@
     align-items:center;justify-content:center;padding:18px}
   .sheet.on{display:flex}
   .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;
-    width:100%;max-width:440px;max-height:82vh;overflow:auto}
+    width:100%;max-width:440px;max-height:82vh;overflow:auto;color:var(--tx)}
   .box h3{margin:0 0 4px;font-size:16px}
   .box label{display:block;font-size:12px;color:var(--dim);margin:12px 0 4px}
   .box input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);
@@ -95,7 +107,8 @@
 
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
-    font-size:13px;z-index:70;display:none;max-width:88%;text-align:center;white-space:pre-wrap}
+    font-size:13px;z-index:70;display:none;max-width:88%;text-align:center;white-space:pre-wrap;
+    color:var(--tx)}
 </style>
 </head>
 <body>
@@ -115,13 +128,17 @@
 </div>
 
 <div id="reader">
+  <div id="view">
+    <div id="page"></div>
+    <div id="tapL"></div><div id="tapR"></div>
+  </div>
   <div id="rbar">
     <button class="ib" id="btnClose">‹ 서재</button>
     <div id="rtitle"></div>
+    <button class="ib" id="btnTheme">◐</button>
     <button class="ib" id="btnFontDn">A−</button>
     <button class="ib" id="btnFontUp">A+</button>
   </div>
-  <div id="view"><div id="tapL"></div><div id="tapR"></div></div>
   <div id="rfoot"></div>
 </div>
 
@@ -157,11 +174,12 @@
 <script src="https://accounts.google.com/gsi/client" async defer onload="onGis()"></script>
 <script>
 /* ============================================================
-   전자책 서재 (v2)
-   · 목록  : Apps Script 색인 — 기기에 저장해두고 즉시 표시
-   · 파일  : 구글 드라이브 API 직접 호출
-   · 진단  : 무엇이 막혔는지 화면에 남깁니다 (설정 → 기록)
+   전자책 서재 (v3)
+   v3 — 뷰어 수정
+        · 책 안쪽에 종이 색을 깔아 글씨가 보이게 (밝게/세피아/어둡게)
+        · 본문이 위아래 막대에 가리지 않도록 자리 분리
    ============================================================ */
+const BUILD = 'v3';
 
 const DEF = {
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -169,7 +187,7 @@ const DEF = {
   cid:'552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com'
 };
 const SCOPE='https://www.googleapis.com/auth/drive.readonly';
-const PAGE=60;                       // 한 번에 그릴 카드 수
+const PAGE=60;
 
 const $=s=>document.querySelector(s);
 const cfg=k=>localStorage.getItem('ebl_'+k)||DEF[k];
@@ -178,11 +196,10 @@ const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
 let BOOKS=[],HAY=[],UPDATED='',CAT='',shown=0,rows=[];
 let TOKEN='',tokenClient=null,gisReady=false,saved=new Set();
 
-/* ── 기록 ── */
 const LOG=[];
 function log(m){ const s=new Date().toTimeString().slice(0,8)+'  '+m;
-  LOG.push(s); if(LOG.length>60) LOG.shift();
-  const el=$('#log'); if(el) el.textContent=LOG.join('\n'); console.log(s); }
+  LOG.push(s); if(LOG.length>60)LOG.shift();
+  const el=$('#log'); if(el)el.textContent=LOG.join('\n'); console.log(s); }
 function stat(m,bad){ $('#stat').textContent=m; $('#stat').classList.toggle('err',!!bad); }
 function toast(m,ms=3000){ const t=$('#toast'); t.textContent=m; t.style.display='block';
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',ms); }
@@ -208,7 +225,7 @@ const DB=(()=>{ let db;
            clear:s=>tx(s,'readwrite',o=>o.clear()) };
 })();
 
-/* ── 구글 로그인 ── */
+/* ── 로그인 ── */
 function onGis(){
   gisReady=true; log('구글 로그인 모듈 준비됨');
   try{
@@ -216,57 +233,49 @@ function onGis(){
       client_id:cfg('cid'), scope:SCOPE,
       callback:r=>{
         if(r.error){ log('로그인 실패: '+r.error); markLogin(false);
-          toast('로그인 실패: '+r.error,5000); (needToken._ng||(()=>{}))(new Error(r.error)); return; }
+          (needToken._ng||(()=>{}))(new Error(r.error)); return; }
         TOKEN=r.access_token; sessionStorage.setItem('ebl_at',TOKEN);
         log('로그인 성공'); markLogin(true); (needToken._ok||(()=>{}))(TOKEN);
-      }
-    });
-    log('클라이언트 ID …'+cfg('cid').slice(-28));
+      }});
   }catch(e){ log('로그인 모듈 오류: '+e.message); }
   const c=sessionStorage.getItem('ebl_at'); if(c){TOKEN=c;markLogin(true);}
 }
 function markLogin(ok){ const b=$('#btnLogin');
   b.classList.toggle('good',ok); b.classList.toggle('warn',!ok); }
-function needToken(interactive){
+function needToken(inter){
   return new Promise((ok,ng)=>{
-    if(TOKEN) return ok(TOKEN);
-    if(!gisReady||!tokenClient) return ng(new Error('구글 로그인 모듈이 아직 준비되지 않았습니다.\n잠시 후 🔑 를 눌러주세요.'));
+    if(TOKEN)return ok(TOKEN);
+    if(!gisReady||!tokenClient)return ng(new Error('구글 로그인 모듈이 준비되지 않았습니다.\n잠시 후 🔑 를 눌러주세요.'));
     needToken._ok=ok; needToken._ng=ng;
-    log('토큰 요청' + (interactive?' (창 표시)':''));
-    tokenClient.requestAccessToken({ prompt: interactive?'consent':'' });
+    tokenClient.requestAccessToken({prompt:inter?'consent':''});
   });
 }
 
 /* ── 색인 ── */
 async function boot(){
   try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
-  let cached=null;
-  try{ cached=await DB.get('kv','index'); }catch(e){ log('저장소 읽기 실패: '+e.message); }
-  if(cached){ apply(cached); render(true); log('저장된 색인 사용 ('+BOOKS.length+'권)'); }
-  else { stat('처음이라 서재를 받아옵니다. 8MB 정도라 30초쯤 걸립니다…');
-         try{ await fetchIndex(); render(true); }
-         catch(e){ stat('목록을 못 받았습니다.\n'+e.message,true); log('색인 실패: '+e.message); } }
+  let c=null; try{ c=await DB.get('kv','index'); }catch(e){ log('저장소 오류: '+e.message); }
+  if(c){ apply(c); render(true); log('저장된 색인 사용 ('+BOOKS.length+'권)'); }
+  else { stat('처음이라 서재를 받아옵니다. 30초쯤 걸립니다…');
+    try{ await fetchIndex(); render(true); }
+    catch(e){ stat('목록을 못 받았습니다.\n'+e.message,true); log('색인 실패: '+e.message); } }
 }
 async function fetchIndex(){
   const t0=Date.now();
   const u=cfg('url')+(cfg('url').includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'));
-  log('색인 요청…');
-  const r=await fetch(u);
-  if(!r.ok) throw new Error('서버 응답 '+r.status);
-  const d=await r.json();
-  if(d.error) throw new Error(d.error);
-  await DB.put('kv','index',d);
-  apply(d);
-  log('색인 완료 '+d.count+'권 / '+((Date.now()-t0)/1000).toFixed(1)+'초');
+  const r=await fetch(u); if(!r.ok)throw new Error('서버 응답 '+r.status);
+  const d=await r.json(); if(d.error)throw new Error(d.error);
+  await DB.put('kv','index',d); apply(d);
+  log('색인 '+d.count+'권 / '+((Date.now()-t0)/1000).toFixed(1)+'초');
 }
 function apply(d){
   BOOKS=d.books||[]; UPDATED=d.updated||'';
-  BOOKS.forEach(b=>{ if(b.a) b.a=b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
+  BOOKS.forEach(b=>{ if(b.a)b.a=b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
   HAY=BOOKS.map(b=>norm([b.t,b.o,b.a,b.p,b.c].filter(Boolean).join('|')));
   buildChips();
 }
 
-/* ── 화면 ── */
+/* ── 서재 화면 ── */
 function buildChips(){
   const c={}; BOOKS.forEach(b=>{const k=b.m||b.b; if(k)c[k]=(c[k]||0)+1;});
   const top=Object.keys(c).sort((a,b)=>c[b]-c[a]).slice(0,14);
@@ -274,156 +283,158 @@ function buildChips(){
   [['','전체'],...top.map(k=>[k,k])].forEach(([v,l])=>{
     const b=document.createElement('button');
     b.className='chip'+(CAT===v?' on':''); b.textContent=l;
-    b.onclick=()=>{CAT=v;buildChips();render(true);}; el.appendChild(b);
-  });
+    b.onclick=()=>{CAT=v;buildChips();render(true);}; el.appendChild(b); });
 }
 function filter(){
   const k=norm($('#q').value), out=[];
-  for(let i=0;i<BOOKS.length;i++){
-    const b=BOOKS[i];
-    if(CAT&&!(b.m===CAT||b.b===CAT)) continue;
-    if(k&&HAY[i].indexOf(k)<0) continue;
-    out.push(b); if(out.length>=2000) break;
-  }
+  for(let i=0;i<BOOKS.length;i++){ const b=BOOKS[i];
+    if(CAT&&!(b.m===CAT||b.b===CAT))continue;
+    if(k&&HAY[i].indexOf(k)<0)continue;
+    out.push(b); if(out.length>=2000)break; }
   return out;
 }
 function render(reset){
   if(reset){ rows=filter(); shown=0; $('#grid').innerHTML=''; $('#grid').scrollTop=0; }
   stat(`${BOOKS.length.toLocaleString()}권 중 ${rows.length.toLocaleString()}권`
-     + (UPDATED?`  ·  갱신 ${UPDATED}`:'')
-     + (saved.size?`  ·  받아둔 책 ${saved.size}`:'')
-     + `  ·  ${BUILD}`);
-  const g=$('#grid'); const old=$('#more'); if(old) old.remove();
+    +(UPDATED?`  ·  갱신 ${UPDATED}`:'')
+    +(saved.size?`  ·  받아둔 책 ${saved.size}`:'')+`  ·  ${BUILD}`);
+  const g=$('#grid'); const o=$('#more'); if(o)o.remove();
   const f=document.createDocumentFragment();
   const end=Math.min(shown+PAGE,rows.length);
-  for(let i=shown;i<end;i++) f.appendChild(card(rows[i]));
+  for(let i=shown;i<end;i++)f.appendChild(card(rows[i]));
   shown=end; g.appendChild(f);
-  if(shown<rows.length){
-    const m=document.createElement('div'); m.id='more';
+  if(shown<rows.length){ const m=document.createElement('div'); m.id='more';
     m.textContent=`더 보기 (${(rows.length-shown).toLocaleString()}권 남음)`;
-    m.onclick=()=>render(false); g.appendChild(m);
-  }
+    m.onclick=()=>render(false); g.appendChild(m); }
 }
 function card(b){
   const d=document.createElement('div'); d.className='card';
   const w=document.createElement('div'); w.className='cvw';
   if(b.v){ const im=document.createElement('img'); im.loading='lazy'; im.decoding='async';
-    im.src=b.v; im.alt=''; im.onerror=()=>{im.remove();
-      w.insertAdjacentHTML('afterbegin',`<div class="ph">${esc(b.t||'')}</div>`);} ;
+    im.src=b.v; im.alt='';
+    im.onerror=()=>{im.remove(); w.insertAdjacentHTML('afterbegin',`<div class="ph">${esc(b.t||'')}</div>`);};
     w.appendChild(im); }
   else w.innerHTML=`<div class="ph">${esc(b.t||'')}</div>`;
-  if(saved.has(b.i)) w.insertAdjacentHTML('beforeend','<div class="tag dl">저장됨</div>');
+  if(saved.has(b.i))w.insertAdjacentHTML('beforeend','<div class="tag dl">저장됨</div>');
   const x=(b.x||'').toUpperCase();
-  if(x&&x!=='EPUB') w.insertAdjacentHTML('beforeend',`<div class="tag fm">${x}</div>`);
+  if(x&&x!=='EPUB')w.insertAdjacentHTML('beforeend',`<div class="tag fm">${x}</div>`);
   const t=document.createElement('div'); t.className='ti'; t.textContent=b.t||'';
   const a=document.createElement('div'); a.className='au'; a.textContent=b.a||'';
-  d.append(w,t,a);
-  d.addEventListener('click',()=>openBook(b));
-  return d;
+  d.append(w,t,a); d.addEventListener('click',()=>openBook(b)); return d;
 }
 
-/* ── 책 열기 ── */
+/* ── 열기 ── */
 let abort=null;
-function busy(on,title,sub,p){
-  $('#busy').style.display=on?'flex':'none';
-  if(title!=null)$('#busyT').textContent=title;
-  if(sub!=null)$('#busyS').textContent=sub;
-  $('#busyB').style.width=((p||0)*100)+'%';
-}
+function busy(on,t,s,p){ $('#busy').style.display=on?'flex':'none';
+  if(t!=null)$('#busyT').textContent=t; if(s!=null)$('#busyS').textContent=s;
+  $('#busyB').style.width=((p||0)*100)+'%'; }
 $('#busyX').onclick=()=>{ if(abort)abort.abort(); busy(false); };
 
 async function openBook(b){
   const ext=(b.x||'').toLowerCase();
   log('열기: '+(b.t||'')+' ['+ext+']');
-  if(ext!=='epub'){ if(b.u){ window.open(b.u,'_blank'); }
-    else toast('링크가 없습니다'); return; }
-  try{
-    busy(true,'책을 준비하는 중…','',0);
+  if(ext!=='epub'){ if(b.u)window.open(b.u,'_blank'); else toast('링크가 없습니다'); return; }
+  try{ busy(true,'책을 준비하는 중…','',0);
     const buf=await getBook(b);
     busy(true,'화면을 구성하는 중…','',1);
-    await showReader(b,buf);
-    busy(false);
-  }catch(e){
-    busy(false);
-    log('열기 실패: '+(e.message||e));
-    toast('열지 못했습니다\n'+(e.message||e),6000);
-  }
+    await showReader(b,buf); busy(false);
+  }catch(e){ busy(false); log('열기 실패: '+(e.message||e));
+    toast('열지 못했습니다\n'+(e.message||e),6000); }
 }
 async function getBook(b){
   const hit=await DB.get('books',b.i);
-  if(hit){ log('저장본 사용 ('+Math.round(hit.byteLength/1048576)+'MB)'); return hit; }
-
+  if(hit){ log('저장본 사용'); return hit; }
   busy(true,'구글 로그인 확인 중…','',0);
-  const at=await needToken(false).catch(async e=>{
-    log('무음 로그인 실패 → 창 표시');
-    return await needToken(true);
-  });
-
-  busy(true,'책을 받는 중…', b.z?b.z+'MB':'',0);
+  const at=await needToken(false).catch(()=>needToken(true));
+  busy(true,'책을 받는 중…',b.z?b.z+'MB':'',0);
   abort=new AbortController();
   const url=`https://www.googleapis.com/drive/v3/files/${b.i}?alt=media&supportsAllDrives=true`;
   const res=await fetch(url,{headers:{Authorization:'Bearer '+at},signal:abort.signal});
-  if(res.status===401||res.status===403){ TOKEN=''; sessionStorage.removeItem('ebl_at'); markLogin(false);
-    throw new Error('드라이브 접근이 거부됐습니다 ('+res.status+')\n🔑 를 눌러 다시 로그인해 주세요.'); }
-  if(!res.ok) throw new Error('드라이브 응답 '+res.status);
-
+  if(res.status===401||res.status===403){ TOKEN=''; sessionStorage.removeItem('ebl_at');
+    markLogin(false); throw new Error('드라이브 접근 거부 ('+res.status+')\n🔑 로 다시 로그인해 주세요.'); }
+  if(!res.ok)throw new Error('드라이브 응답 '+res.status);
   const total=Number(res.headers.get('content-length')||0)||(b.z?b.z*1048576:0);
   let buf;
   if(res.body&&res.body.getReader){
-    const rd=res.body.getReader(); const parts=[]; let got=0;
+    const rd=res.body.getReader(),parts=[]; let got=0;
     for(;;){ const {done,value}=await rd.read(); if(done)break;
       parts.push(value); got+=value.length;
       busy(true,null,(got/1048576).toFixed(1)+'MB'+(total?' / '+(total/1048576).toFixed(1)+'MB':''),
-           total?got/total:0); }
+        total?got/total:0); }
     buf=await new Blob(parts).arrayBuffer();
   } else buf=await res.arrayBuffer();
-
   log('받음 '+Math.round(buf.byteLength/1048576)+'MB');
-  try{ await DB.put('books',b.i,buf); saved.add(b.i); }
-  catch(e){ log('저장 실패(용량?): '+e.message); }
+  try{ await DB.put('books',b.i,buf); saved.add(b.i); }catch(e){ log('저장 실패: '+e.message); }
   return buf;
 }
 
 /* ── 리더 ── */
-let book=null,rend=null,fsize=Number(localStorage.getItem('ebl_fs')||100);
+let book=null,rend=null,curBook=null;
+let fsize=Number(localStorage.getItem('ebl_fs')||110);
+const THEMES=['light','sepia','night'];
+let theme=localStorage.getItem('ebl_th')||'light';
+
+function paperCss(){
+  const c={ light:{bg:'#ffffff',fg:'#16181c'},
+            sepia:{bg:'#f6efe2',fg:'#3b3228'},
+            night:{bg:'#15181c',fg:'#c7ccd4'} }[theme];
+  return {
+    'html, body':{ background:c.bg+' !important', color:c.fg+' !important' },
+    'p, div, span, li, td, th, dd, dt, blockquote':{ color:c.fg+' !important' },
+    'body':{ 'padding':'0 6px !important', '-webkit-text-size-adjust':'100%' },
+    'img, svg':{ 'max-width':'100% !important', height:'auto !important' },
+    'a':{ color:(theme==='night'?'#7fb3ff':'#1a56b8')+' !important' }
+  };
+}
+function applyTheme(){
+  document.body.classList.remove('sepia','night');
+  if(theme!=='light') document.body.classList.add(theme);
+  if(rend){ rend.themes.register('paper', paperCss()); rend.themes.select('paper');
+            rend.themes.fontSize(fsize+'%'); }
+}
 async function showReader(b,buf){
+  curBook=b;
   $('#library').style.display='none';
   $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||'';
-  [...$('#view').children].forEach(n=>{ if(n.id!=='tapL'&&n.id!=='tapR') n.remove(); });
+  $('#page').innerHTML='';
 
   book=ePub(buf);
-  rend=book.renderTo('view',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
+  rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
+  rend.themes.register('paper', paperCss());
+  rend.themes.select('paper');
   rend.themes.fontSize(fsize+'%');
+  applyTheme();
+
   const cfi=localStorage.getItem('ebl_pos_'+b.i);
   try{ await rend.display(cfi||undefined); }
-  catch(e){ log('저장 위치 복원 실패 → 처음부터'); await rend.display(); }
+  catch(e){ log('위치 복원 실패 → 처음부터'); await rend.display(); }
 
   rend.on('relocated',loc=>{
-    if(loc?.start?.cfi) localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
+    if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
     const p=loc?.start?.percentage;
     $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')+(b.t||'');
   });
   rend.on('rendered',(s,i)=>{ try{ i.document.addEventListener('click',onTap); }catch(e){} });
-  log('리더 표시 완료');
+  log('리더 표시');
 }
 function onTap(e){
   const w=window.innerWidth,x=e.clientX;
-  if(x<w*0.32) rend.prev();
-  else if(x>w*0.68) rend.next();
+  if(x<w*0.30) rend.prev();
+  else if(x>w*0.70) rend.next();
   else { $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
 }
 function closeReader(){
   $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
-  book=null; rend=null; render(true);
+  book=null; rend=null; curBook=null; render(true);
 }
 
 /* ── 이벤트 ── */
 $('#q').addEventListener('input',()=>{clearTimeout($('#q')._t);
   $('#q')._t=setTimeout(()=>render(true),130);});
-$('#grid').addEventListener('scroll',()=>{ const g=$('#grid');
-  if(shown<rows.length && g.scrollTop+g.clientHeight>g.scrollHeight-400) render(false); });
+$('#grid').addEventListener('scroll',()=>{const g=$('#grid');
+  if(shown<rows.length&&g.scrollTop+g.clientHeight>g.scrollHeight-400)render(false);});
 $('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인됐습니다'); }
   catch(e){ toast(e.message,5000); } };
 $('#btnSync').onclick=async()=>{ try{ stat('목록을 새로 받는 중…'); await fetchIndex();
@@ -431,13 +442,17 @@ $('#btnSync').onclick=async()=>{ try{ stat('목록을 새로 받는 중…'); aw
 $('#btnClose').onclick=closeReader;
 $('#tapL').onclick=()=>rend&&rend.prev();
 $('#tapR').onclick=()=>rend&&rend.next();
-$('#btnFontUp').onclick=()=>{fsize=Math.min(200,fsize+10);
+$('#btnTheme').onclick=()=>{ theme=THEMES[(THEMES.indexOf(theme)+1)%3];
+  localStorage.setItem('ebl_th',theme); applyTheme();
+  toast({light:'밝게',sepia:'세피아',night:'어둡게'}[theme],1200); };
+$('#btnFontUp').onclick=()=>{fsize=Math.min(220,fsize+10);
   localStorage.setItem('ebl_fs',fsize); rend&&rend.themes.fontSize(fsize+'%');};
-$('#btnFontDn').onclick=()=>{fsize=Math.max(60,fsize-10);
+$('#btnFontDn').onclick=()=>{fsize=Math.max(70,fsize-10);
   localStorage.setItem('ebl_fs',fsize); rend&&rend.themes.fontSize(fsize+'%');};
 document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')return;
   if(e.key==='ArrowLeft')rend&&rend.prev(); if(e.key==='ArrowRight')rend&&rend.next();
   if(e.key==='Escape')closeReader(); });
+window.addEventListener('resize',()=>{ if(rend) try{ rend.resize(); }catch(e){} });
 
 $('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
   $('#sCid').value=cfg('cid'); $('#log').textContent=LOG.join('\n');
@@ -448,30 +463,21 @@ $('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim());
 $('#btnClearBooks').onclick=async()=>{ await DB.clear('books'); saved.clear();
   toast('받아둔 책을 비웠습니다'); render(true); };
 $('#btnClearAll').onclick=async()=>{ await DB.clear('books'); await DB.clear('kv');
-  sessionStorage.clear(); toast('초기화했습니다. 새로고침합니다'); setTimeout(()=>location.reload(),800); };
+  sessionStorage.clear(); toast('초기화했습니다'); setTimeout(()=>location.reload(),800); };
 
 window.addEventListener('error',e=>log('오류: '+e.message));
 window.addEventListener('unhandledrejection',e=>log('오류(비동기): '+(e.reason?.message||e.reason)));
 
-/* 화면 아래 버전 표시 — 새 파일이 반영됐는지 눈으로 확인하는 용도 */
-const BUILD = 'v2  2026-08-12';
-log('빌드 ' + BUILD);
-
+log('빌드 '+BUILD);
+applyTheme();
 markLogin(false);
 boot();
-
-/* 새 버전이 올라오면 곧바로 갈아끼웁니다 (캐시에 갇히지 않도록) */
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    reg.update();
-    reg.addEventListener('updatefound',()=>{
-      const w=reg.installing;
-      w && w.addEventListener('statechange',()=>{
-        if(w.state==='installed' && navigator.serviceWorker.controller){
-          toast('새 버전이 있습니다. 다시 열어주세요.',6000);
-        }
-      });
-    });
+  navigator.serviceWorker.register('sw.js').then(r=>{ r.update();
+    r.addEventListener('updatefound',()=>{ const w=r.installing;
+      w&&w.addEventListener('statechange',()=>{
+        if(w.state==='installed'&&navigator.serviceWorker.controller)
+          toast('새 버전이 있습니다. 앱을 다시 열어주세요.',6000); }); });
   }).catch(()=>{});
 }
 </script>
