@@ -59,8 +59,12 @@
   #grid.l .cvw{width:52px;flex:0 0 52px}
   #grid.l .meta{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
   #grid.l .ti{-webkit-line-clamp:2;margin-top:0;font-size:14px}
-  /* 길게 누를 때 글자가 선택되거나 iOS 팝업이 뜨지 않도록 */
+  /* 길게 누를 때 글자가 선택되거나 iOS 팝업이 뜨지 않도록.
+     사파리의 '공유·사진 앱에 저장' 메뉴는 표지 그림에서 뜹니다.
+     그림이 손가락을 아예 받지 않게 해야 없어집니다. */
   .card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .card img,.cvw img{-webkit-touch-callout:none!important;-webkit-user-select:none;
+    user-select:none;pointer-events:none}
   .card.held{opacity:.55}
   .cvw{position:relative;width:100%;aspect-ratio:2/3;border-radius:6px;overflow:hidden;
     background:var(--panel);box-shadow:0 2px 10px #0006;
@@ -364,6 +368,9 @@
     <p class="note">진도·다 읽음 표시가 사라집니다. 파일은 그대로 둡니다.</p>
 
     <div class="sect">그 밖에</div>
+    <div class="btns"><button id="btnFresh">앱 새로 고치기</button></div>
+    <p class="note">고친 내용이 안 보일 때 누르세요. 저장해 둔 앱 파일을 버리고
+      새로 받아옵니다. 책·읽은 기록은 그대로입니다.</p>
     <div class="btns"><button id="btnClearAll">전부 초기화</button></div>
     <div id="log"></div>
   </div>
@@ -391,7 +398,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v12';
+const BUILD='v12a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1193,6 +1200,14 @@ $('#btnClearRead').onclick=()=>{
         .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   TAB=''; localStorage.setItem('ebl_tab','');
   toast('읽은 기록을 지웠습니다'); paintTabs(); render(true);
+};
+/* 서비스 워커가 옛 화면을 붙들고 있을 때 빠져나오는 길 */
+$('#btnFresh').onclick=async()=>{
+  toast('앱 파일을 새로 받는 중…');
+  try{ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }catch(e){}
+  try{ const rs=await navigator.serviceWorker.getRegistrations();
+       await Promise.all(rs.map(r=>r.unregister())); }catch(e){}
+  setTimeout(()=>location.reload(true),600);
 };
 $('#btnClearAll').onclick=async()=>{
   if(!confirm('파일·읽은 기록·목록·보기 설정을 모두 지웁니다.\n연결 설정(주소·토큰)은 남겨 둡니다.\n계속할까요?')) return;
