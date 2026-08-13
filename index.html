@@ -234,6 +234,11 @@
   #pdf canvas{display:block;width:100%;height:auto}
   #pdf .pn{position:absolute;right:6px;bottom:4px;font-size:10px;color:#8b95a3;
     background:#0006;padding:1px 6px;border-radius:4px}
+  #pdf .perr{padding:24px 16px;text-align:center;color:var(--bad);font-size:13px;line-height:1.7}
+  #pdf .perr small{color:var(--dim)}
+  /* 한 쪽씩 보기 — 화면 한가운데에 한 장만 */
+  #pdf.one{display:flex;align-items:center;justify-content:center}
+  #pdf.one .pg{margin:0;flex:0 0 auto}
   body.night #pdf{background:#0b0d10}
   body.night #pdf canvas{filter:invert(1) hue-rotate(180deg) brightness(.92)}
   body.sepia #pdf{background:#5c5344}
@@ -323,6 +328,10 @@
       <button data-v="light">밝게</button><button data-v="sepia">세피아</button><button data-v="night">어둡게</button>
     </div></div>
   <!-- PDF 는 종이가 고정이라 글자 설정이 듣지 않습니다. 배율만 둡니다. -->
+  <div class="grp k-pdf"><div class="lb">보는 방법</div>
+    <div class="seg" id="segPnav">
+      <button data-v="scroll">위아래로 굴리기</button><button data-v="page">한 쪽씩 넘기기</button>
+    </div></div>
   <div class="grp k-pdf"><div class="lb"><span>배율</span><span id="vZoom"></span></div>
     <input type="range" id="rgZoom" min="60" max="300" step="10"></div>
   <div class="grp k-pdf"><div class="lb">쪽 옮기기</div>
@@ -455,7 +464,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v13';
+const BUILD='v13a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -472,7 +481,7 @@ const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
 /* 사용자 설정 (기기에 저장) */
 const P = Object.assign({
   theme:'light', fs:110, lh:170, pd:6, pv:16, font:'', nav:'both', tap:30,
-  mode:'g', size:104, sort:'t', cat:'tree', zoom:100,
+  mode:'g', size:104, sort:'t', cat:'tree', zoom:100, pnav:'scroll',
   fmt:{ epub:true, pdf:true, etc:false },    // 보여줄 형식 (그 외는 기본 감춤)
   pins:[]                                    // 홈에 고정한 분류 (내 서가)
 }, JSON.parse(localStorage.getItem('ebl_pref')||'{}'));
@@ -892,6 +901,7 @@ function applyRead(){
       ? '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
       : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : ''; }
   $('#vZoom').textContent=P.zoom+'%'; $('#rgZoom').value=P.zoom;
+  segSet('#segPnav',P.pnav);
   if(rend){ rend.themes.register('paper',paperCss()); rend.themes.select('paper');
     rend.themes.fontSize(P.fs+'%');
     // 틀 크기가 바뀌었으니 다시 계산 (안 하면 글이 잘립니다)
@@ -943,45 +953,90 @@ function loadPdfJs(){
     document.head.appendChild(s);
   });
 }
+/* 왜 열리지 않는지 사람 말로 알려줍니다 */
+function pdfWhy(e){
+  const n=(e&&e.name)||'', m=(e&&e.message)||String(e);
+  if(n==='PasswordException')  return '암호가 걸린 PDF 입니다.';
+  if(n==='InvalidPDFException')return '파일이 깨졌거나 PDF 가 아닙니다.\n드라이브에서 열어 확인해 보세요.';
+  if(n==='MissingPDFException')return '파일을 받지 못했습니다.';
+  if(/worker/i.test(m))        return 'PDF 모듈을 받지 못했습니다.\n인터넷 연결을 확인해 주세요.';
+  if(/memory|allocat/i.test(m))return '이 PDF 가 기기에 비해 너무 큽니다.\n배율을 낮춰 보세요.';
+  return m;
+}
+async function openPdfDoc(buf){
+  // getDocument 는 넘긴 버퍼를 가져가 버립니다. 원본은 그대로 둬야
+  // 다시 열 때 문제가 없으므로 복사해서 넘깁니다.
+  const data=new Uint8Array(buf.slice(0));
+  try{ return await pdfjsLib.getDocument({data}).promise; }
+  catch(e){
+    if(e&&e.name==='PasswordException'){
+      const pw=prompt('암호가 걸린 PDF 입니다. 암호를 넣어 주세요.');
+      if(pw==null) throw new Error('암호를 넣지 않았습니다');
+      return await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0)),password:pw}).promise;
+    }
+    throw e;
+  }
+}
 async function showPdf(b,buf){
   curB=b; noMark=false; KIND='pdf';
   openShell(b);
   busy(true,'PDF 를 여는 중…','',1);
-  await loadPdfJs();
-  // getDocument 는 넘긴 버퍼를 가져가 버립니다. 원본은 그대로 둬야
-  // 다시 열 때 문제가 없으므로 복사해서 넘깁니다.
-  pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
-  const host=$('#pdf'); host.innerHTML='';
-  const p1=await pdfDoc.getPage(1), v1=p1.getViewport({scale:1});
-  host._ratio=v1.height/v1.width;
-  for(let i=1;i<=pdfDoc.numPages;i++){
-    const d=document.createElement('div'); d.className='pg'; d.dataset.n=i;
-    d.innerHTML=`<div class="pn">${i}</div>`;
-    host.appendChild(d);
-  }
-  layoutPdf();
-  // 화면 가까이 온 쪽만 그리고, 멀어진 쪽은 그림을 버립니다
-  pdfIO=new IntersectionObserver(es=>{
-    es.forEach(e=>{ const d=e.target;
-      if(e.isIntersecting) drawPdf(d);
-      else if(d._cv){ d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false; }
-    });
-  },{root:host,rootMargin:'800px 0px'});
-  [...host.children].forEach(d=>pdfIO.observe(d));
-  host.onscroll=onPdfScroll;
-  // 읽던 쪽으로
+  try{
+    await loadPdfJs();
+    pdfDoc=await openPdfDoc(buf);
+    const p1=await pdfDoc.getPage(1), v1=p1.getViewport({scale:1});
+    $('#pdf')._ratio=v1.height/v1.width;
+  }catch(e){ throw new Error(pdfWhy(e)); }
   const p=pctOf(b);
-  if(p>0){ const n=Math.max(1,Math.min(pdfDoc.numPages,Math.round(p*pdfDoc.numPages)));
-    setTimeout(()=>gotoPg(n),60); }
-  else onPdfScroll();
+  pdfPg = p>0 ? Math.max(1,Math.min(pdfDoc.numPages,Math.round(p*pdfDoc.numPages))) : 1;
+  buildPdf();
   markRead(b.i,null);
 }
-/* 100% 가 '화면 폭에 맞춤'. 그보다 키우면 옆으로 밀어서 봅니다.
-   여기서 화면 폭으로 한 번 더 자르면 확대가 아예 듣지 않습니다. */
+/* 두 가지 보기를 다시 차립니다 (설정이 바뀔 때도 이걸 부릅니다) */
+function buildPdf(){
+  const host=$('#pdf'); if(!pdfDoc)return;
+  try{ pdfIO&&pdfIO.disconnect(); }catch(e){} pdfIO=null;
+  pdfBusy.clear(); host.innerHTML='';
+  const one = P.pnav==='page';
+  host.classList.toggle('one',one);
+  if(one){
+    const d=document.createElement('div'); d.className='pg'; d.dataset.n=pdfPg;
+    host.appendChild(d); host.onscroll=null;
+    drawPdf(d); showPdfFoot();
+  }else{
+    for(let i=1;i<=pdfDoc.numPages;i++){
+      const d=document.createElement('div'); d.className='pg'; d.dataset.n=i;
+      d.innerHTML=`<div class="pn">${i}</div>`; host.appendChild(d);
+    }
+    layoutPdf();
+    // 화면 가까이 온 쪽만 그리고, 멀어진 쪽은 그림을 버립니다
+    pdfIO=new IntersectionObserver(es=>{
+      es.forEach(e=>{ const d=e.target;
+        if(e.isIntersecting) drawPdf(d); else freePdf(d); });
+    },{root:host,rootMargin:'600px 0px'});
+    [...host.children].forEach(d=>pdfIO.observe(d));
+    host.onscroll=onPdfScroll;
+    setTimeout(()=>{ gotoPg(pdfPg); onPdfScroll(); },40);
+  }
+  $('#tapL').style.display=$('#tapR').style.display=
+    (one&&P.nav!=='swipe')?'block':'none';
+}
+function freePdf(d){
+  if(!d._cv)return;
+  const cv=d.querySelector('canvas');
+  if(cv){ cv.width=cv.height=0; }      // 사파리는 이렇게 해줘야 메모리를 돌려줍니다
+  d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false;
+  const w=pdfWidth(), r=$('#pdf')._ratio||1.414;
+  d.style.width=w+'px'; d.style.height=Math.round(w*r)+'px';
+}
+/* 100% 가 '화면에 맞춤'. 그보다 키우면 밀어서 봅니다. */
 function pdfWidth(){
-  const host=$('#pdf');
-  const base=Math.max(160, host.clientWidth-16);
-  return Math.round(base*(P.zoom/100));
+  const host=$('#pdf'), z=P.zoom/100;
+  const w=Math.max(160,host.clientWidth-16);
+  if(P.pnav!=='page') return Math.round(w*z);
+  // 한 쪽씩 볼 때는 세로도 화면 안에 들어와야 합니다
+  const h=Math.max(160,host.clientHeight-16), r=host._ratio||1.414;
+  return Math.round(Math.min(w, h/r)*z);
 }
 function layoutPdf(){
   const host=$('#pdf'), w=pdfWidth(), r=host._ratio||1.414;
@@ -998,7 +1053,6 @@ async function drawPdf(d){
     const v0=pg.getViewport({scale:1});
     const w=pdfWidth();
     // 확대해서 볼 때는 이미 커진 상태라 화면 배율까지 곱할 필요가 없습니다.
-    // 배율이 올라갈수록 낮춰 그림 크기를 비슷하게 유지합니다.
     const dpr=Math.min(window.devicePixelRatio||1, Math.max(1, 2/(P.zoom/100)));
     let scale=(w/v0.width)*dpr, vp=pg.getViewport({scale});
     // 그래도 넘치면 여기서 자릅니다. 아이패드가 메모리를 못 견딥니다.
@@ -1007,26 +1061,73 @@ async function drawPdf(d){
     const cv=document.createElement('canvas');
     cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
     await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
-    d.style.height='auto'; d.innerHTML=`<div class="pn">${n}</div>`;
+    d.style.width=w+'px'; d.style.height='auto';
+    d.innerHTML=`<div class="pn">${n}</div>`;
     d.insertBefore(cv,d.firstChild); d._cv=true;
-  }catch(e){ log('쪽 그리기 실패 '+d.dataset.n+': '+(e.message||e)); }
+    trimPdf(d);
+  }catch(e){
+    log('쪽 그리기 실패 '+d.dataset.n+': '+(e.message||e));
+    d.innerHTML=`<div class="pn">${d.dataset.n}</div>`
+      +`<div class="perr">이 쪽을 그리지 못했습니다<br><small>${esc(pdfWhy(e))}</small></div>`;
+  }
   finally{ pdfBusy.delete(d); }
+}
+/* 그려둔 쪽이 너무 많이 쌓이지 않게 — 멀리 있는 것부터 버립니다 */
+const KEEP=5;
+function trimPdf(cur){
+  const host=$('#pdf');
+  const live=[...host.children].filter(d=>d._cv);
+  if(live.length<=KEEP)return;
+  const c=Number(cur.dataset.n);
+  live.sort((a,b)=>Math.abs(Number(b.dataset.n)-c)-Math.abs(Number(a.dataset.n)-c));
+  live.slice(0,live.length-KEEP).forEach(freePdf);
 }
 function gotoPg(n){
   const host=$('#pdf'), d=host.querySelector(`.pg[data-n="${n}"]`);
   if(d) host.scrollTop=d.offsetTop-host.offsetTop-6;
 }
+/* 한 쪽씩 보기에서 쪽 옮기기 */
+function goPdfPage(n){
+  if(!pdfDoc)return;
+  n=Math.max(1,Math.min(pdfDoc.numPages,n));
+  if(n===pdfPg && P.pnav==='page' && $('#pdf').firstChild && $('#pdf').firstChild._cv)return;
+  pdfPg=n;
+  if(P.pnav==='page'){
+    redrawPdf();
+    if(!noMark) markRead(curB.i, n/pdfDoc.numPages, n>=pdfDoc.numPages);
+    showPdfFoot();
+  } else gotoPg(n);
+}
+/* 배율·화면 크기가 바뀌면 지금 쪽을 다시 그립니다 */
+function redrawPdf(){
+  if(KIND!=='pdf'||!pdfDoc)return;
+  const host=$('#pdf');
+  if(P.pnav==='page'){
+    host.innerHTML=''; host.scrollTop=0; host.scrollLeft=0;
+    const d=document.createElement('div'); d.className='pg'; d.dataset.n=pdfPg;
+    const w=pdfWidth(), r=host._ratio||1.414;
+    d.style.width=w+'px'; d.style.height=Math.round(w*r)+'px';
+    host.appendChild(d); drawPdf(d);
+  }else{
+    [...host.children].forEach(freePdf);
+    layoutPdf(); gotoPg(pdfPg);
+  }
+}
+function showPdfFoot(){
+  if(!pdfDoc||!curB)return;
+  $('#rfoot').textContent=`${pdfPg} / ${pdfDoc.numPages}`
+    +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
+    +'  ·  '+(curB.t||'');
+}
 function onPdfScroll(){
-  const host=$('#pdf'); if(!pdfDoc)return;
+  const host=$('#pdf'); if(!pdfDoc||P.pnav==='page')return;
   const y=host.scrollTop+host.clientHeight*0.35;
   let n=1; const ch=host.children;
   for(let i=0;i<ch.length;i++){ if(ch[i].offsetTop-host.offsetTop<=y)n=i+1; else break; }
   pdfPg=n;
-  const total=pdfDoc.numPages, atEnd=host.scrollTop+host.clientHeight>=host.scrollHeight-8;
-  if(!noMark) markRead(curB.i, n/total, atEnd);
-  $('#rfoot').textContent=`${n} / ${total}`
-    +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
-    +'  ·  '+(curB.t||'');
+  const atEnd=host.scrollTop+host.clientHeight>=host.scrollHeight-8;
+  if(!noMark) markRead(curB.i, n/pdfDoc.numPages, atEnd);
+  showPdfFoot();
 }
 
 /* ══════════ TXT ══════════ */
@@ -1082,13 +1183,16 @@ function openShell(b){
 
 const readerOn = () => $('#reader').style.display==='flex';
 function canPage(e){
-  // EPUB 만 쪽을 넘깁니다. PDF·TXT 는 손가락으로 굴려 봅니다.
-  if(KIND!=='epub' || !rend || !readerOn()) return false;
+  // EPUB, 그리고 '한 쪽씩 보는' PDF 만 넘깁니다.
+  if(!readerOn()) return false;
+  if(KIND==='epub'){ if(!rend)return false; }
+  else if(!(KIND==='pdf'&&P.pnav==='page')) return false;
   const t = e.target;
   if(t && t.closest && t.closest('.pan, #rbar, #rfoot, .sheet, #busy')) return false;
   return true;
 }
-/* PDF·TXT 에서는 가운데를 눌러 막대를 여닫습니다 */
+/* PDF·TXT 에서는 가운데를 눌러 막대를 여닫습니다
+   (좌우 끝은 tapL·tapR 이 먼저 받으므로 여기까지 오지 않습니다) */
 ['#pdf','#txt'].forEach(sel=>$(sel).addEventListener('click',e=>{
   if(!readerOn()||KIND==='epub')return;
   if(e.target&&e.target.closest&&e.target.closest('.pan, #rbar, #rfoot, .sheet, #busy'))return;
@@ -1111,7 +1215,7 @@ function bindSwipe(doc){
     if(P.nav==='tap'||!canPage(e))return;
     const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
     if(Date.now()-st<600&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.6){
-      dx<0?rend.next():rend.prev(); }
+      dx<0?pageFwd():pageBack(); }
   },{passive:true});
 }
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
@@ -1187,6 +1291,7 @@ $('#btnView').onclick=()=>{ segSet('#segMode',P.mode); segSet('#segSize',P.size)
 seg('#segTheme','theme',applyRead);
 seg('#segFont','font',applyRead);
 seg('#segNav','nav',applyRead);
+seg('#segPnav','pnav',()=>{ if(KIND==='pdf'&&pdfDoc)buildPdf(); });
 seg('#segMode','mode',()=>render(true));
 seg('#segSize','size',()=>render(true));
 seg('#segSort','sort',()=>render(true));
@@ -1201,12 +1306,7 @@ $('#rgZoom').addEventListener('input',()=>{
   P.zoom=Number($('#rgZoom').value); savePref(); $('#vZoom').textContent=P.zoom+'%';
   if(KIND!=='pdf')return;
   clearTimeout($('#rgZoom')._t);
-  $('#rgZoom')._t=setTimeout(()=>{
-    const n=pdfPg, host=$('#pdf');
-    // 배율이 바뀌면 그려둔 것을 모두 버리고 다시 잽니다
-    [...host.children].forEach(d=>{ d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false; });
-    layoutPdf(); gotoPg(n);
-  },160);
+  $('#rgZoom')._t=setTimeout(redrawPdf,180);
 });
 $('#pgPrev').onclick=()=>{ if(KIND==='pdf')gotoPg(Math.max(1,pdfPg-1)); };
 $('#pgNext').onclick=()=>{ if(KIND==='pdf'&&pdfDoc)gotoPg(Math.min(pdfDoc.numPages,pdfPg+1)); };
@@ -1382,8 +1482,7 @@ function openPin(){ $('#pinQ').value=''; paintPin(); $('#pinSheet').classList.ad
 $('#hPinEdit').onclick=openPin;
 /* 화면을 돌리거나 창을 늘리면 PDF 를 다시 잽니다 */
 addEventListener('resize',()=>{ clearTimeout(window._rz);
-  window._rz=setTimeout(()=>{ if(KIND==='pdf'&&pdfDoc&&readerOn()){
-    const n=pdfPg; layoutPdf(); gotoPg(n); } },260); });
+  window._rz=setTimeout(()=>{ if(readerOn())redrawPdf(); },260); });
 $('#pinClose').onclick=()=>{ $('#pinSheet').classList.remove('on'); buildHome(); };
 $('#pinQ').addEventListener('input',()=>{clearTimeout($('#pinQ')._t);
   $('#pinQ')._t=setTimeout(paintPin,140);});
@@ -1444,8 +1543,15 @@ $('#grid').addEventListener('scroll',()=>{const g=$('#grid');
 $('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인됐습니다'); }
   catch(e){ toast(e.message,5000); } };
 $('#btnClose').onclick=closeReader;
-$('#tapL').onclick=()=>{ if(rend&&readerOn()) rend.prev(); };
-$('#tapR').onclick=()=>{ if(rend&&readerOn()) rend.next(); };
+/* 좌우 넘기기 — EPUB 이든 '한 쪽씩 보는' PDF 든 같은 손놀림 */
+function pageBack(){ if(!readerOn())return;
+  if(KIND==='epub'&&rend)rend.prev();
+  else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg-1); }
+function pageFwd(){ if(!readerOn())return;
+  if(KIND==='epub'&&rend)rend.next();
+  else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg+1); }
+$('#tapL').onclick=pageBack;
+$('#tapR').onclick=pageFwd;
 document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')return;
   if(e.key==='ArrowLeft')rend&&rend.prev(); if(e.key==='ArrowRight')rend&&rend.next();
   if(e.key==='Escape')closeReader(); });
