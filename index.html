@@ -276,6 +276,11 @@
      그래서 글은 '고를 수 있게' 두고, 손가락 동작만 우리가 가로챕니다. */
   body.drawing #pdf,body.drawing #txt{touch-action:pan-y;-webkit-touch-callout:none}
   body.drawing #txt .body,body.drawing #pdf .textLayer{-webkit-user-select:text;user-select:text}
+  /* 책 위에 덧그리는 형광펜 층 */
+  #epubov{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+  #epubov i{position:absolute;border-radius:2px;opacity:.36;mix-blend-mode:multiply;
+    pointer-events:auto;cursor:pointer}
+  body.night #epubov i{mix-blend-mode:screen;opacity:.3}
   #selov{position:fixed;inset:0;z-index:55;pointer-events:none;display:none}
   #selov.on{display:block}
   #selov i{position:absolute;background:#6ea8fe55;border:1px solid #6ea8fe88;border-radius:2px}
@@ -373,7 +378,7 @@
 
 <div id="reader">
   <div id="view">
-    <div id="page"></div><div id="pdf"></div><div id="txt"></div>
+    <div id="page"></div><div id="epubov"></div><div id="pdf"></div><div id="txt"></div>
     <div id="tapL"></div><div id="tapR"></div>
   </div>
   <div id="rbar">
@@ -573,7 +578,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14c';
+const BUILD='v14e';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -991,6 +996,7 @@ function paperCss(){
   if(fam) txt['font-family']=fam+' !important';
   return { 'html, body':{background:c.bg+' !important'}, body,
     'p, div, span, li, td, th, dd, dt, blockquote':txt,
+    '::selection':{background:'rgba(110,168,254,0.32)'},
     'img, svg':{'max-width':'100% !important',height:'auto !important'},
     'a':{color:c.a+' !important'} };
 }
@@ -1017,7 +1023,8 @@ function applyRead(){
     // 슬라이더를 미는 동안 수십 번 불리므로 잠깐 모아서 한 번만
     clearTimeout(applyRead._r);
     applyRead._r=setTimeout(()=>{ requestAnimationFrame(()=>{
-      try{ rend.resize(); }catch(e){} }); }, 120);
+      try{ rend.resize(); }catch(e){}
+      setTimeout(paintEpubHl,160); }); }, 120);
   }
   $('#vFs').textContent=P.fs+'%'; $('#vLh').textContent=(P.lh/100).toFixed(2);
   $('#vPd').textContent=P.pd+'%'; $('#vPv').textContent=P.pv+'px'; $('#vTap').textContent=P.tap+'%';
@@ -1047,8 +1054,11 @@ async function showReader(b,buf){
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} });
   bindEpubSelect();
-  restoreEpubHl(); paintHlBadge();
-  rend.on('rendered',()=>{ setTimeout(restoreEpubHl,60); });
+  paintHlBadge();
+  // 쪽을 그릴 때·넘길 때·글자 크기를 바꿀 때 모두 다시 칠합니다
+  rend.on('rendered', ()=>setTimeout(paintEpubHl,60));
+  rend.on('relocated',()=>setTimeout(paintEpubHl,60));
+  setTimeout(paintEpubHl,120);
 }
 
 /* ══════════ 형광펜 · 메모 ══════════
@@ -1077,23 +1087,27 @@ function hlDel(id){
   const o=a[k]; a.splice(k,1);
   if(!a.length)delete HL[curB.i];
   saveHL();
-  if(o.k==='epub'&&rend&&o.c){ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} }
+  if(o.k==='epub') paintEpubHl();
   else if(o.k==='pdf') paintPdfHl();
   else paintTxtHl();
   paintHlBadge();
 }
 function repaintHl(o){
-  if(o.k==='epub')drawEpubHl(o); else if(o.k==='pdf')paintPdfHl(); else paintTxtHl();
+  if(o.k==='epub')paintEpubHl(); else if(o.k==='pdf')paintPdfHl(); else paintTxtHl();
 }
 function hlGet(id){ return (curB&&HL[curB.i]||[]).find(x=>x.i===id); }
 
 /* 그은 글 위에 뜨는 막대 */
 let PICK=null;  // {k, c, t, pos} — 그었지만 아직 저장 전
-function selbarAt(x,y){
+function selbarAt(x,y,below,y2){
   const b=$('#selbar'); b.classList.add('on');
   const w=b.offsetWidth, h=b.offsetHeight;
   let L=Math.max(8,Math.min(innerWidth-w-8, x-w/2));
-  let T=y-h-12; if(T<8) T=y+18;
+  // 사파리 기본 메뉴(복사·찾아보기)는 고른 글 위쪽에 뜹니다.
+  // 겹치지 않도록 우리 막대는 아래로 내려 붙입니다.
+  let T = below ? (y2!=null?y2:y)+14 : y-h-12;
+  if(T<8) T=(y2!=null?y2:y)+18;
+  if(T+h>innerHeight-8) T=Math.max(8,y-h-12);
   b.style.left=L+'px'; b.style.top=T+'px';
 }
 function selbarOff(){ $('#selbar').classList.remove('on'); PICK=null; }
@@ -1146,10 +1160,8 @@ $('#hlWipe').onclick=()=>{
   if(!curB)return;
   const n=hlOf(curB.i).length; if(!n)return;
   if(!confirm(`이 책의 형광펜·메모 ${n}개를 모두 지웁니다.\n되돌릴 수 없습니다.`))return;
-  if(rend) hlOf(curB.i).filter(o=>o.k==='epub'&&o.c)
-    .forEach(o=>{ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} });
   delete HL[curB.i]; saveHL.now();
-  if(KIND==='pdf')paintPdfHl(); else if(KIND==='txt')paintTxtHl();
+  if(KIND==='pdf')paintPdfHl(); else if(KIND==='txt')paintTxtHl(); else paintEpubHl();
   paintHlBadge(); paintHl(); toast(`${n}개를 지웠습니다`);
 };
 $('#hlCopyAll').onclick=()=>{
@@ -1181,9 +1193,7 @@ function paintHl(){
   const f=document.createDocumentFragment();
   a.forEach(o=>{
     const d=document.createElement('div'); d.className='it';
-    const where = o.k==='pdf' ? `${o.c.p}쪽`
-                : (o.k==='epub'&&!o.c) ? (o.pos?Math.round(o.pos*100)+'%  ·  자리 없음':'자리 없음')
-                : (o.pos?Math.round(o.pos*100)+'%':'');
+    const where = o.k==='pdf' ? `${o.c.p}쪽` : (o.pos?Math.round(o.pos*100)+'%':'');
     d.innerHTML=`<div class="q" style="border-left-color:${COLS[o.col]||COLS.y}">${esc(o.t||'')}</div>`
       +(o.n?`<div class="m">${esc(o.n)}</div>`:'')
       +`<div class="w"><span>${esc(where)}</span><span></span></div>`;
@@ -1201,37 +1211,48 @@ function paintHl(){
 }
 function gotoHl(o){
   if(o.k==='epub'&&rend){
-    if(o.c){ try{ rend.display(o.c); }catch(e){ toast('그 자리를 찾지 못했습니다'); } }
-    else toast('이 메모는 자리가 저장되지 않았습니다'); }
+    const go=o.c||(o.q&&o.q.h);
+    if(go){ try{ rend.display(go); }catch(e){ toast('그 자리를 찾지 못했습니다'); } } }
   else if(o.k==='pdf'){ goPdfPage(o.c.p); }
   else { const m=$(`#txt mark[data-id="${o.i}"]`);
          if(m)m.scrollIntoView({block:'center'}); }
 }
 
 /* ── EPUB 쪽 ── */
-function drawEpubHl(o){
-  if(!rend||!o.c)return;
-  try{ rend.annotations.highlight(o.c,{id:o.i},()=>openMemo(o.i),'ebl-hl',
-    {fill:COLS[o.col]||COLS.y,'fill-opacity':'0.34','mix-blend-mode':'multiply'}); }catch(e){}
-}
-function restoreEpubHl(){ hlOf(curB.i).filter(o=>o.k==='epub'&&o.c).forEach(drawEpubHl); }
-function bindEpubSelect(){
-  rend.on('selected',(cfi,contents)=>{
-    book.getRange(cfi).then(r=>{
-      const t=String(r||'').toString().trim();
-      if(!t)return;
-      PICK={k:'epub',c:cfi,t:t.slice(0,600),pos:pctOf(curB)};
-      // 책 안쪽(iframe) 좌표를 바깥 화면 좌표로 옮깁니다
-      let x=innerWidth/2, y=innerHeight/2;
-      try{
-        const sel=contents.window.getSelection();
-        const rc=sel.getRangeAt(0).getBoundingClientRect();
-        const fr=$('#page iframe').getBoundingClientRect();
-        x=fr.left+rc.left+rc.width/2; y=fr.top+rc.top;
-      }catch(e){}
-      selbarAt(x,y);
-    }).catch(()=>{});
+/* 지금 펼쳐진 쪽에서 저장해 둔 글을 찾아, 그 글 위에 그대로 칠합니다.
+   쪽을 넘기거나 글자 크기를 바꾸면 다시 찾아 다시 칠합니다. */
+function paintEpubHl(){
+  const host=$('#epubov'); if(!host)return;
+  host.innerHTML='';
+  if(KIND!=='epub'||!curB||!epubC)return;
+  const doc=epubC.document; if(!doc||!doc.body)return;
+  const f=$('#page iframe'); if(!f)return;
+  const fb=f.getBoundingClientRect(), vb=$('#view').getBoundingClientRect();
+  const ox=fb.left-vb.left, oy=fb.top-vb.top;
+  const frag=document.createDocumentFragment();
+  hlOf(curB.i).filter(o=>o.k==='epub').forEach(o=>{
+    const r=findQuote(o,doc); if(!r)return;
+    [...r.getClientRects()].forEach(c=>{
+      if(c.width<0.5||c.height<0.5)return;
+      // 다른 단이나 아직 안 넘긴 쪽에 있는 것은 그리지 않습니다
+      if(c.right<0||c.left>fb.width||c.bottom<0||c.top>fb.height)return;
+      const i=document.createElement('i');
+      i.style.left=(ox+c.left)+'px'; i.style.top=(oy+c.top)+'px';
+      i.style.width=c.width+'px'; i.style.height=c.height+'px';
+      i.style.background=COLS[o.col]||COLS.y;
+      i.dataset.id=o.i;
+      frag.appendChild(i);
+    });
   });
+  host.appendChild(frag);
+}
+$('#epubov').onclick=e=>{ const id=e.target&&e.target.dataset&&e.target.dataset.id;
+  if(id)openMemo(id); };
+const drawEpubHl=()=>paintEpubHl();
+const restoreEpubHl=()=>paintEpubHl();
+function bindEpubSelect(){
+  // 책 안쪽에서 글을 고르면 epub.js 가 알려줍니다
+  rend.on('selected',()=>{ if(!drawMode)selSoon(); });
 }
 
 /* ── PDF 쪽 ── */
@@ -1342,14 +1363,16 @@ function drawEnd(){
   takeRange(dragR,dragDoc,dragOff);
 }
 /* 훑은 자리를 형광펜 자료로 바꿉니다 */
-function takeRange(r,doc,off){
+function takeRange(r,doc,off,below){
   const t=String(r).trim(); if(!t)return clearOv();
-  const c0=[...r.getClientRects()].find(c=>c.width>0.5&&c.height>0.5); if(!c0)return clearOv();
+  const rc=[...r.getClientRects()].filter(c=>c.width>0.5&&c.height>0.5);
+  const c0=rc[0]; if(!c0)return clearOv();
+  const cN=rc[rc.length-1];
   if(KIND==='epub'){
-    // 자리를 못 잡아도 메모는 남길 수 있게 합니다 (형광펜만 못 칠합니다)
-    const cfi=cfiFrom(r);
-    if(!cfi)log('CFI 를 못 얻었습니다 — 메모만 남깁니다');
-    PICK={k:'epub',c:cfi,t:t.slice(0,600),pos:pctOf(curB)};
+    const doc=epubC&&epubC.document;
+    const q=quoteOf(r,doc);
+    if(!q||!doc){ toast('이 자리를 잡지 못했습니다'); return clearOv(); }
+    PICK={k:'epub',c:cfiFrom(r),q:q,t:t.slice(0,600),pos:pctOf(curB)};
   }else if(KIND==='pdf'){
     const el=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
     const d=el&&el.closest?el.closest('.pg'):null; if(!d)return clearOv();
@@ -1367,7 +1390,7 @@ function takeRange(r,doc,off){
     if(b<=a)return clearOv();
     PICK={k:'txt',c:{s:a,e:b},t:t.slice(0,600),pos:TXTRAW.length?a/TXTRAW.length:0};
   }
-  selbarAt(c0.left+off.x+c0.width/2, c0.top+off.y);
+  selbarAt(c0.left+off.x+c0.width/2, c0.top+off.y, below, cN.bottom+off.y);
 }
 /* 바깥 화면(PDF·TXT)에 걸기 */
 (function(){
@@ -1384,6 +1407,49 @@ function takeRange(r,doc,off){
   addEventListener('pointercancel',()=>{ dragOn=false; clearOv(); });
   addEventListener('touchcancel', ()=>{ dragOn=false; clearOv(); });
 })();
+/* ── EPUB 자리 잡기 ──
+   주소(CFI)만 믿지 않습니다. 판이 바뀌거나 못 얻는 경우가 있어서,
+   '그은 글 + 앞뒤 문장'을 함께 저장해 두고 다시 글로 찾아냅니다.
+   책 내용은 안 바뀌므로 이 방법이 오히려 더 튼튼합니다. */
+const CTX=40;
+function quoteOf(r,doc){
+  try{
+    const root=doc.body, full=root.textContent;
+    const a=txtOffset(r.startContainer,r.startOffset,root);
+    const b=txtOffset(r.endContainer,r.endOffset,root);
+    return { p:full.slice(Math.max(0,a-CTX),a), s:full.slice(b,b+CTX),
+             h:(rend&&rend.location&&rend.location.start&&rend.location.start.href)||'' };
+  }catch(e){ return null; }
+}
+function rangeAt(root,a,b){
+  const doc=root.ownerDocument;
+  const w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let n=0,c,sN=null,sO=0,eN=null,eO=0;
+  while(c=w.nextNode()){
+    const len=c.nodeValue.length;
+    if(sN===null && n+len>=a){ sN=c; sO=a-n; }
+    if(n+len>=b){ eN=c; eO=b-n; break; }
+    n+=len;
+  }
+  if(!sN||!eN)return null;
+  const r=doc.createRange(); r.setStart(sN,sO); r.setEnd(eN,eO); return r;
+}
+/* 저장해 둔 글을 지금 펼쳐진 쪽에서 찾아냅니다 */
+function findQuote(o,doc){
+  if(!o.t)return null;
+  const root=doc&&doc.body; if(!root)return null;
+  const full=root.textContent;
+  let i=-1;
+  if(o.q){                                   // 앞뒤까지 맞는 자리를 먼저
+    const want=(o.q.p||'')+o.t+(o.q.s||'');
+    i=full.indexOf(want);
+    if(i>=0) i+=(o.q.p||'').length;
+  }
+  if(i<0) i=full.indexOf(o.t);               // 없으면 글만으로
+  if(i<0) return null;
+  return rangeAt(root,i,i+o.t.length);
+}
+
 /* EPUB 에서 '이 자리'를 나타내는 주소(CFI)를 얻습니다.
    epub.js 는 판마다 넘겨주는 물건이 달라(View 인지 Contents 인지)
    한 가지 길만 두면 조용히 실패합니다. 그래서 세 갈래로 시도합니다. */
@@ -1410,6 +1476,7 @@ function bindDrawEpub(view){
   const fwd=e=>{ const p=ptOf(e);
     return { clientX:p.clientX+dragOff.x, clientY:p.clientY+dragOff.y,
              cancelable:e.cancelable, preventDefault:()=>{ try{e.preventDefault();}catch(x){} } }; };
+  bindSelEpub(doc);
   const dn=e=>drawStart(e,doc,offOf());
   doc.addEventListener('pointerdown',dn);
   doc.addEventListener('touchstart',dn,{passive:false});
@@ -1421,36 +1488,33 @@ function bindDrawEpub(view){
     d.style.webkitTouchCallout='none'; d.style.touchAction='none'; }
 }
 
-/* 손을 뗐을 때 — PDF·TXT 공통 */
+/* ── 긋기 모드가 아닐 때 ──
+   아이패드의 기본 선택 메뉴(복사·찾아보기·번역)는 웹에서 없앨 수 없습니다.
+   그래서 없애려 들지 않고, 우리 색 막대를 그 아래에 나란히 띄웁니다.
+   손가락으로 꾹 눌러 고르는 평소 방식 그대로 쓰시면 됩니다. */
 function selDone(){
-  if(drawMode)return;                 // 긋기 모드에서는 위 방식이 맡습니다
-  if(KIND==='epub')return;
-  const s=getSelection(); if(!s||s.isCollapsed)return selbarOff();
-  const t=s.toString().trim(); if(!t)return selbarOff();
-  const rg=s.getRangeAt(0);
-  const el=rg.commonAncestorContainer.nodeType===1
-        ? rg.commonAncestorContainer : rg.commonAncestorContainer.parentElement;
-  const r0=[...rg.getClientRects()].find(r=>r.width>1&&r.height>1); if(!r0)return selbarOff();
-
-  if(KIND==='pdf'){
-    const d=el.closest('.pg'); if(!d)return selbarOff();
-    const pb=d.getBoundingClientRect();
-    const rects=[...rg.getClientRects()].filter(r=>r.width>1&&r.height>1).map(r=>({
-      x:(r.left-pb.left)/pb.width, y:(r.top-pb.top)/pb.height,
-      w:r.width/pb.width, h:r.height/pb.height }));
-    if(!rects.length)return selbarOff();
-    PICK={k:'pdf',c:{p:Number(d.dataset.n),r:rects},t:t.slice(0,600),
-          pos:pdfDoc?Number(d.dataset.n)/pdfDoc.numPages:0};
-  }else{
-    const body=$('#txt .body'); if(!body||!body.contains(el))return selbarOff();
-    const a=txtOffset(rg.startContainer,rg.startOffset,body);
-    const b=txtOffset(rg.endContainer,rg.endOffset,body);
-    if(b<=a)return selbarOff();
-    PICK={k:'txt',c:{s:a,e:b},t:t.slice(0,600),
-          pos:TXTRAW.length?a/TXTRAW.length:0};
+  if(drawMode)return;                 // 긋기 모드에서는 훑기 쪽이 맡습니다
+  if(!readerOn())return;
+  let doc=document, off={x:0,y:0};
+  if(KIND==='epub'){
+    const f=$('#page iframe'); if(!f)return selbarOff();
+    try{ doc=f.contentDocument; }catch(e){ return selbarOff(); }
+    if(!doc)return selbarOff();
+    const b=f.getBoundingClientRect(); off={x:b.left,y:b.top};
   }
-  selbarAt(r0.left+r0.width/2, r0.top);
+  const sel=doc.getSelection?doc.getSelection():null;
+  if(!sel||sel.isCollapsed||!sel.rangeCount)return selbarOff();
+  if(!String(sel).trim())return selbarOff();
+  takeRange(sel.getRangeAt(0),doc,off,true);
 }
+/* 고른 글이 바뀔 때마다 — 손을 뗀 뒤 잠깐 기다렸다 띄웁니다 */
+let selT=null;
+function selSoon(){ clearTimeout(selT); selT=setTimeout(selDone,260); }
+/* EPUB 은 아이프레임 안에서도 신호를 받습니다 */
+function bindSelEpub(doc){
+  try{ doc.addEventListener('selectionchange',()=>{ if(!drawMode)selSoon(); }); }catch(e){}
+}
+document.addEventListener('selectionchange',()=>{ if(!drawMode&&KIND!=='epub')selSoon(); });
 /* 글 전체에서 몇 번째 글자인지 — 형광펜을 그으면 태그가 끼어들어
    글자 마디가 쪼개지므로, 늘 처음부터 세어야 자리가 어긋나지 않습니다 */
 function txtOffset(node,off,root){
@@ -2057,7 +2121,7 @@ function openPin(){ $('#pinQ').value=''; paintPin(); $('#pinSheet').classList.ad
 $('#hPinEdit').onclick=openPin;
 /* 화면을 돌리거나 창을 늘리면 PDF 를 다시 잽니다 */
 addEventListener('resize',()=>{ clearTimeout(window._rz);
-  window._rz=setTimeout(()=>{ if(readerOn())redrawPdf(); },260); });
+  window._rz=setTimeout(()=>{ if(readerOn()){ redrawPdf(); paintEpubHl(); } },260); });
 $('#pinClose').onclick=()=>{ $('#pinSheet').classList.remove('on'); buildHome(); };
 $('#pinQ').addEventListener('input',()=>{clearTimeout($('#pinQ')._t);
   $('#pinQ')._t=setTimeout(paintPin,140);});
