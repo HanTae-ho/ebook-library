@@ -578,7 +578,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14f';
+const BUILD='v14g';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1277,11 +1277,50 @@ let epubC=null;                       // 지금 그려진 EPUB 쪽 (cfiFromRange
 
 function caretAt(x,y,doc){
   try{
-    if(doc.caretRangeFromPoint) return doc.caretRangeFromPoint(x,y);
+    if(doc.caretRangeFromPoint){ const r=doc.caretRangeFromPoint(x,y); if(r)return r; }
     if(doc.caretPositionFromPoint){
-      const p=doc.caretPositionFromPoint(x,y); if(!p)return null;
-      const r=doc.createRange(); r.setStart(p.offsetNode,p.offset); r.collapse(true); return r; }
+      const p=doc.caretPositionFromPoint(x,y);
+      if(p){ const r=doc.createRange(); r.setStart(p.offsetNode,p.offset); r.collapse(true); return r; } }
   }catch(e){}
+  return caretHunt(x,y,doc);
+}
+/* 브라우저가 '이 자리가 몇 번째 글자냐'에 답하지 않을 때 직접 찾습니다.
+   책이 아이프레임 안에 있으면 사파리가 종종 답을 거릅니다.
+   요소 짚기는 늘 되므로, 그 안에서 글자를 반씩 좁혀 들어갑니다. */
+function caretHunt(x,y,doc){
+  let el=null; try{ el=doc.elementFromPoint(x,y); }catch(e){}
+  if(!el||!el.childNodes)return null;
+  const rr=doc.createRange();
+  const hit=(n,i)=>{ try{ rr.setStart(n,i); rr.setEnd(n,Math.min(n.nodeValue.length,i+1));
+      return rr.getBoundingClientRect(); }catch(e){ return null; } };
+  const w=doc.createTreeWalker(el,NodeFilter.SHOW_TEXT);
+  let n,best=null,bestD=Infinity;
+  while(n=w.nextNode()){
+    const len=n.nodeValue.length; if(!len)continue;
+    // 이 마디가 점 근처에 있나
+    let box=null; try{ rr.selectNodeContents(n); box=rr.getBoundingClientRect(); }catch(e){}
+    if(!box||(!box.width&&!box.height))continue;
+    const near = y>=box.top-2 && y<=box.bottom+2;
+    if(!near){
+      const dy=Math.max(box.top-y,0,y-box.bottom);
+      if(dy*dy<bestD){ bestD=dy*dy; best=[n,0]; }
+      continue;
+    }
+    // 줄 안에서 반씩 좁혀 들어갑니다 (수백 글자여도 열 번이면 닿습니다)
+    let lo=0,hi=len-1,ans=0;
+    for(let k=0;k<14&&lo<=hi;k++){
+      const mid=(lo+hi)>>1, c=hit(n,mid);
+      if(!c){ lo=mid+1; continue; }
+      if(y<c.top-1){ hi=mid-1; continue; }
+      if(y>c.bottom+1){ lo=mid+1; continue; }
+      if(x<c.left){ hi=mid-1; ans=mid; }
+      else if(x>c.right){ lo=mid+1; ans=mid+1; }
+      else { ans=(x>c.left+c.width/2)?mid+1:mid; lo=hi+1; }
+    }
+    const r=doc.createRange(); r.setStart(n,Math.max(0,Math.min(len,ans))); r.collapse(true);
+    return r;
+  }
+  if(best){ const r=doc.createRange(); r.setStart(best[0],best[1]); r.collapse(true); return r; }
   return null;
 }
 function spanRange(a,b,doc){
@@ -1340,15 +1379,15 @@ function drawStart(e,doc,off){
   if(e.pointerType==='mouse'&&e.button)return;
   if(e.touches&&e.touches.length>1)return;          // 두 손가락은 확대·넘김에 양보
   const p=ptOf(e);
+  if(e.cancelable)e.preventDefault();     // 사파리가 제 방식으로 고르기 전에 가져옵니다
   const r=caretAt(p.clientX-off.x,p.clientY-off.y,doc);
   if(!r){
-    if(!caretWarned){ caretWarned=true;
-      toast('이 자리에서는 글을 잡지 못했습니다.\n글자 위에서 시작해 보세요',3500); }
+    if(!caretWarned){ caretWarned=true; log('글자 자리를 못 짚음');
+      toast('글자 위에서 시작해 보세요',2600); }
     return;
   }
   dragOn=true; dragA=r; dragR=null; dragDoc=doc; dragOff=off;
   selbarOff(); clearOv();
-  if(e.cancelable)e.preventDefault();
 }
 function drawMove(e){
   if(!dragOn)return;
