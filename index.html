@@ -627,7 +627,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v15';
+const BUILD='v15a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1825,14 +1825,46 @@ function penEnd(){
   const d=penDrag.d; penDrag=null;
   drawInk(d); saveINK(); paintPenBadge();
 }
-/* 지우개 — 지나간 자리에 걸리는 획을 통째로 지웁니다 */
+/* 지우개 — 지나간 자리만 지웁니다.
+   획을 통째로 없애지 않고, 닿은 데를 잘라 앞뒤를 남깁니다. */
+const ERW=[0,0.016,0.028,0.045];          // 굵기 단추에 따른 지우개 크기
+function segDist(a,b,p,ar){
+  const ax=a[0],ay=a[1]*ar, bx=b[0],by=b[1]*ar, px=p[0],py=p[1]*ar;
+  const dx=bx-ax, dy=by-ay, L=dx*dx+dy*dy;
+  let t = L ? ((px-ax)*dx+(py-ay)*dy)/L : 0;
+  t = t<0?0 : t>1?1 : t;
+  const qx=ax+t*dx, qy=ay+t*dy;
+  return Math.hypot(px-qx, py-qy);
+}
 function eraseAt(n,pt,d){
   const list=INK[n]; if(!list||!list.length)return;
-  const r=0.018, before=list.length;
-  INK[n]=list.filter(st=>!st.p.some(q=>{
-    const dx=q[0]-pt[0], dy=(q[1]-pt[1])*(d.clientHeight/d.clientWidth);
-    return dx*dx+dy*dy < r*r; }));
-  if(INK[n].length!==before){ drawInk(d); saveINK(); paintPenBadge(); }
+  const ar=d.clientHeight/d.clientWidth;   // 세로를 가로 잣대에 맞춥니다
+  const r=ERW[PEN.w]||0.028;
+  const out=[]; let changed=false;
+  list.forEach(st=>{
+    const p=st.p, m=p.length;
+    const cut=new Array(m).fill(false);
+    for(let i=0;i<m;i++){
+      const dx=p[i][0]-pt[0], dy=(p[i][1]-pt[1])*ar;
+      if(dx*dx+dy*dy < r*r) cut[i]=true;
+    }
+    // 점 사이를 스쳐 지나가도 잘리도록 — 점만 보면 사이가 안 끊깁니다
+    for(let i=1;i<m;i++){
+      if(cut[i-1]&&cut[i])continue;
+      if(segDist(p[i-1],p[i],pt,ar) < r){ cut[i-1]=true; cut[i]=true; }
+    }
+    if(!cut.some(Boolean)){ out.push(st); return; }
+    changed=true;
+    let run=[];
+    for(let i=0;i<m;i++){
+      if(cut[i]){ if(run.length>1)out.push({c:st.c,w:st.w,h:st.h,p:run}); run=[]; }
+      else run.push(p[i]);
+    }
+    if(run.length>1)out.push({c:st.c,w:st.w,h:st.h,p:run});
+  });
+  if(!changed)return;
+  INK[n]=out; if(!out.length)delete INK[n];
+  drawInk(d); saveINK(); paintPenBadge();
 }
 function setPen(on){
   inkOn=on;
