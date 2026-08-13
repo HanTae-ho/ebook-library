@@ -578,7 +578,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14e';
+const BUILD='v14f';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1358,20 +1358,25 @@ function drawMove(e){
   if(e.cancelable)e.preventDefault();
 }
 function drawEnd(){
-  if(!dragOn)return; dragOn=false;
+  if(!dragOn)return; dragOn=false; lastSel='그음';
   if(!dragR||dragR.collapsed||!String(dragR).trim()){ clearOv(); return; }
   takeRange(dragR,dragDoc,dragOff);
 }
 /* 훑은 자리를 형광펜 자료로 바꿉니다 */
 function takeRange(r,doc,off,below){
-  const t=String(r).trim(); if(!t)return clearOv();
+  const t=String(r).trim();
+  if(!t){ log('고른 글이 비어 있습니다'); return clearOv(); }
   const rc=[...r.getClientRects()].filter(c=>c.width>0.5&&c.height>0.5);
-  const c0=rc[0]; if(!c0)return clearOv();
+  const c0=rc[0];
+  if(!c0){ log('고른 글의 자리를 재지 못했습니다'); return clearOv(); }
   const cN=rc[rc.length-1];
   if(KIND==='epub'){
-    const doc=epubC&&epubC.document;
-    const q=quoteOf(r,doc);
-    if(!q||!doc){ toast('이 자리를 잡지 못했습니다'); return clearOv(); }
+    // 넘겨받은 것 대신, 고른 글이 실제로 들어 있는 문서를 씁니다
+    const d2=(r.startContainer&&r.startContainer.ownerDocument)||doc;
+    const q=quoteOf(r,d2);
+    if(!q){ log('EPUB 자리잡기 실패 — doc='+(!!d2)+' body='+(!!(d2&&d2.body)));
+      toast('이 자리를 잡지 못했습니다'); return clearOv(); }
+    if(d2&&(!epubC||epubC.document!==d2)) epubC={document:d2};
     PICK={k:'epub',c:cfiFrom(r),q:q,t:t.slice(0,600),pos:pctOf(curB)};
   }else if(KIND==='pdf'){
     const el=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
@@ -1493,7 +1498,7 @@ function bindDrawEpub(view){
    그래서 없애려 들지 않고, 우리 색 막대를 그 아래에 나란히 띄웁니다.
    손가락으로 꾹 눌러 고르는 평소 방식 그대로 쓰시면 됩니다. */
 function selDone(){
-  if(drawMode)return;                 // 긋기 모드에서는 훑기 쪽이 맡습니다
+  if(dragOn)return;                   // 훑는 중에는 그쪽이 맡습니다
   if(!readerOn())return;
   let doc=document, off={x:0,y:0};
   if(KIND==='epub'){
@@ -1509,12 +1514,41 @@ function selDone(){
 }
 /* 고른 글이 바뀔 때마다 — 손을 뗀 뒤 잠깐 기다렸다 띄웁니다 */
 let selT=null;
-function selSoon(){ clearTimeout(selT); selT=setTimeout(selDone,260); }
-/* EPUB 은 아이프레임 안에서도 신호를 받습니다 */
+function selSoon(){ clearTimeout(selT); selT=setTimeout(selDone,240); }
 function bindSelEpub(doc){
-  try{ doc.addEventListener('selectionchange',()=>{ if(!drawMode)selSoon(); }); }catch(e){}
+  try{ doc.addEventListener('selectionchange',selSoon); }catch(e){}
 }
-document.addEventListener('selectionchange',()=>{ if(!drawMode&&KIND!=='epub')selSoon(); });
+document.addEventListener('selectionchange',selSoon);
+
+/* ── 마지막 보루 ──
+   아이패드에서는 선택 신호가 아이프레임 벽에 막히거나 아예 안 오는 일이 잦습니다.
+   그래서 신호를 기다리지 않고, 0.35초마다 '지금 고른 글이 있는지' 직접 봅니다.
+   글이 그대로면 아무 일도 하지 않으므로 부담이 없습니다. */
+function grabSel(){
+  const cand=[];
+  const f=$('#page iframe');
+  if(f){ try{ const d=f.contentDocument, b=f.getBoundingClientRect();
+    if(d)cand.push([d,{x:b.left,y:b.top}]); }catch(e){} }
+  cand.push([document,{x:0,y:0}]);
+  for(const [d,off] of cand){
+    let sel=null; try{ sel=d.getSelection&&d.getSelection(); }catch(e){}
+    if(!sel||sel.isCollapsed||!sel.rangeCount)continue;
+    const t=String(sel).trim(); if(!t)continue;
+    return {r:sel.getRangeAt(0),doc:d,off:off,t:t};
+  }
+  return null;
+}
+let lastSel='';
+setInterval(()=>{
+  if(!readerOn()){ if(lastSel){ lastSel=''; selbarOff(); } return; }
+  if(dragOn)return;                       // 훑는 중에는 건드리지 않습니다
+  const g=grabSel();
+  const key=g?(g.t.length+'|'+g.t.slice(0,50)):'';
+  if(key===lastSel)return;
+  lastSel=key;
+  if(!g){ selbarOff(); return; }
+  takeRange(g.r,g.doc,g.off,true);
+},350);
 /* 글 전체에서 몇 번째 글자인지 — 형광펜을 그으면 태그가 끼어들어
    글자 마디가 쪼개지므로, 늘 처음부터 세어야 자리가 어긋나지 않습니다 */
 function txtOffset(node,off,root){
