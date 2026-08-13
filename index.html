@@ -573,7 +573,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14b';
+const BUILD='v14c';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1077,7 +1077,7 @@ function hlDel(id){
   const o=a[k]; a.splice(k,1);
   if(!a.length)delete HL[curB.i];
   saveHL();
-  if(o.k==='epub'&&rend){ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} }
+  if(o.k==='epub'&&rend&&o.c){ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} }
   else if(o.k==='pdf') paintPdfHl();
   else paintTxtHl();
   paintHlBadge();
@@ -1146,7 +1146,7 @@ $('#hlWipe').onclick=()=>{
   if(!curB)return;
   const n=hlOf(curB.i).length; if(!n)return;
   if(!confirm(`이 책의 형광펜·메모 ${n}개를 모두 지웁니다.\n되돌릴 수 없습니다.`))return;
-  if(rend) hlOf(curB.i).filter(o=>o.k==='epub')
+  if(rend) hlOf(curB.i).filter(o=>o.k==='epub'&&o.c)
     .forEach(o=>{ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} });
   delete HL[curB.i]; saveHL.now();
   if(KIND==='pdf')paintPdfHl(); else if(KIND==='txt')paintTxtHl();
@@ -1181,7 +1181,9 @@ function paintHl(){
   const f=document.createDocumentFragment();
   a.forEach(o=>{
     const d=document.createElement('div'); d.className='it';
-    const where = o.k==='pdf' ? `${o.c.p}쪽` : (o.pos?Math.round(o.pos*100)+'%':'');
+    const where = o.k==='pdf' ? `${o.c.p}쪽`
+                : (o.k==='epub'&&!o.c) ? (o.pos?Math.round(o.pos*100)+'%  ·  자리 없음':'자리 없음')
+                : (o.pos?Math.round(o.pos*100)+'%':'');
     d.innerHTML=`<div class="q" style="border-left-color:${COLS[o.col]||COLS.y}">${esc(o.t||'')}</div>`
       +(o.n?`<div class="m">${esc(o.n)}</div>`:'')
       +`<div class="w"><span>${esc(where)}</span><span></span></div>`;
@@ -1198,7 +1200,9 @@ function paintHl(){
   el.appendChild(f);
 }
 function gotoHl(o){
-  if(o.k==='epub'&&rend){ try{ rend.display(o.c); }catch(e){} }
+  if(o.k==='epub'&&rend){
+    if(o.c){ try{ rend.display(o.c); }catch(e){ toast('그 자리를 찾지 못했습니다'); } }
+    else toast('이 메모는 자리가 저장되지 않았습니다'); }
   else if(o.k==='pdf'){ goPdfPage(o.c.p); }
   else { const m=$(`#txt mark[data-id="${o.i}"]`);
          if(m)m.scrollIntoView({block:'center'}); }
@@ -1206,11 +1210,11 @@ function gotoHl(o){
 
 /* ── EPUB 쪽 ── */
 function drawEpubHl(o){
-  if(!rend)return;
+  if(!rend||!o.c)return;
   try{ rend.annotations.highlight(o.c,{id:o.i},()=>openMemo(o.i),'ebl-hl',
     {fill:COLS[o.col]||COLS.y,'fill-opacity':'0.34','mix-blend-mode':'multiply'}); }catch(e){}
 }
-function restoreEpubHl(){ hlOf(curB.i).filter(o=>o.k==='epub').forEach(drawEpubHl); }
+function restoreEpubHl(){ hlOf(curB.i).filter(o=>o.k==='epub'&&o.c).forEach(drawEpubHl); }
 function bindEpubSelect(){
   rend.on('selected',(cfi,contents)=>{
     book.getRange(cfi).then(r=>{
@@ -1342,9 +1346,9 @@ function takeRange(r,doc,off){
   const t=String(r).trim(); if(!t)return clearOv();
   const c0=[...r.getClientRects()].find(c=>c.width>0.5&&c.height>0.5); if(!c0)return clearOv();
   if(KIND==='epub'){
-    let cfi=null;
-    try{ cfi=epubC&&epubC.cfiFromRange(r); }catch(e){}
-    if(!cfi){ toast('이 자리는 잡지 못했습니다'); return clearOv(); }
+    // 자리를 못 잡아도 메모는 남길 수 있게 합니다 (형광펜만 못 칠합니다)
+    const cfi=cfiFrom(r);
+    if(!cfi)log('CFI 를 못 얻었습니다 — 메모만 남깁니다');
     PICK={k:'epub',c:cfi,t:t.slice(0,600),pos:pctOf(curB)};
   }else if(KIND==='pdf'){
     const el=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
@@ -1380,10 +1384,26 @@ function takeRange(r,doc,off){
   addEventListener('pointercancel',()=>{ dragOn=false; clearOv(); });
   addEventListener('touchcancel', ()=>{ dragOn=false; clearOv(); });
 })();
+/* EPUB 에서 '이 자리'를 나타내는 주소(CFI)를 얻습니다.
+   epub.js 는 판마다 넘겨주는 물건이 달라(View 인지 Contents 인지)
+   한 가지 길만 두면 조용히 실패합니다. 그래서 세 갈래로 시도합니다. */
+function cfiFrom(r){
+  const try1=o=>{ try{ return o&&typeof o.cfiFromRange==='function'?o.cfiFromRange(r):null; }
+                  catch(e){ return null; } };
+  let v=try1(epubC); if(v)return v;
+  v=try1(epubC&&epubC.contents); if(v)return v;
+  try{ const cs=rend&&rend.getContents&&rend.getContents();
+    for(const c of ([].concat(cs||[]))){ v=try1(c); if(v)return v; } }catch(e){}
+  try{ const h=rend&&rend.location&&rend.location.start&&rend.location.start.href;
+    const sec=h&&book&&book.spine&&book.spine.get(h); v=try1(sec); if(v)return v; }catch(e){}
+  return null;
+}
 /* 책 안쪽(EPUB iframe)에 걸기 — 쪽이 새로 그려질 때마다 */
-function bindDrawEpub(contents){
-  epubC=contents;
-  const doc=contents.document;
+function bindDrawEpub(view){
+  // 넘어온 것이 View 면 그 안의 Contents 를 씁니다
+  epubC = (view&&view.contents) ? view.contents : view;
+  const doc = (view&&view.document) || (epubC&&epubC.document);
+  if(!doc)return;
   const offOf=()=>{ const f=$('#page iframe');
     const b=f?f.getBoundingClientRect():{left:0,top:0}; return {x:b.left,y:b.top}; };
   // 책 안쪽 좌표는 아이프레임 기준입니다. 바깥과 셈이 맞도록 자리를 더해 넘깁니다.
