@@ -627,7 +627,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v15a';
+const BUILD='v15b';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1790,17 +1790,33 @@ function paintPenBadge(){
 /* 손끝 자리를 쪽 안의 비율로 바꿉니다 */
 function inkPt(e,d){
   const b=d.getBoundingClientRect();
-  return [ (e.clientX-b.left)/b.width, (e.clientY-b.top)/b.height,
+  const cl=v=>v<-0.05?-0.05:v>1.05?1.05:v;
+  return [ cl((e.clientX-b.left)/b.width), cl((e.clientY-b.top)/b.height),
            (e.pressure!=null&&e.pressure>0)?e.pressure:0.5 ];
 }
-let penDrag=null;
+/* 어느 쪽 위인지 '좌표'로 찾습니다.
+   눌린 것이 무엇이냐로 찾으면, 쪽 넘김 탭 영역이 좌우를 덮고 있어
+   가운데에서만 글씨가 써집니다. */
+function pgAt(x,y){
+  const ch=$('#pdf').children;
+  for(let i=0;i<ch.length;i++){
+    const d=ch[i]; if(!d.classList||!d.classList.contains('pg'))continue;
+    const b=d.getBoundingClientRect();
+    if(x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom)return d;
+  }
+  return null;
+}
+let penDrag=null, penAt=0;
 function penStart(e){
   if(KIND!=='pdf'||!readerOn())return;
   const pen = e.pointerType==='pen';
   if(!pen && !(inkOn&&PEN.finger))return;        // 손가락은 그대로 통과 → 굴리기·글 고르기 유지
-  const d=e.target&&e.target.closest?e.target.closest('.pg'):null;
+  if(e.target&&e.target.closest&&e.target.closest('#penbar, .pan, .sheet, #rbar, #rfoot'))return;
+  const d=pgAt(e.clientX,e.clientY);
   if(!d)return;
+  penAt=Date.now();
   if(e.cancelable)e.preventDefault();
+  e.stopPropagation();
   if(!inkOn)setPen(true);
   const n=Number(d.dataset.n), pt=inkPt(e,d);
   if(PEN.erase){ penDrag={erase:true,d:d,n:n}; eraseAt(n,pt,d); return; }
@@ -1900,12 +1916,14 @@ function paintPenBar(){
   $('#penFinger').classList.toggle('on',PEN.finger);
 }
 (function(){
-  const el=$('#pdf');
-  el.addEventListener('pointerdown',penStart);
-  el.addEventListener('pointermove',penMove,{passive:false});
-  ['pointerup','pointercancel','pointerleave'].forEach(k=>el.addEventListener(k,penEnd));
+  const rd=$('#reader');
+  // 내려가는 길(capture)에서 먼저 잡습니다 — 탭 영역보다 앞서야 합니다
+  rd.addEventListener('pointerdown',penStart,true);
+  // 그리는 중에는 손이 쪽 밖으로 나가도 이어지도록 창 전체에서 받습니다
+  addEventListener('pointermove',penMove,{passive:false});
+  ['pointerup','pointercancel'].forEach(k=>addEventListener(k,penEnd));
   // 스크리블이 펜슬 신호를 가로채지 못하게 막습니다
-  el.addEventListener('touchmove',e=>{ if(penDrag&&e.cancelable)e.preventDefault(); },{passive:false});
+  addEventListener('touchmove',e=>{ if(penDrag&&e.cancelable)e.preventDefault(); },{passive:false});
 })();
 
 /* ══════════ PDF ══════════ */
@@ -2539,10 +2557,12 @@ $('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인�
   catch(e){ toast(e.message,5000); } };
 $('#btnClose').onclick=closeReader;
 /* 좌우 넘기기 — EPUB 이든 '한 쪽씩 보는' PDF 든 같은 손놀림 */
-function pageBack(){ if(!readerOn())return; clearSel(); clearOv(); selbarOff();
+function pageBack(){ if(!readerOn()||penDrag||Date.now()-penAt<500)return;
+  clearSel(); clearOv(); selbarOff();
   if(KIND==='epub'&&rend)rend.prev();
   else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg-1); }
-function pageFwd(){ if(!readerOn())return; clearSel(); clearOv(); selbarOff();
+function pageFwd(){ if(!readerOn()||penDrag||Date.now()-penAt<500)return;
+  clearSel(); clearOv(); selbarOff();
   if(KIND==='epub'&&rend)rend.next();
   else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg+1); }
 $('#tapL').onclick=pageBack;
