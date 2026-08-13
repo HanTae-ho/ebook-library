@@ -270,6 +270,21 @@
   /* PDF 에 남긴 형광펜 — 쪽 크기에 대한 비율로 두어 배율이 바뀌어도 따라옵니다 */
   .hlbox{position:absolute;z-index:1;border-radius:2px;pointer-events:auto;cursor:pointer}
 
+  /* 긋기 모드 — 사파리 기본 메뉴를 피하고 펜슬로도 그을 수 있게
+     우리가 직접 훑은 자리를 잡습니다 */
+  body.drawing #pdf,body.drawing #txt{
+    -webkit-user-select:none;user-select:none;touch-action:pan-y}
+  #selov{position:fixed;inset:0;z-index:55;pointer-events:none;display:none}
+  #selov.on{display:block}
+  #selov i{position:absolute;background:#6ea8fe55;border:1px solid #6ea8fe88;border-radius:2px}
+  #btnDraw.good{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:700}
+  #drawTip{position:fixed;left:50%;transform:translateX(-50%);z-index:56;
+    bottom:calc(var(--sb) + 14px);background:#222831f0;border:1px solid var(--line);
+    border-radius:10px;padding:8px 13px;font-size:12px;color:var(--dim);display:none;
+    white-space:nowrap}
+  #drawTip.on{display:block}
+  #drawTip b{color:var(--acc);font-weight:600}
+
   /* 메모 목록 */
   #hlList{max-height:56vh;overflow-y:auto;margin-top:8px}
   #hlList .it{padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}
@@ -353,11 +368,15 @@
   <div id="rbar">
     <button class="ib" id="btnClose">‹ 서재</button>
     <div id="rtitle"></div>
-    <button class="ib" id="btnHl" title="형광펜·메모">🖍</button>
+    <button class="ib" id="btnDraw" title="긋기 모드">🖍</button>
+    <button class="ib" id="btnHl" title="형광펜·메모 목록">📑</button>
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
 </div>
+
+<div id="selov"></div>
+<div id="drawTip"><b>긋기 모드</b> — 글 위를 훑으세요 · 위아래로 밀면 넘어갑니다</div>
 
 <!-- 글을 그으면 뜨는 막대 -->
 <div id="selbar">
@@ -534,7 +553,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14';
+const BUILD='v14a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -551,7 +570,7 @@ const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
 /* 사용자 설정 (기기에 저장) */
 const P = Object.assign({
   theme:'light', fs:110, lh:170, pd:6, pv:16, font:'', nav:'both', tap:30,
-  mode:'g', size:104, sort:'t', cat:'tree', zoom:100, pnav:'scroll',
+  mode:'g', size:104, sort:'t', cat:'tree', zoom:100, pnav:'scroll', draw:false,
   fmt:{ epub:true, pdf:true, etc:false },    // 보여줄 형식 (그 외는 기본 감춤)
   pins:[]                                    // 홈에 고정한 분류 (내 서가)
 }, JSON.parse(localStorage.getItem('ebl_pref')||'{}'));
@@ -1006,7 +1025,7 @@ async function showReader(b,buf){
       +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+(b.t||'');
   });
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
-  rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); }catch(e){} });
+  rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} });
   bindEpubSelect();
   restoreEpubHl(); paintHlBadge();
   rend.on('rendered',()=>{ setTimeout(restoreEpubHl,60); });
@@ -1062,20 +1081,20 @@ $$('#selbar .col').forEach(x=>x.onclick=()=>{
   if(!PICK)return;
   const o=hlAdd(Object.assign({col:x.dataset.c},PICK));
   if(o)repaintHl(o);
-  clearSel(); selbarOff(); paintHlBadge(); toast('형광펜을 그었습니다');
+  clearSel(); clearOv(); selbarOff(); paintHlBadge(); toast('형광펜을 그었습니다');
 });
 $('#selCopy').onclick=()=>{
   if(!PICK)return;
   const t=PICK.t;
   try{ navigator.clipboard.writeText(t); toast('복사했습니다'); }
   catch(e){ toast('복사하지 못했습니다'); }
-  clearSel(); selbarOff();
+  clearSel(); clearOv(); selbarOff();
 };
 $('#selMemo').onclick=()=>{
   if(!PICK)return;
   const o=hlAdd(Object.assign({col:'y',n:''},PICK));
   if(o){ repaintHl(o); paintHlBadge(); openMemo(o.i); }
-  clearSel(); selbarOff();
+  clearSel(); clearOv(); selbarOff();
 };
 function clearSel(){
   try{ getSelection().removeAllRanges(); }catch(e){}
@@ -1181,8 +1200,137 @@ async function addTextLayer(d,pg,vp){
     d._txt=true;
   }catch(e){ log('글자층 실패 '+d.dataset.n+': '+(e.message||e)); }
 }
+/* ══════════ 긋기 모드 ══════════
+   아이패드 사파리는 글을 선택하면 제 나름의 메뉴(복사·찾아보기·번역)를 띄우고,
+   애플펜슬로 끄는 것은 선택이 아니라 화면 넘기기로 받아들입니다.
+   그래서 브라우저의 선택 기능을 쓰지 않고, 훑은 자리를 직접 잡습니다. */
+let drawMode=!!P.draw, dragOn=false, dragA=null, dragR=null, dragDoc=null, dragOff={x:0,y:0};
+let epubC=null;                       // 지금 그려진 EPUB 쪽 (cfiFromRange 를 씁니다)
+
+function caretAt(x,y,doc){
+  try{
+    if(doc.caretRangeFromPoint) return doc.caretRangeFromPoint(x,y);
+    if(doc.caretPositionFromPoint){
+      const p=doc.caretPositionFromPoint(x,y); if(!p)return null;
+      const r=doc.createRange(); r.setStart(p.offsetNode,p.offset); r.collapse(true); return r; }
+  }catch(e){}
+  return null;
+}
+function spanRange(a,b,doc){
+  const r=doc.createRange();
+  const fwd = a.compareBoundaryPoints(0,b) <= 0;   // 0 = START_TO_START
+  const s=fwd?a:b, e=fwd?b:a;
+  r.setStart(s.startContainer,s.startOffset);
+  r.setEnd(e.startContainer,e.startOffset);
+  return r;
+}
+function paintOv(r,off){
+  const el=$('#selov'); el.innerHTML='';
+  if(!r||r.collapsed){ el.classList.remove('on'); return; }
+  const f=document.createDocumentFragment();
+  [...r.getClientRects()].filter(c=>c.width>0.5&&c.height>0.5).forEach(c=>{
+    const i=document.createElement('i');
+    i.style.left=(c.left+off.x)+'px'; i.style.top=(c.top+off.y)+'px';
+    i.style.width=c.width+'px'; i.style.height=c.height+'px';
+    f.appendChild(i);
+  });
+  el.appendChild(f); el.classList.add('on');
+}
+function clearOv(){ const el=$('#selov'); el.innerHTML=''; el.classList.remove('on'); }
+
+function setDrawMode(on){
+  drawMode=on; P.draw=on; savePref();
+  $('#btnDraw').classList.toggle('good',on);
+  document.body.classList.toggle('drawing',on);
+  $('#drawTip').classList.toggle('on',on);
+  if(on)setTimeout(()=>$('#drawTip').classList.remove('on'),3200);
+  // EPUB 은 책 안쪽(iframe)에도 걸어줘야 합니다
+  try{ const d=$('#page iframe').contentDocument.documentElement;
+    d.style.webkitUserSelect=on?'none':''; d.style.userSelect=on?'none':'';
+    d.style.touchAction=on?'none':''; }catch(e){}
+  // 그을 때는 쪽 넘김 영역을 치웁니다
+  $('#tapL').style.display=$('#tapR').style.display=
+    (!on&&(KIND==='epub'||(KIND==='pdf'&&P.pnav==='page'))&&P.nav!=='swipe')?'block':'none';
+  if(!on){ clearOv(); selbarOff(); }
+}
+$('#btnDraw').onclick=()=>setDrawMode(!drawMode);
+
+function drawStart(e,doc,off){
+  if(!drawMode||!readerOn())return;
+  if(e.pointerType==='mouse'&&e.button)return;
+  const r=caretAt(e.clientX-off.x,e.clientY-off.y,doc); if(!r)return;
+  dragOn=true; dragA=r; dragR=null; dragDoc=doc; dragOff=off;
+  selbarOff(); clearOv();
+}
+function drawMove(e){
+  if(!dragOn)return;
+  const r=caretAt(e.clientX-dragOff.x,e.clientY-dragOff.y,dragDoc); if(!r)return;
+  dragR=spanRange(dragA,r,dragDoc);
+  paintOv(dragR,dragOff);
+  if(e.cancelable)e.preventDefault();
+}
+function drawEnd(){
+  if(!dragOn)return; dragOn=false;
+  if(!dragR||dragR.collapsed||!String(dragR).trim()){ clearOv(); return; }
+  takeRange(dragR,dragDoc,dragOff);
+}
+/* 훑은 자리를 형광펜 자료로 바꿉니다 */
+function takeRange(r,doc,off){
+  const t=String(r).trim(); if(!t)return clearOv();
+  const c0=[...r.getClientRects()].find(c=>c.width>0.5&&c.height>0.5); if(!c0)return clearOv();
+  if(KIND==='epub'){
+    let cfi=null;
+    try{ cfi=epubC&&epubC.cfiFromRange(r); }catch(e){}
+    if(!cfi){ toast('이 자리는 잡지 못했습니다'); return clearOv(); }
+    PICK={k:'epub',c:cfi,t:t.slice(0,600),pos:pctOf(curB)};
+  }else if(KIND==='pdf'){
+    const el=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
+    const d=el&&el.closest?el.closest('.pg'):null; if(!d)return clearOv();
+    const pb=d.getBoundingClientRect();
+    const rects=[...r.getClientRects()].filter(c=>c.width>1&&c.height>1).map(c=>({
+      x:(c.left-pb.left)/pb.width, y:(c.top-pb.top)/pb.height,
+      w:c.width/pb.width, h:c.height/pb.height }));
+    if(!rects.length)return clearOv();
+    PICK={k:'pdf',c:{p:Number(d.dataset.n),r:rects},t:t.slice(0,600),
+          pos:pdfDoc?Number(d.dataset.n)/pdfDoc.numPages:0};
+  }else{
+    const body=$('#txt .body'); if(!body)return clearOv();
+    const a=txtOffset(r.startContainer,r.startOffset,body);
+    const b=txtOffset(r.endContainer,r.endOffset,body);
+    if(b<=a)return clearOv();
+    PICK={k:'txt',c:{s:a,e:b},t:t.slice(0,600),pos:TXTRAW.length?a/TXTRAW.length:0};
+  }
+  selbarAt(c0.left+off.x+c0.width/2, c0.top+off.y);
+}
+/* 바깥 화면(PDF·TXT)에 걸기 */
+(function(){
+  const off={x:0,y:0};
+  ['#pdf','#txt'].forEach(sel=>{
+    const el=$(sel);
+    el.addEventListener('pointerdown',e=>drawStart(e,document,off));
+  });
+  addEventListener('pointermove',drawMove,{passive:false});
+  addEventListener('pointerup',drawEnd);
+  addEventListener('pointercancel',()=>{ dragOn=false; clearOv(); });
+})();
+/* 책 안쪽(EPUB iframe)에 걸기 — 쪽이 새로 그려질 때마다 */
+function bindDrawEpub(contents){
+  epubC=contents;
+  const doc=contents.document;
+  const offOf=()=>{ const f=$('#page iframe');
+    const b=f?f.getBoundingClientRect():{left:0,top:0}; return {x:b.left,y:b.top}; };
+  doc.addEventListener('pointerdown',e=>drawStart(e,doc,offOf()));
+  doc.addEventListener('pointermove',e=>{ if(dragOn)drawMove(
+    {clientX:e.clientX+dragOff.x,clientY:e.clientY+dragOff.y,cancelable:e.cancelable,
+     preventDefault:()=>e.preventDefault()}); },{passive:false});
+  doc.addEventListener('pointerup',drawEnd);
+  if(drawMode){ const d=doc.documentElement;
+    d.style.webkitUserSelect='none'; d.style.userSelect='none'; d.style.touchAction='none'; }
+}
+
 /* 손을 뗐을 때 — PDF·TXT 공통 */
 function selDone(){
+  if(drawMode)return;                 // 긋기 모드에서는 위 방식이 맡습니다
   if(KIND==='epub')return;
   const s=getSelection(); if(!s||s.isCollapsed)return selbarOff();
   const t=s.toString().trim(); if(!t)return selbarOff();
@@ -1485,7 +1633,7 @@ function onTxtScroll(){
 
 /* 리더 껍데기 — 어떤 형식이든 공통 */
 function openShell(b){
-  selbarOff();
+  selbarOff(); clearOv();
   $('#library').style.display='none'; $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||'';
   $('#page').style.display = KIND==='epub'?'block':'none';
@@ -1496,6 +1644,8 @@ function openShell(b){
   $$('#panRead .k-pdf').forEach(x=>x.style.display=KIND==='pdf'?'':'none');
   $$('#panRead .k-text').forEach(x=>x.style.display=KIND==='pdf'?'none':'');
   $$('#panRead .k-epub').forEach(x=>x.style.display=KIND==='epub'?'':'none');
+  $('#btnDraw').classList.toggle('good',drawMode);
+  document.body.classList.toggle('drawing',drawMode);
   $('#page').innerHTML=''; if(KIND!=='pdf')$('#pdf').innerHTML='';
   if(KIND!=='txt')$('#txt').innerHTML='';
 }
@@ -1503,7 +1653,7 @@ function openShell(b){
 const readerOn = () => $('#reader').style.display==='flex';
 function canPage(e){
   // EPUB, 그리고 '한 쪽씩 보는' PDF 만 넘깁니다.
-  if(!readerOn()) return false;
+  if(!readerOn() || drawMode) return false;
   if(KIND==='epub'){ if(!rend)return false; }
   else if(!(KIND==='pdf'&&P.pnav==='page')) return false;
   const t = e.target;
@@ -1550,7 +1700,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now(); saveHL.now(); selbarOff(); TXTRAW='';
+function closeReader(){ saveRD.now(); saveHL.now(); selbarOff(); clearOv(); TXTRAW=''; epubC=null;
   $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
   try{ pdfIO&&pdfIO.disconnect(); }catch(e){}
