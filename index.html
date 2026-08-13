@@ -224,6 +224,28 @@
   .acts button.warn{color:var(--bad)}
   .acts button .h{display:block;font-size:11.5px;color:var(--dim);margin-top:2px}
 
+  /* ── PDF ──
+     페이지를 위에서 아래로 이어 붙이고, 화면에 들어온 것만 그립니다.
+     멀어진 페이지는 그림을 버려 메모리를 돌려줍니다. */
+  #pdf{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;display:none;
+    padding:calc(var(--st) + 46px) 0 calc(var(--sb) + 34px);background:#3a3f47}
+  #pdf .pg{position:relative;margin:0 auto 10px;background:var(--paper);
+    box-shadow:0 1px 6px #0007}
+  #pdf canvas{display:block;width:100%;height:auto}
+  #pdf .pn{position:absolute;right:6px;bottom:4px;font-size:10px;color:#8b95a3;
+    background:#0006;padding:1px 6px;border-radius:4px}
+  body.night #pdf{background:#0b0d10}
+  body.night #pdf canvas{filter:invert(1) hue-rotate(180deg) brightness(.92)}
+  body.sepia #pdf{background:#5c5344}
+  body.sepia #pdf canvas{filter:sepia(.28) brightness(.98)}
+
+  /* ── TXT ── */
+  #txt{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;
+    background:var(--paper);
+    padding:calc(var(--st) + 46px + var(--pv)) var(--ph) calc(var(--sb) + 34px + var(--pv))}
+  #txt .body{color:var(--ink);white-space:pre-wrap;word-break:break-word;
+    max-width:44em;margin:0 auto}
+
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
     font-size:13px;z-index:90;display:none;max-width:88%;text-align:center;white-space:pre-wrap;color:var(--tx)}
@@ -279,7 +301,10 @@
 </div>
 
 <div id="reader">
-  <div id="view"><div id="page"></div><div id="tapL"></div><div id="tapR"></div></div>
+  <div id="view">
+    <div id="page"></div><div id="pdf"></div><div id="txt"></div>
+    <div id="tapL"></div><div id="tapR"></div>
+  </div>
   <div id="rbar">
     <button class="ib" id="btnClose">‹ 서재</button>
     <div id="rtitle"></div>
@@ -297,23 +322,33 @@
     <div class="seg" id="segTheme">
       <button data-v="light">밝게</button><button data-v="sepia">세피아</button><button data-v="night">어둡게</button>
     </div></div>
-  <div class="grp"><div class="lb"><span>글자 크기</span><span id="vFs"></span></div>
+  <!-- PDF 는 종이가 고정이라 글자 설정이 듣지 않습니다. 배율만 둡니다. -->
+  <div class="grp k-pdf"><div class="lb"><span>배율</span><span id="vZoom"></span></div>
+    <input type="range" id="rgZoom" min="60" max="300" step="10"></div>
+  <div class="grp k-pdf"><div class="lb">쪽 옮기기</div>
+    <div class="seg">
+      <button id="pgPrev">‹ 앞쪽</button>
+      <button id="pgGo">쪽 번호로</button>
+      <button id="pgNext">뒤쪽 ›</button>
+    </div></div>
+
+  <div class="grp k-text"><div class="lb"><span>글자 크기</span><span id="vFs"></span></div>
     <input type="range" id="rgFs" min="70" max="220" step="5"></div>
-  <div class="grp"><div class="lb"><span>줄 간격</span><span id="vLh"></span></div>
+  <div class="grp k-text"><div class="lb"><span>줄 간격</span><span id="vLh"></span></div>
     <input type="range" id="rgLh" min="120" max="240" step="5"></div>
-  <div class="grp"><div class="lb"><span>좌우 여백</span><span id="vPd"></span></div>
+  <div class="grp k-text"><div class="lb"><span>좌우 여백</span><span id="vPd"></span></div>
     <input type="range" id="rgPd" min="0" max="16" step="1"></div>
-  <div class="grp"><div class="lb"><span>상하 여백</span><span id="vPv"></span></div>
+  <div class="grp k-text"><div class="lb"><span>상하 여백</span><span id="vPv"></span></div>
     <input type="range" id="rgPv" min="0" max="80" step="4"></div>
-  <div class="grp"><div class="lb">글꼴</div>
+  <div class="grp k-text"><div class="lb">글꼴</div>
     <div class="seg" id="segFont">
       <button data-v="">책 기본</button><button data-v="sans">고딕</button><button data-v="serif">명조</button>
     </div></div>
-  <div class="grp"><div class="lb">넘기는 방법</div>
+  <div class="grp k-epub"><div class="lb">넘기는 방법</div>
     <div class="seg" id="segNav">
       <button data-v="tap">좌우 탭</button><button data-v="swipe">밀어서</button><button data-v="both">둘 다</button>
     </div></div>
-  <div class="grp"><div class="lb"><span>탭 영역 폭</span><span id="vTap"></span></div>
+  <div class="grp k-epub"><div class="lb"><span>탭 영역 폭</span><span id="vTap"></span></div>
     <input type="range" id="rgTap" min="15" max="45" step="1"></div>
   <div class="grp"><div class="lb">이 책 상태</div>
     <div class="seg">
@@ -420,7 +455,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v12d';
+const BUILD='v13';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -437,7 +472,7 @@ const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
 /* 사용자 설정 (기기에 저장) */
 const P = Object.assign({
   theme:'light', fs:110, lh:170, pd:6, pv:16, font:'', nav:'both', tap:30,
-  mode:'g', size:104, sort:'t', cat:'tree',
+  mode:'g', size:104, sort:'t', cat:'tree', zoom:100,
   fmt:{ epub:true, pdf:true, etc:false },    // 보여줄 형식 (그 외는 기본 감춤)
   pins:[]                                    // 홈에 고정한 분류 (내 서가)
 }, JSON.parse(localStorage.getItem('ebl_pref')||'{}'));
@@ -559,7 +594,17 @@ function apply(d){
 /* ── 읽은 기록 ──
    { 파일ID: { p:진도(0~1), t:마지막 읽은 시각, f:1이면 다 읽음 } }        */
 let RD = JSON.parse(localStorage.getItem('ebl_read')||'{}');
-const saveRD = () => { try{ localStorage.setItem('ebl_read',JSON.stringify(RD)); }catch(e){} };
+/* PDF·TXT 는 손가락을 굴릴 때마다 진도가 바뀝니다.
+   그때마다 통째로 저장하면 1초에 수십 번이 되므로 0.7초에 한 번만 씁니다. */
+const saveRD = (()=>{
+  let t=null;
+  const flush=()=>{ t=null; try{ localStorage.setItem('ebl_read',JSON.stringify(RD)); }catch(e){} };
+  const f=()=>{ if(!t) t=setTimeout(flush,700); };
+  f.now=()=>{ if(t)clearTimeout(t); flush(); };
+  return f;
+})();
+addEventListener('pagehide',()=>saveRD.now());
+addEventListener('visibilitychange',()=>{ if(document.hidden)saveRD.now(); });
 const DONE_AT = 0.985;                       // 이 이상 읽으면 '다 읽음'
 
 function markRead(id,p,forceDone,forceReading){
@@ -759,13 +804,24 @@ function busy(on,t,s,p){ $('#busy').style.display=on?'flex':'none';
   $('#busyB').style.width=((p||0)*100)+'%'; }
 $('#busyX').onclick=()=>{ if(abort)abort.abort(); busy(false); };
 
+const TXT_EXT=['txt','text','md','markdown','log','csv'];
+function kindOf(b){
+  const x=(b.x||'').toLowerCase();
+  if(x==='epub')return 'epub';
+  if(x==='pdf') return 'pdf';
+  if(TXT_EXT.indexOf(x)>=0) return 'txt';
+  return '';
+}
 async function openBook(b){
-  const ext=(b.x||'').toLowerCase();
-  if(ext!=='epub'){ if(b.u)window.open(b.u,'_blank'); else toast('링크가 없습니다'); return; }
+  const k=kindOf(b);
+  if(!k){ if(b.u)window.open(b.u,'_blank'); else toast('링크가 없습니다'); return; }
   try{ busy(true,'책을 준비하는 중…','',0);
     const buf=await getBook(b);
     busy(true,'화면을 구성하는 중…','',1);
-    await showReader(b,buf); busy(false);
+    if(k==='epub')      await showReader(b,buf);
+    else if(k==='pdf')  await showPdf(b,buf);
+    else                await showTxt(b,buf);
+    busy(false);
   }catch(e){ busy(false); log('열기 실패: '+(e.message||e));
     toast('열지 못했습니다\n'+(e.message||e),6000); }
 }
@@ -800,6 +856,7 @@ async function getBook(b){
 /* ── 리더 ── */
 let book=null,rend=null,curB=null;
 let noMark=false;   // 이 책은 닫을 때까지 읽은 기록을 남기지 않습니다
+let KIND='epub';    // 지금 열린 것이 epub / pdf / txt 중 무엇인지
 function paperCss(){
   const c={light:{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'},
            sepia:{bg:'#f6efe2',fg:'#3b3228',a:'#8a5a1f'},
@@ -825,7 +882,16 @@ function applyRead(){
   document.documentElement.style.setProperty('--tap',P.tap+'%');
   document.documentElement.style.setProperty('--pv',P.pv+'px');
   document.documentElement.style.setProperty('--ph',P.pd+'%');
-  $('#tapL').style.display=$('#tapR').style.display=(P.nav==='swipe'?'none':'block');
+  $('#tapL').style.display=$('#tapR').style.display=
+    (KIND==='epub'&&P.nav!=='swipe')?'block':'none';
+  // TXT 도 글자 설정을 그대로 따릅니다
+  const tb=$('#txt .body');
+  if(tb){ tb.style.fontSize=(15*P.fs/100).toFixed(1)+'px';
+    tb.style.lineHeight=(P.lh/100);
+    tb.style.fontFamily=P.font==='sans'
+      ? '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
+      : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : ''; }
+  $('#vZoom').textContent=P.zoom+'%'; $('#rgZoom').value=P.zoom;
   if(rend){ rend.themes.register('paper',paperCss()); rend.themes.select('paper');
     rend.themes.fontSize(P.fs+'%');
     // 틀 크기가 바뀌었으니 다시 계산 (안 하면 글이 잘립니다)
@@ -841,9 +907,8 @@ function applyRead(){
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
 }
 async function showReader(b,buf){
-  curB=b; noMark=false;
-  $('#library').style.display='none'; $('#reader').style.display='flex';
-  $('#rtitle').textContent=b.t||''; $('#page').innerHTML='';
+  curB=b; noMark=false; KIND='epub';
+  openShell(b);
   book=ePub(buf);
   rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
   applyRead();
@@ -864,14 +929,171 @@ async function showReader(b,buf){
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); }catch(e){} });
 }
 
+/* ══════════ PDF ══════════ */
+let pdfDoc=null, pdfIO=null, pdfPg=1, pdfBusy=new Set();
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve();
+  if(loadPdfJs._p) return loadPdfJs._p;
+  const B='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  return loadPdfJs._p=new Promise((ok,ng)=>{
+    const s=document.createElement('script'); s.src=B+'pdf.min.js';
+    s.onload=()=>{ try{ pdfjsLib.GlobalWorkerOptions.workerSrc=B+'pdf.worker.min.js'; }catch(e){}
+      ok(); };
+    s.onerror=()=>{ loadPdfJs._p=null; ng(new Error('PDF 모듈을 받지 못했습니다')); };
+    document.head.appendChild(s);
+  });
+}
+async function showPdf(b,buf){
+  curB=b; noMark=false; KIND='pdf';
+  openShell(b);
+  busy(true,'PDF 를 여는 중…','',1);
+  await loadPdfJs();
+  // getDocument 는 넘긴 버퍼를 가져가 버립니다. 원본은 그대로 둬야
+  // 다시 열 때 문제가 없으므로 복사해서 넘깁니다.
+  pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))}).promise;
+  const host=$('#pdf'); host.innerHTML='';
+  const p1=await pdfDoc.getPage(1), v1=p1.getViewport({scale:1});
+  host._ratio=v1.height/v1.width;
+  for(let i=1;i<=pdfDoc.numPages;i++){
+    const d=document.createElement('div'); d.className='pg'; d.dataset.n=i;
+    d.innerHTML=`<div class="pn">${i}</div>`;
+    host.appendChild(d);
+  }
+  layoutPdf();
+  // 화면 가까이 온 쪽만 그리고, 멀어진 쪽은 그림을 버립니다
+  pdfIO=new IntersectionObserver(es=>{
+    es.forEach(e=>{ const d=e.target;
+      if(e.isIntersecting) drawPdf(d);
+      else if(d._cv){ d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false; }
+    });
+  },{root:host,rootMargin:'800px 0px'});
+  [...host.children].forEach(d=>pdfIO.observe(d));
+  host.onscroll=onPdfScroll;
+  // 읽던 쪽으로
+  const p=pctOf(b);
+  if(p>0){ const n=Math.max(1,Math.min(pdfDoc.numPages,Math.round(p*pdfDoc.numPages)));
+    setTimeout(()=>gotoPg(n),60); }
+  else onPdfScroll();
+  markRead(b.i,null);
+}
+/* 100% 가 '화면 폭에 맞춤'. 그보다 키우면 옆으로 밀어서 봅니다.
+   여기서 화면 폭으로 한 번 더 자르면 확대가 아예 듣지 않습니다. */
+function pdfWidth(){
+  const host=$('#pdf');
+  const base=Math.max(160, host.clientWidth-16);
+  return Math.round(base*(P.zoom/100));
+}
+function layoutPdf(){
+  const host=$('#pdf'), w=pdfWidth(), r=host._ratio||1.414;
+  [...host.children].forEach(d=>{
+    d.style.width=w+'px';
+    if(!d._cv) d.style.height=Math.round(w*r)+'px';
+  });
+}
+async function drawPdf(d){
+  if(d._cv||pdfBusy.has(d)||!pdfDoc)return;
+  pdfBusy.add(d);
+  try{
+    const n=Number(d.dataset.n), pg=await pdfDoc.getPage(n);
+    const v0=pg.getViewport({scale:1});
+    const w=pdfWidth();
+    // 확대해서 볼 때는 이미 커진 상태라 화면 배율까지 곱할 필요가 없습니다.
+    // 배율이 올라갈수록 낮춰 그림 크기를 비슷하게 유지합니다.
+    const dpr=Math.min(window.devicePixelRatio||1, Math.max(1, 2/(P.zoom/100)));
+    let scale=(w/v0.width)*dpr, vp=pg.getViewport({scale});
+    // 그래도 넘치면 여기서 자릅니다. 아이패드가 메모리를 못 견딥니다.
+    const MAXPIX=6e6, pix=vp.width*vp.height;
+    if(pix>MAXPIX){ scale*=Math.sqrt(MAXPIX/pix); vp=pg.getViewport({scale}); }
+    const cv=document.createElement('canvas');
+    cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    d.style.height='auto'; d.innerHTML=`<div class="pn">${n}</div>`;
+    d.insertBefore(cv,d.firstChild); d._cv=true;
+  }catch(e){ log('쪽 그리기 실패 '+d.dataset.n+': '+(e.message||e)); }
+  finally{ pdfBusy.delete(d); }
+}
+function gotoPg(n){
+  const host=$('#pdf'), d=host.querySelector(`.pg[data-n="${n}"]`);
+  if(d) host.scrollTop=d.offsetTop-host.offsetTop-6;
+}
+function onPdfScroll(){
+  const host=$('#pdf'); if(!pdfDoc)return;
+  const y=host.scrollTop+host.clientHeight*0.35;
+  let n=1; const ch=host.children;
+  for(let i=0;i<ch.length;i++){ if(ch[i].offsetTop-host.offsetTop<=y)n=i+1; else break; }
+  pdfPg=n;
+  const total=pdfDoc.numPages, atEnd=host.scrollTop+host.clientHeight>=host.scrollHeight-8;
+  if(!noMark) markRead(curB.i, n/total, atEnd);
+  $('#rfoot').textContent=`${n} / ${total}`
+    +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
+    +'  ·  '+(curB.t||'');
+}
+
+/* ══════════ TXT ══════════ */
+function decodeText(buf){
+  const u=new Uint8Array(buf);
+  if(u[0]===0xEF&&u[1]===0xBB&&u[2]===0xBF)return new TextDecoder('utf-8').decode(u.subarray(3));
+  if(u[0]===0xFF&&u[1]===0xFE)return new TextDecoder('utf-16le').decode(u);
+  if(u[0]===0xFE&&u[1]===0xFF)return new TextDecoder('utf-16be').decode(u);
+  // 국내 txt 는 상당수가 EUC-KR 입니다. UTF-8 로 읽다 깨지면 넘어갑니다.
+  try{ return new TextDecoder('utf-8',{fatal:true}).decode(u); }
+  catch(e){ try{ return new TextDecoder('euc-kr').decode(u); }
+            catch(e2){ return new TextDecoder('utf-8').decode(u); } }
+}
+async function showTxt(b,buf){
+  curB=b; noMark=false; KIND='txt';
+  openShell(b);
+  const host=$('#txt');
+  const d=document.createElement('div'); d.className='body';
+  d.textContent=decodeText(buf);
+  host.innerHTML=''; host.appendChild(d);
+  applyRead();
+  host.onscroll=onTxtScroll;
+  const p=pctOf(b);
+  if(p>0) setTimeout(()=>{ host.scrollTop=p*(host.scrollHeight-host.clientHeight); },60);
+  else onTxtScroll();
+  markRead(b.i,null);
+}
+function onTxtScroll(){
+  const host=$('#txt');
+  const max=host.scrollHeight-host.clientHeight;
+  const p=max>0?host.scrollTop/max:1, atEnd=max<=0||host.scrollTop>=max-4;
+  if(!noMark) markRead(curB.i,p,atEnd);
+  $('#rfoot').textContent=Math.round(p*100)+'%'
+    +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
+    +'  ·  '+(curB.t||'');
+}
+
+/* 리더 껍데기 — 어떤 형식이든 공통 */
+function openShell(b){
+  $('#library').style.display='none'; $('#reader').style.display='flex';
+  $('#rtitle').textContent=b.t||'';
+  $('#page').style.display = KIND==='epub'?'block':'none';
+  $('#pdf').style.display  = KIND==='pdf' ?'block':'none';
+  $('#txt').style.display  = KIND==='txt' ?'block':'none';
+  const tap = KIND==='epub' && P.nav!=='swipe';
+  $('#tapL').style.display=$('#tapR').style.display=tap?'block':'none';
+  $$('#panRead .k-pdf').forEach(x=>x.style.display=KIND==='pdf'?'':'none');
+  $$('#panRead .k-text').forEach(x=>x.style.display=KIND==='pdf'?'none':'');
+  $$('#panRead .k-epub').forEach(x=>x.style.display=KIND==='epub'?'':'none');
+  $('#page').innerHTML=''; if(KIND!=='pdf')$('#pdf').innerHTML='';
+  if(KIND!=='txt')$('#txt').innerHTML='';
+}
+
 const readerOn = () => $('#reader').style.display==='flex';
 function canPage(e){
-  // 리더가 열려 있고 책이 준비됐을 때만. 설정판·막대를 누른 건 제외합니다.
-  if(!rend || !readerOn()) return false;
+  // EPUB 만 쪽을 넘깁니다. PDF·TXT 는 손가락으로 굴려 봅니다.
+  if(KIND!=='epub' || !rend || !readerOn()) return false;
   const t = e.target;
   if(t && t.closest && t.closest('.pan, #rbar, #rfoot, .sheet, #busy')) return false;
   return true;
 }
+/* PDF·TXT 에서는 가운데를 눌러 막대를 여닫습니다 */
+['#pdf','#txt'].forEach(sel=>$(sel).addEventListener('click',e=>{
+  if(!readerOn()||KIND==='epub')return;
+  if(e.target&&e.target.closest&&e.target.closest('.pan, #rbar, #rfoot, .sheet, #busy'))return;
+  toggleBars();
+}));
 function bindGestures(doc){
   doc.addEventListener('click',e=>{
     if(!canPage(e)) return;
@@ -895,8 +1117,14 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ $('#reader').style.display='none'; $('#library').style.display='flex';
+function closeReader(){ saveRD.now();
+  $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
+  try{ pdfIO&&pdfIO.disconnect(); }catch(e){}
+  try{ pdfDoc&&pdfDoc.destroy&&pdfDoc.destroy(); }catch(e){}
+  pdfIO=null; pdfDoc=null; pdfBusy.clear();
+  $('#pdf').innerHTML=''; $('#pdf').onscroll=null;
+  $('#txt').innerHTML=''; $('#txt').onscroll=null;
   book=null; rend=null; curB=null; paintTabs(); render(true); }
 
 /* ── 설정판 ── */
@@ -967,6 +1195,26 @@ seg('#segCat','cat',()=>{ SEL=''; PATH=[]; buildChips(); render(true); });
   const [sel,key]=x.split(':');
   $(sel).addEventListener('input',()=>{ P[key]=Number($(sel).value); savePref(); applyRead(); });
 });
+
+/* ── PDF 조작 ── */
+$('#rgZoom').addEventListener('input',()=>{
+  P.zoom=Number($('#rgZoom').value); savePref(); $('#vZoom').textContent=P.zoom+'%';
+  if(KIND!=='pdf')return;
+  clearTimeout($('#rgZoom')._t);
+  $('#rgZoom')._t=setTimeout(()=>{
+    const n=pdfPg, host=$('#pdf');
+    // 배율이 바뀌면 그려둔 것을 모두 버리고 다시 잽니다
+    [...host.children].forEach(d=>{ d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false; });
+    layoutPdf(); gotoPg(n);
+  },160);
+});
+$('#pgPrev').onclick=()=>{ if(KIND==='pdf')gotoPg(Math.max(1,pdfPg-1)); };
+$('#pgNext').onclick=()=>{ if(KIND==='pdf'&&pdfDoc)gotoPg(Math.min(pdfDoc.numPages,pdfPg+1)); };
+$('#pgGo').onclick=()=>{ if(KIND!=='pdf'||!pdfDoc)return;
+  const s=prompt(`몇 쪽으로 갈까요? (1 ~ ${pdfDoc.numPages})`, String(pdfPg));
+  const n=Math.round(Number(s));
+  if(n>=1&&n<=pdfDoc.numPages){ panOff(); gotoPg(n); }
+};
 
 /* ── 상태 탭 ── */
 function counts(){
@@ -1131,6 +1379,11 @@ $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
 /* 내 서가 고르기 */
 function openPin(){ $('#pinQ').value=''; paintPin(); $('#pinSheet').classList.add('on'); }
+$('#hPinEdit').onclick=openPin;
+/* 화면을 돌리거나 창을 늘리면 PDF 를 다시 잽니다 */
+addEventListener('resize',()=>{ clearTimeout(window._rz);
+  window._rz=setTimeout(()=>{ if(KIND==='pdf'&&pdfDoc&&readerOn()){
+    const n=pdfPg; layoutPdf(); gotoPg(n); } },260); });
 $('#pinClose').onclick=()=>{ $('#pinSheet').classList.remove('on'); buildHome(); };
 $('#pinQ').addEventListener('input',()=>{clearTimeout($('#pinQ')._t);
   $('#pinQ')._t=setTimeout(paintPin,140);});
