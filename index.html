@@ -251,6 +251,46 @@
   #txt .body{color:var(--ink);white-space:pre-wrap;word-break:break-word;
     max-width:44em;margin:0 auto}
 
+  /* ── 형광펜 · 메모 ── */
+  /* 글을 그으면 뜨는 작은 막대 */
+  #selbar{position:fixed;z-index:60;display:none;gap:6px;align-items:center;
+    background:#222831f5;border:1px solid var(--line);border-radius:11px;
+    padding:7px 9px;box-shadow:0 6px 20px #0008}
+  #selbar.on{display:flex}
+  #selbar .col{width:24px;height:24px;border-radius:50%;border:2px solid #ffffff28}
+  #selbar .col.on{border-color:#fff}
+  #selbar .sep{width:1px;height:20px;background:var(--line)}
+  #selbar button.tx{font-size:13px;color:var(--tx);padding:3px 7px}
+
+  /* PDF 위에 얹는 글자층 — 보이지는 않고 선택만 됩니다 */
+  .textLayer{position:absolute;left:0;top:0;overflow:hidden;line-height:1;z-index:2}
+  .textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;
+    cursor:text;transform-origin:0 0}
+  .textLayer ::selection{background:#3a7bd5}
+  /* PDF 에 남긴 형광펜 — 쪽 크기에 대한 비율로 두어 배율이 바뀌어도 따라옵니다 */
+  .hlbox{position:absolute;z-index:1;border-radius:2px;pointer-events:auto;cursor:pointer}
+
+  /* 메모 목록 */
+  #hlList{max-height:56vh;overflow-y:auto;margin-top:8px}
+  #hlList .it{padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+  #hlList .it:last-child{border-bottom:none}
+  #hlList .q{font-size:13px;line-height:1.55;border-left:3px solid var(--acc);
+    padding-left:9px;color:var(--tx);
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  #hlList .m{font-size:12.5px;color:var(--acc);margin-top:6px;padding-left:12px;line-height:1.5;
+    white-space:pre-wrap}
+  #hlList .w{display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;color:var(--dim);margin-top:6px;padding-left:12px}
+  #hlList .w button{font-size:11px;color:var(--bad);padding:2px 6px}
+  #hlNone{color:var(--dim);font-size:12.5px;line-height:1.7;padding:6px 2px}
+  #memoTx{width:100%;min-height:110px;padding:11px;border-radius:10px;
+    border:1px solid var(--line);background:var(--bg);color:var(--tx);
+    font:inherit;line-height:1.6;resize:vertical;outline:none}
+  #memoTx:focus{border-color:var(--acc)}
+  #memoQ{font-size:12.5px;color:var(--dim);line-height:1.55;margin:2px 0 10px;
+    border-left:3px solid var(--line);padding-left:9px;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
     font-size:13px;z-index:90;display:none;max-width:88%;text-align:center;white-space:pre-wrap;color:var(--tx)}
@@ -313,9 +353,21 @@
   <div id="rbar">
     <button class="ib" id="btnClose">‹ 서재</button>
     <div id="rtitle"></div>
+    <button class="ib" id="btnHl" title="형광펜·메모">🖍</button>
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
+</div>
+
+<!-- 글을 그으면 뜨는 막대 -->
+<div id="selbar">
+  <button class="col" data-c="y" style="background:#ffe14d"></button>
+  <button class="col" data-c="g" style="background:#8ef0a0"></button>
+  <button class="col" data-c="b" style="background:#8ec8ff"></button>
+  <button class="col" data-c="p" style="background:#ffa8c8"></button>
+  <div class="sep"></div>
+  <button class="tx" id="selMemo">메모</button>
+  <button class="tx" id="selCopy">복사</button>
 </div>
 
 <div class="backdrop" id="bd"></div>
@@ -367,6 +419,24 @@
     <div class="seg" style="margin-top:6px">
       <button id="mkClear">읽은 기록 지우기</button>
     </div></div>
+</div>
+
+<!-- 이 책의 형광펜·메모 -->
+<div class="pan" id="panHl">
+  <h4><span id="hlTitle">형광펜 · 메모</span> <button data-close>닫기</button></h4>
+  <div id="hlNone"></div>
+  <div id="hlList"></div>
+</div>
+
+<!-- 메모 쓰기 (애플펜슬로 바로 써넣을 수 있습니다) -->
+<div class="pan" id="panMemo">
+  <h4>메모 <button data-close>닫기</button></h4>
+  <div id="memoQ"></div>
+  <textarea id="memoTx" placeholder="여기에 적으세요. 애플펜슬로 바로 쓰셔도 됩니다."></textarea>
+  <div class="seg" style="margin-top:12px">
+    <button id="memoDel">지우기</button>
+    <button id="memoOk" class="on">저장</button>
+  </div>
 </div>
 
 <!-- 책 하나에 대한 손질 (표지를 길게 누르면) -->
@@ -464,7 +534,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v13a';
+const BUILD='v14';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -937,6 +1007,250 @@ async function showReader(b,buf){
   });
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); }catch(e){} });
+  bindEpubSelect();
+  restoreEpubHl(); paintHlBadge();
+  rend.on('rendered',()=>{ setTimeout(restoreEpubHl,60); });
+}
+
+/* ══════════ 형광펜 · 메모 ══════════
+   HL[책ID] = [ {i:번호, k:'epub'|'pdf', c:CFI 또는 {p:쪽,r:[상자들]},
+                 t:'그은 글', n:'메모', col:'y', at:시각, pos:진도} ] */
+let HL={}; try{ HL=JSON.parse(localStorage.getItem('ebl_hl')||'{}'); }catch(e){ HL={}; }
+const saveHL=(()=>{ let t=null;
+  const flush=()=>{ t=null; try{ localStorage.setItem('ebl_hl',JSON.stringify(HL)); }
+    catch(e){ toast('메모를 저장하지 못했습니다. 저장 공간이 모자랍니다',5000); } };
+  const f=()=>{ if(!t)t=setTimeout(flush,500); }; f.now=()=>{ if(t)clearTimeout(t); flush(); };
+  return f; })();
+addEventListener('pagehide',()=>saveHL.now());
+const COLS={ y:'#ffe14d', g:'#8ef0a0', b:'#8ec8ff', p:'#ffa8c8' };
+const hlOf=id=>HL[id]||[];
+function hlAdd(o){
+  if(!curB)return null;
+  const a=HL[curB.i]||(HL[curB.i]=[]);
+  o.i=Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  o.at=Date.now();
+  a.push(o); saveHL(); return o;
+}
+function hlDel(id){
+  if(!curB)return;
+  const a=HL[curB.i]||[]; const k=a.findIndex(x=>x.i===id);
+  if(k<0)return;
+  const o=a[k]; a.splice(k,1);
+  if(!a.length)delete HL[curB.i];
+  saveHL();
+  if(o.k==='epub'&&rend){ try{ rend.annotations.remove(o.c,'highlight'); }catch(e){} }
+  else if(o.k==='pdf') paintPdfHl();
+  else paintTxtHl();
+  paintHlBadge();
+}
+function repaintHl(o){
+  if(o.k==='epub')drawEpubHl(o); else if(o.k==='pdf')paintPdfHl(); else paintTxtHl();
+}
+function hlGet(id){ return (curB&&HL[curB.i]||[]).find(x=>x.i===id); }
+
+/* 그은 글 위에 뜨는 막대 */
+let PICK=null;  // {k, c, t, pos} — 그었지만 아직 저장 전
+function selbarAt(x,y){
+  const b=$('#selbar'); b.classList.add('on');
+  const w=b.offsetWidth, h=b.offsetHeight;
+  let L=Math.max(8,Math.min(innerWidth-w-8, x-w/2));
+  let T=y-h-12; if(T<8) T=y+18;
+  b.style.left=L+'px'; b.style.top=T+'px';
+}
+function selbarOff(){ $('#selbar').classList.remove('on'); PICK=null; }
+$$('#selbar .col').forEach(x=>x.onclick=()=>{
+  if(!PICK)return;
+  const o=hlAdd(Object.assign({col:x.dataset.c},PICK));
+  if(o)repaintHl(o);
+  clearSel(); selbarOff(); paintHlBadge(); toast('형광펜을 그었습니다');
+});
+$('#selCopy').onclick=()=>{
+  if(!PICK)return;
+  const t=PICK.t;
+  try{ navigator.clipboard.writeText(t); toast('복사했습니다'); }
+  catch(e){ toast('복사하지 못했습니다'); }
+  clearSel(); selbarOff();
+};
+$('#selMemo').onclick=()=>{
+  if(!PICK)return;
+  const o=hlAdd(Object.assign({col:'y',n:''},PICK));
+  if(o){ repaintHl(o); paintHlBadge(); openMemo(o.i); }
+  clearSel(); selbarOff();
+};
+function clearSel(){
+  try{ getSelection().removeAllRanges(); }catch(e){}
+  try{ const f=$('#page iframe'); f&&f.contentWindow.getSelection().removeAllRanges(); }catch(e){}
+}
+
+/* 메모 쓰기 */
+let memoId=null;
+function openMemo(id){
+  const o=hlGet(id); if(!o)return;
+  memoId=id;
+  $('#memoQ').textContent=o.t||'';
+  $('#memoTx').value=o.n||'';
+  pan('#panMemo',true);
+  setTimeout(()=>$('#memoTx').focus(),260);
+}
+$('#memoOk').onclick=()=>{
+  const o=hlGet(memoId);
+  if(o){ o.n=$('#memoTx').value.trim(); saveHL.now(); repaintHl(o); }
+  panOff(); paintHl(); toast('메모를 저장했습니다');
+};
+$('#memoDel').onclick=()=>{
+  if(memoId&&confirm('이 형광펜과 메모를 지웁니다.')){ hlDel(memoId); panOff(); paintHl(); }
+};
+
+/* 목록 */
+$('#btnHl').onclick=()=>{ paintHl(); pan('#panHl',true); };
+function paintHlBadge(){
+  const n=curB?hlOf(curB.i).length:0;
+  $('#btnHl').textContent = n? '🖍 '+n : '🖍';
+}
+function paintHl(){
+  if(!curB)return;
+  const a=hlOf(curB.i).slice().sort((x,y)=>(x.pos||0)-(y.pos||0));
+  $('#hlTitle').textContent=`형광펜 · 메모 (${a.length})`;
+  const none=$('#hlNone'), el=$('#hlList');
+  none.style.display=a.length?'none':'block';
+  none.textContent='아직 없습니다.\n글을 손가락이나 펜슬로 그으면 형광펜·메모 막대가 뜹니다.'
+    +(KIND==='pdf'?'\n\n스캔한 PDF 는 글자가 아니라 그림이라 그을 수 없습니다.':'');
+  el.innerHTML='';
+  const f=document.createDocumentFragment();
+  a.forEach(o=>{
+    const d=document.createElement('div'); d.className='it';
+    const where = o.k==='pdf' ? `${o.c.p}쪽` : (o.pos?Math.round(o.pos*100)+'%':'');
+    d.innerHTML=`<div class="q" style="border-left-color:${COLS[o.col]||COLS.y}">${esc(o.t||'')}</div>`
+      +(o.n?`<div class="m">${esc(o.n)}</div>`:'')
+      +`<div class="w"><span>${esc(where)}</span><span></span></div>`;
+    const w=d.querySelector('.w');
+    const bm=document.createElement('button'); bm.textContent=o.n?'메모 고치기':'메모 달기';
+    bm.style.color='var(--acc)';
+    bm.onclick=e=>{ e.stopPropagation(); panOff(); setTimeout(()=>openMemo(o.i),240); };
+    const bd=document.createElement('button'); bd.textContent='지우기';
+    bd.onclick=e=>{ e.stopPropagation(); if(confirm('이 형광펜을 지웁니다.')){ hlDel(o.i); paintHl(); } };
+    w.lastChild.append(bm,bd);
+    d.onclick=()=>{ panOff(); gotoHl(o); };
+    f.appendChild(d);
+  });
+  el.appendChild(f);
+}
+function gotoHl(o){
+  if(o.k==='epub'&&rend){ try{ rend.display(o.c); }catch(e){} }
+  else if(o.k==='pdf'){ goPdfPage(o.c.p); }
+  else { const m=$(`#txt mark[data-id="${o.i}"]`);
+         if(m)m.scrollIntoView({block:'center'}); }
+}
+
+/* ── EPUB 쪽 ── */
+function drawEpubHl(o){
+  if(!rend)return;
+  try{ rend.annotations.highlight(o.c,{id:o.i},()=>openMemo(o.i),'ebl-hl',
+    {fill:COLS[o.col]||COLS.y,'fill-opacity':'0.34','mix-blend-mode':'multiply'}); }catch(e){}
+}
+function restoreEpubHl(){ hlOf(curB.i).filter(o=>o.k==='epub').forEach(drawEpubHl); }
+function bindEpubSelect(){
+  rend.on('selected',(cfi,contents)=>{
+    book.getRange(cfi).then(r=>{
+      const t=String(r||'').toString().trim();
+      if(!t)return;
+      PICK={k:'epub',c:cfi,t:t.slice(0,600),pos:pctOf(curB)};
+      // 책 안쪽(iframe) 좌표를 바깥 화면 좌표로 옮깁니다
+      let x=innerWidth/2, y=innerHeight/2;
+      try{
+        const sel=contents.window.getSelection();
+        const rc=sel.getRangeAt(0).getBoundingClientRect();
+        const fr=$('#page iframe').getBoundingClientRect();
+        x=fr.left+rc.left+rc.width/2; y=fr.top+rc.top;
+      }catch(e){}
+      selbarAt(x,y);
+    }).catch(()=>{});
+  });
+}
+
+/* ── PDF 쪽 ── */
+async function addTextLayer(d,pg,vp){
+  try{
+    const tc=await pg.getTextContent();
+    const tl=document.createElement('div'); tl.className='textLayer';
+    const v=pg.getViewport({scale:d.clientWidth/pg.getViewport({scale:1}).width});
+    tl.style.width=v.width+'px'; tl.style.height=v.height+'px';
+    await pdfjsLib.renderTextLayer(
+      {textContent:tc,textContentSource:tc,container:tl,viewport:v,textDivs:[]}).promise;
+    d.appendChild(tl);
+    d._txt=true;
+  }catch(e){ log('글자층 실패 '+d.dataset.n+': '+(e.message||e)); }
+}
+/* 손을 뗐을 때 — PDF·TXT 공통 */
+function selDone(){
+  if(KIND==='epub')return;
+  const s=getSelection(); if(!s||s.isCollapsed)return selbarOff();
+  const t=s.toString().trim(); if(!t)return selbarOff();
+  const rg=s.getRangeAt(0);
+  const el=rg.commonAncestorContainer.nodeType===1
+        ? rg.commonAncestorContainer : rg.commonAncestorContainer.parentElement;
+  const r0=[...rg.getClientRects()].find(r=>r.width>1&&r.height>1); if(!r0)return selbarOff();
+
+  if(KIND==='pdf'){
+    const d=el.closest('.pg'); if(!d)return selbarOff();
+    const pb=d.getBoundingClientRect();
+    const rects=[...rg.getClientRects()].filter(r=>r.width>1&&r.height>1).map(r=>({
+      x:(r.left-pb.left)/pb.width, y:(r.top-pb.top)/pb.height,
+      w:r.width/pb.width, h:r.height/pb.height }));
+    if(!rects.length)return selbarOff();
+    PICK={k:'pdf',c:{p:Number(d.dataset.n),r:rects},t:t.slice(0,600),
+          pos:pdfDoc?Number(d.dataset.n)/pdfDoc.numPages:0};
+  }else{
+    const body=$('#txt .body'); if(!body||!body.contains(el))return selbarOff();
+    const a=txtOffset(rg.startContainer,rg.startOffset,body);
+    const b=txtOffset(rg.endContainer,rg.endOffset,body);
+    if(b<=a)return selbarOff();
+    PICK={k:'txt',c:{s:a,e:b},t:t.slice(0,600),
+          pos:TXTRAW.length?a/TXTRAW.length:0};
+  }
+  selbarAt(r0.left+r0.width/2, r0.top);
+}
+/* 글 전체에서 몇 번째 글자인지 — 형광펜을 그으면 태그가 끼어들어
+   글자 마디가 쪼개지므로, 늘 처음부터 세어야 자리가 어긋나지 않습니다 */
+function txtOffset(node,off,root){
+  let n=0; const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let c; while(c=w.nextNode()){ if(c===node)return n+off; n+=c.nodeValue.length; }
+  return n;
+}
+let TXTRAW='';
+function paintTxtHl(){
+  const el=$('#txt .body'); if(!el||!curB)return;
+  const hs=hlOf(curB.i).filter(o=>o.k==='txt')
+    .slice().sort((a,b)=>a.c.s-b.c.s);
+  if(!hs.length){ el.textContent=TXTRAW; return; }
+  let html='',last=0;
+  hs.forEach(o=>{
+    const s=Math.max(last,o.c.s), e=Math.max(s,Math.min(TXTRAW.length,o.c.e));
+    if(e<=s)return;
+    html+=esc(TXTRAW.slice(last,s))
+      +`<mark data-id="${o.i}" style="background:${COLS[o.col]||COLS.y};color:inherit;`
+      +`border-radius:2px">${esc(TXTRAW.slice(s,e))}</mark>`;
+    last=e;
+  });
+  html+=esc(TXTRAW.slice(last));
+  el.innerHTML=html;
+  el.querySelectorAll('mark').forEach(m=>m.onclick=e=>{ e.stopPropagation(); openMemo(m.dataset.id); });
+}
+function paintPdfHl(){
+  if(KIND!=='pdf'||!curB)return;
+  const host=$('#pdf');
+  [...host.querySelectorAll('.hlbox')].forEach(x=>x.remove());
+  hlOf(curB.i).filter(o=>o.k==='pdf').forEach(o=>{
+    const d=host.querySelector(`.pg[data-n="${o.c.p}"]`); if(!d)return;
+    o.c.r.forEach(r=>{
+      const b=document.createElement('div'); b.className='hlbox';
+      b.style.left=(r.x*100)+'%'; b.style.top=(r.y*100)+'%';
+      b.style.width=(r.w*100)+'%'; b.style.height=(r.h*100)+'%';
+      b.style.background=COLS[o.col]||COLS.y; b.style.opacity='.34';
+      b.onclick=e=>{ e.stopPropagation(); openMemo(o.i); };
+      d.appendChild(b);
+    });
+  });
 }
 
 /* ══════════ PDF ══════════ */
@@ -989,7 +1303,7 @@ async function showPdf(b,buf){
   }catch(e){ throw new Error(pdfWhy(e)); }
   const p=pctOf(b);
   pdfPg = p>0 ? Math.max(1,Math.min(pdfDoc.numPages,Math.round(p*pdfDoc.numPages))) : 1;
-  buildPdf();
+  buildPdf(); paintHlBadge();
   markRead(b.i,null);
 }
 /* 두 가지 보기를 다시 차립니다 (설정이 바뀔 때도 이걸 부릅니다) */
@@ -1064,6 +1378,9 @@ async function drawPdf(d){
     d.style.width=w+'px'; d.style.height='auto';
     d.innerHTML=`<div class="pn">${n}</div>`;
     d.insertBefore(cv,d.firstChild); d._cv=true;
+    // 글자층을 얹어야 글을 그을 수 있습니다 (스캔본은 글자가 없어 비어 있습니다)
+    await addTextLayer(d,pg,vp);
+    paintPdfHl();
     trimPdf(d);
   }catch(e){
     log('쪽 그리기 실패 '+d.dataset.n+': '+(e.message||e));
@@ -1145,9 +1462,10 @@ async function showTxt(b,buf){
   curB=b; noMark=false; KIND='txt';
   openShell(b);
   const host=$('#txt');
+  TXTRAW=decodeText(buf);
   const d=document.createElement('div'); d.className='body';
-  d.textContent=decodeText(buf);
   host.innerHTML=''; host.appendChild(d);
+  paintTxtHl(); paintHlBadge();
   applyRead();
   host.onscroll=onTxtScroll;
   const p=pctOf(b);
@@ -1167,6 +1485,7 @@ function onTxtScroll(){
 
 /* 리더 껍데기 — 어떤 형식이든 공통 */
 function openShell(b){
+  selbarOff();
   $('#library').style.display='none'; $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||'';
   $('#page').style.display = KIND==='epub'?'block':'none';
@@ -1196,8 +1515,18 @@ function canPage(e){
 ['#pdf','#txt'].forEach(sel=>$(sel).addEventListener('click',e=>{
   if(!readerOn()||KIND==='epub')return;
   if(e.target&&e.target.closest&&e.target.closest('.pan, #rbar, #rfoot, .sheet, #busy'))return;
+  // 글을 긋고 있었다면 막대를 여닫지 않습니다
+  const s=getSelection(); if(s&&!s.isCollapsed&&s.toString().trim())return;
+  if($('#selbar').classList.contains('on')){ selbarOff(); return; }
   toggleBars();
 }));
+/* 손을 뗐을 때 그은 글이 있으면 막대를 띄웁니다 */
+['#pdf','#txt'].forEach(sel=>{
+  const el=$(sel);
+  el.addEventListener('pointerup',()=>setTimeout(selDone,10));
+  el.addEventListener('touchend',()=>setTimeout(selDone,10),{passive:true});
+});
+addEventListener('keydown',e=>{ if(e.key==='Escape'){ selbarOff(); panOff(); } });
 function bindGestures(doc){
   doc.addEventListener('click',e=>{
     if(!canPage(e)) return;
@@ -1221,7 +1550,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now();
+function closeReader(){ saveRD.now(); saveHL.now(); selbarOff(); TXTRAW='';
   $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
   try{ pdfIO&&pdfIO.disconnect(); }catch(e){}
@@ -1236,7 +1565,7 @@ function segSet(sel,v){ $$(sel+' button').forEach(b=>b.classList.toggle('on',b.d
 function seg(sel,key,after){ $$(sel+' button').forEach(b=>b.onclick=()=>{
   P[key]=b.dataset.v==='' ? '' : (isNaN(b.dataset.v)?b.dataset.v:Number(b.dataset.v));
   savePref(); segSet(sel,P[key]); after&&after(); }); }
-const PANS=['#panRead','#panView','#panBook'];
+const PANS=['#panRead','#panView','#panBook','#panHl','#panMemo'];
 function pan(id,on){ $(id).classList.toggle('on',on); $('#bd').classList.toggle('on',on); }
 function panOff(){ PANS.forEach(p=>$(p).classList.remove('on')); $('#bd').classList.remove('on'); }
 $('#bd').onclick=panOff;
