@@ -244,6 +244,30 @@
   body.sepia #pdf{background:#5c5344}
   body.sepia #pdf canvas{filter:sepia(.28) brightness(.98)}
 
+  /* ── 펜슬 필기 ──
+     쪽 위에 투명한 종이를 한 장 덮습니다. 손가락은 그대로 통과시켜
+     굴리기·글 고르기가 살아 있고, 펜슬만 이 종이에 그립니다. */
+  #pdf .ink{position:absolute;left:0;top:0;width:100%;height:100%;z-index:3;
+    pointer-events:none;touch-action:pan-y}
+  #penbar{position:fixed;left:50%;transform:translateX(-50%);z-index:58;
+    bottom:calc(var(--sb) + 12px);display:none;gap:7px;align-items:center;
+    background:#222831f8;border:1px solid var(--line);border-radius:13px;
+    padding:8px 11px;box-shadow:0 8px 26px #000a;max-width:94vw;flex-wrap:wrap;
+    justify-content:center}
+  #penbar.on{display:flex}
+  #penbar .col{width:26px;height:26px;border-radius:50%;border:2px solid #ffffff28}
+  #penbar .col.on{border-color:#fff;transform:scale(1.12)}
+  #penbar .wd{width:30px;height:26px;border-radius:7px;border:1px solid var(--line);
+    background:#ffffff10;display:flex;align-items:center;justify-content:center}
+  #penbar .wd.on{background:var(--acc);border-color:var(--acc)}
+  #penbar .wd i{display:block;background:var(--tx);border-radius:99px}
+  #penbar .wd.on i{background:#0b1220}
+  #penbar .tx{font-size:12.5px;color:var(--tx);padding:5px 9px;border-radius:8px;
+    border:1px solid var(--line);background:#ffffff10;white-space:nowrap}
+  #penbar .tx.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+  #penbar .sep{width:1px;height:22px;background:var(--line)}
+  #btnPen.good{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:700}
+
   /* ── TXT ── */
   #txt{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;
     background:var(--paper);
@@ -391,11 +415,28 @@
   <div id="rbar">
     <button class="ib" id="btnClose">‹ 서재</button>
     <div id="rtitle"></div>
+    <button class="ib" id="btnPen" title="펜슬 필기">펜</button>
     <button class="ib" id="btnDraw" title="긋기 모드">긋기</button>
     <button class="ib" id="btnHl" title="형광펜·메모 목록">메모</button>
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
+</div>
+
+<div id="penbar">
+  <button class="col" data-c="#e8453c" style="background:#e8453c"></button>
+  <button class="col" data-c="#2b6cd4" style="background:#2b6cd4"></button>
+  <button class="col" data-c="#1f2937" style="background:#1f2937"></button>
+  <button class="col" data-c="#ffd400" style="background:#ffd400" title="형광펜"></button>
+  <div class="sep"></div>
+  <button class="wd" data-w="1"><i style="width:14px;height:2px"></i></button>
+  <button class="wd" data-w="2"><i style="width:14px;height:4px"></i></button>
+  <button class="wd" data-w="3"><i style="width:14px;height:7px"></i></button>
+  <div class="sep"></div>
+  <button class="tx" id="penErase">지우개</button>
+  <button class="tx" id="penUndo">되돌리기</button>
+  <button class="tx" id="penFinger" title="펜슬 없이 손가락으로 그리기">손가락</button>
+  <button class="tx" id="penOff">닫기</button>
 </div>
 
 <div id="selov"></div>
@@ -586,7 +627,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14i';
+const BUILD='v15';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1614,7 +1655,7 @@ function bindDismissEpub(doc){
 }
 setInterval(()=>{
   if(!readerOn()){ if(lastSel){ lastSel=''; selbarOff(); } return; }
-  if(dragOn)return;                       // 훑는 중에는 건드리지 않습니다
+  if(dragOn||penDrag||inkOn)return;        // 훑거나 그리는 중에는 건드리지 않습니다
   const g=grabSel();
   const key=g?(g.t.length+'|'+g.t.slice(0,50)):'';
   if(key===lastSel)return;
@@ -1665,6 +1706,176 @@ function paintPdfHl(){
   });
 }
 
+/* ══════════ 펜슬 필기 ══════════
+   INK[쪽번호] = [ {c:색, w:굵기, h:형광펜인가, p:[[x,y,힘],…] } ]
+   x·y·굵기는 모두 '쪽 크기에 대한 비율'로 저장합니다.
+   그래야 배율을 바꾸거나 화면을 돌려도 글씨가 제자리에 있습니다.
+   원본 PDF 는 건드리지 않습니다. */
+let INK={}, inkKey='', inkOn=false;
+const PEN={ c:'#e8453c', w:2, erase:false, finger:false };
+const PENW=[0,0.0016,0.0030,0.0058];      // 쪽 너비에 대한 비율
+
+const saveINK=(()=>{ let t=null;
+  const flush=()=>{ t=null; if(!inkKey)return;
+    DB.put('kv','ink:'+inkKey,INK).catch(e=>{
+      log('필기 저장 실패: '+(e.message||e));
+      toast('필기를 저장하지 못했습니다\n'+(e.message||e),4500); }); };
+  const f=()=>{ if(!t)t=setTimeout(flush,600); }; f.now=()=>{ if(t)clearTimeout(t); flush(); };
+  return f; })();
+async function loadINK(id){
+  inkKey=id; INK={};
+  try{ INK=(await DB.get('kv','ink:'+id))||{}; }catch(e){ INK={}; }
+}
+function inkOf(n){ return INK[n]||(INK[n]=[]); }
+function inkCount(){ let n=0; Object.values(INK).forEach(a=>n+=a.length); return n; }
+
+/* 쪽마다 투명 종이 한 장 */
+function inkCanvas(d,make){
+  let cv=d.querySelector('canvas.ink');
+  if(!cv&&make){ cv=document.createElement('canvas'); cv.className='ink'; d.appendChild(cv); }
+  return cv;
+}
+function drawInk(d){
+  const n=Number(d.dataset.n), list=INK[n];
+  const w=d.clientWidth, h=d.clientHeight;
+  if(!w||!h)return;
+  let cv=inkCanvas(d,!!(list&&list.length));
+  if(!cv)return;
+  if(!list||!list.length){ cv.remove(); return; }
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d',{desynchronized:true});
+  g.scale(dpr,dpr);
+  list.forEach(st=>strokeOn(g,st,w,h));
+}
+/* 점을 곧게 잇지 않고 곡선으로 이어야 매끄럽습니다.
+   사파리는 촘촘한 좌표 묶음을 안 주므로 이 처리가 특히 중요합니다. */
+function strokeOn(g,st,w,h){
+  const p=st.p; if(!p||!p.length)return;
+  g.save();
+  g.lineCap='round'; g.lineJoin='round';
+  g.strokeStyle=st.c;
+  g.globalAlpha=st.h?0.34:1;
+  if(st.h)g.globalCompositeOperation='multiply';
+  const base=st.w*w;
+  if(p.length===1){
+    g.fillStyle=st.c; g.beginPath();
+    g.arc(p[0][0]*w,p[0][1]*h,base/2,0,6.284); g.fill(); g.restore(); return;
+  }
+  for(let i=1;i<p.length;i++){
+    const a=p[i-1], b=p[i];
+    // 형광펜은 굵기를 고르게, 펜은 필압을 따릅니다
+    g.lineWidth = st.h ? base : base*(0.45+0.85*((a[2]+b[2])/2||0.5));
+    g.beginPath();
+    if(i===1) g.moveTo(a[0]*w,a[1]*h);
+    else { const q=p[i-2];
+      g.moveTo((q[0]+a[0])/2*w,(q[1]+a[1])/2*h);
+      g.quadraticCurveTo(a[0]*w,a[1]*h,(a[0]+b[0])/2*w,(a[1]+b[1])/2*h); }
+    if(i===1) g.lineTo(b[0]*w,b[1]*h);
+    g.stroke();
+  }
+  g.restore();
+}
+function paintAllInk(){
+  if(KIND!=='pdf')return;
+  [...$('#pdf').children].forEach(d=>{ if(d.classList.contains('pg'))drawInk(d); });
+  paintPenBadge();
+}
+function paintPenBadge(){
+  const n=inkCount();
+  $('#btnPen').textContent = n? '펜 '+n : '펜';
+  $('#btnPen').classList.toggle('good',inkOn);
+}
+
+/* 손끝 자리를 쪽 안의 비율로 바꿉니다 */
+function inkPt(e,d){
+  const b=d.getBoundingClientRect();
+  return [ (e.clientX-b.left)/b.width, (e.clientY-b.top)/b.height,
+           (e.pressure!=null&&e.pressure>0)?e.pressure:0.5 ];
+}
+let penDrag=null;
+function penStart(e){
+  if(KIND!=='pdf'||!readerOn())return;
+  const pen = e.pointerType==='pen';
+  if(!pen && !(inkOn&&PEN.finger))return;        // 손가락은 그대로 통과 → 굴리기·글 고르기 유지
+  const d=e.target&&e.target.closest?e.target.closest('.pg'):null;
+  if(!d)return;
+  if(e.cancelable)e.preventDefault();
+  if(!inkOn)setPen(true);
+  const n=Number(d.dataset.n), pt=inkPt(e,d);
+  if(PEN.erase){ penDrag={erase:true,d:d,n:n}; eraseAt(n,pt,d); return; }
+  const st={ c:PEN.c, w:PENW[PEN.w]*(PEN.c==='#ffd400'?3.2:1), h:PEN.c==='#ffd400', p:[pt] };
+  inkOf(n).push(st);
+  penDrag={st:st,d:d,n:n};
+}
+function penMove(e){
+  if(!penDrag)return;
+  if(e.cancelable)e.preventDefault();
+  const pt=inkPt(e,penDrag.d);
+  if(penDrag.erase){ eraseAt(penDrag.n,pt,penDrag.d); return; }
+  const p=penDrag.st.p, last=p[p.length-1];
+  // 너무 촘촘한 점은 버립니다 (저장 크기와 매끄러움 둘 다 좋아집니다)
+  const dx=pt[0]-last[0], dy=pt[1]-last[1];
+  if(dx*dx+dy*dy < 4e-6) return;
+  p.push([Math.round(pt[0]*1e4)/1e4, Math.round(pt[1]*1e4)/1e4, Math.round(pt[2]*100)/100]);
+  drawInk(penDrag.d);
+}
+function penEnd(){
+  if(!penDrag)return;
+  const d=penDrag.d; penDrag=null;
+  drawInk(d); saveINK(); paintPenBadge();
+}
+/* 지우개 — 지나간 자리에 걸리는 획을 통째로 지웁니다 */
+function eraseAt(n,pt,d){
+  const list=INK[n]; if(!list||!list.length)return;
+  const r=0.018, before=list.length;
+  INK[n]=list.filter(st=>!st.p.some(q=>{
+    const dx=q[0]-pt[0], dy=(q[1]-pt[1])*(d.clientHeight/d.clientWidth);
+    return dx*dx+dy*dy < r*r; }));
+  if(INK[n].length!==before){ drawInk(d); saveINK(); paintPenBadge(); }
+}
+function setPen(on){
+  inkOn=on;
+  $('#penbar').classList.toggle('on',on&&KIND==='pdf');
+  $('#btnPen').classList.toggle('good',on);
+  if(on){ setDrawMode(false); selbarOff(); }
+  paintPenBadge();
+}
+$('#btnPen').onclick=()=>{
+  if(KIND!=='pdf')return toast('PDF 에서만 쓸 수 있습니다');
+  setPen(!inkOn);
+};
+$('#penOff').onclick=()=>setPen(false);
+$$('#penbar .col').forEach(b=>b.onclick=()=>{
+  PEN.c=b.dataset.c; PEN.erase=false; paintPenBar(); });
+$$('#penbar .wd').forEach(b=>b.onclick=()=>{ PEN.w=Number(b.dataset.w); PEN.erase=false; paintPenBar(); });
+$('#penErase').onclick=()=>{ PEN.erase=!PEN.erase; paintPenBar(); };
+$('#penFinger').onclick=()=>{ PEN.finger=!PEN.finger; paintPenBar();
+  toast(PEN.finger?'손가락으로도 그립니다 (굴리기는 두 손가락)':'펜슬로만 그립니다'); };
+$('#penUndo').onclick=()=>{
+  const n=(KIND==='pdf'&&pdfPg)||1;
+  // 지금 쪽에 없으면 가장 최근에 그린 쪽에서 되돌립니다
+  let k=INK[n]&&INK[n].length?n:null;
+  if(!k){ Object.keys(INK).forEach(x=>{ if(INK[x]&&INK[x].length)k=x; }); }
+  if(!k)return toast('되돌릴 것이 없습니다');
+  INK[k].pop(); if(!INK[k].length)delete INK[k];
+  saveINK(); paintAllInk();
+};
+function paintPenBar(){
+  $$('#penbar .col').forEach(b=>b.classList.toggle('on',!PEN.erase&&PEN.c===b.dataset.c));
+  $$('#penbar .wd').forEach(b=>b.classList.toggle('on',!PEN.erase&&PEN.w===Number(b.dataset.w)));
+  $('#penErase').classList.toggle('on',PEN.erase);
+  $('#penFinger').classList.toggle('on',PEN.finger);
+}
+(function(){
+  const el=$('#pdf');
+  el.addEventListener('pointerdown',penStart);
+  el.addEventListener('pointermove',penMove,{passive:false});
+  ['pointerup','pointercancel','pointerleave'].forEach(k=>el.addEventListener(k,penEnd));
+  // 스크리블이 펜슬 신호를 가로채지 못하게 막습니다
+  el.addEventListener('touchmove',e=>{ if(penDrag&&e.cancelable)e.preventDefault(); },{passive:false});
+})();
+
 /* ══════════ PDF ══════════ */
 let pdfDoc=null, pdfIO=null, pdfPg=1, pdfBusy=new Set();
 function loadPdfJs(){
@@ -1713,9 +1924,10 @@ async function showPdf(b,buf){
     const p1=await pdfDoc.getPage(1), v1=p1.getViewport({scale:1});
     $('#pdf')._ratio=v1.height/v1.width;
   }catch(e){ throw new Error(pdfWhy(e)); }
+  await loadINK(b.i);
   const p=pctOf(b);
   pdfPg = p>0 ? Math.max(1,Math.min(pdfDoc.numPages,Math.round(p*pdfDoc.numPages))) : 1;
-  buildPdf(); paintHlBadge();
+  buildPdf(); paintHlBadge(); paintPenBadge(); paintPenBar();
   markRead(b.i,null);
 }
 /* 두 가지 보기를 다시 차립니다 (설정이 바뀔 때도 이걸 부릅니다) */
@@ -1749,7 +1961,7 @@ function buildPdf(){
 }
 function freePdf(d){
   if(!d._cv)return;
-  const cv=d.querySelector('canvas');
+  const cv=d.querySelector('canvas:not(.ink)');
   if(cv){ cv.width=cv.height=0; }      // 사파리는 이렇게 해줘야 메모리를 돌려줍니다
   d.innerHTML=`<div class="pn">${d.dataset.n}</div>`; d._cv=false;
   const w=pdfWidth(), r=$('#pdf')._ratio||1.414;
@@ -1793,6 +2005,7 @@ async function drawPdf(d){
     // 글자층을 얹어야 글을 그을 수 있습니다 (스캔본은 글자가 없어 비어 있습니다)
     await addTextLayer(d,pg,vp);
     paintPdfHl();
+    drawInk(d);
     trimPdf(d);
   }catch(e){
     log('쪽 그리기 실패 '+d.dataset.n+': '+(e.message||e));
@@ -1912,6 +2125,8 @@ function openShell(b){
   $('#btnDraw').classList.toggle('good',drawMode);
   document.body.classList.toggle('drawing',drawMode);
   $('#drawPager').classList.toggle('on',drawMode);
+  $('#btnPen').style.display = KIND==='pdf' ? '' : 'none';
+  if(KIND!=='pdf')setPen(false);
   $('#page').innerHTML=''; if(KIND!=='pdf')$('#pdf').innerHTML='';
   if(KIND!=='txt')$('#txt').innerHTML='';
 }
@@ -1966,9 +2181,10 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now(); saveHL.now(); selbarOff(); clearOv();
+function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); setPen(false);
+  selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
-  TXTRAW=''; epubC=null; caretWarned=false;
+  TXTRAW=''; epubC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
   $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
   try{ pdfIO&&pdfIO.disconnect(); }catch(e){}
@@ -2053,7 +2269,7 @@ $('#rgZoom').addEventListener('input',()=>{
   P.zoom=Number($('#rgZoom').value); savePref(); $('#vZoom').textContent=P.zoom+'%';
   if(KIND!=='pdf')return;
   clearTimeout($('#rgZoom')._t);
-  $('#rgZoom')._t=setTimeout(redrawPdf,180);
+  $('#rgZoom')._t=setTimeout(()=>{ redrawPdf(); setTimeout(paintAllInk,120); },180);
 });
 $('#pgPrev').onclick=()=>{ if(KIND==='pdf')gotoPg(Math.max(1,pdfPg-1)); };
 $('#pgNext').onclick=()=>{ if(KIND==='pdf'&&pdfDoc)gotoPg(Math.min(pdfDoc.numPages,pdfPg+1)); };
@@ -2229,7 +2445,7 @@ function openPin(){ $('#pinQ').value=''; paintPin(); $('#pinSheet').classList.ad
 $('#hPinEdit').onclick=openPin;
 /* 화면을 돌리거나 창을 늘리면 PDF 를 다시 잽니다 */
 addEventListener('resize',()=>{ clearTimeout(window._rz);
-  window._rz=setTimeout(()=>{ if(readerOn()){ redrawPdf(); paintEpubHl(); } },260); });
+  window._rz=setTimeout(()=>{ if(readerOn()){ redrawPdf(); paintEpubHl(); paintAllInk(); } },260); });
 $('#pinClose').onclick=()=>{ $('#pinSheet').classList.remove('on'); buildHome(); };
 $('#pinQ').addEventListener('input',()=>{clearTimeout($('#pinQ')._t);
   $('#pinQ')._t=setTimeout(paintPin,140);});
