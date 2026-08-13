@@ -586,7 +586,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v14h';
+const BUILD='v14i';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1107,16 +1107,28 @@ function hlGet(id){ return (curB&&HL[curB.i]||[]).find(x=>x.i===id); }
 
 /* 그은 글 위에 뜨는 막대 */
 let PICK=null;  // {k, c, t, pos} — 그었지만 아직 저장 전
-/* 사파리 기본 메뉴는 자리가 없으면 위로도 아래로도 붙습니다.
-   피해 다니는 방식으로는 이길 수 없어, 화면 맨 아래 고정 자리에 둡니다.
-   글을 가리지도 않고 엄지로 닿기도 좋습니다. */
+let PICKBOX=null;  // 그은 글이 화면에서 차지하는 자리
+/* 막대 자리 잡기
+   사파리 기본 메뉴는 고른 글 '위'에 붙는 것이 보통이고,
+   위에 자리가 없을 때만 아래로 내려옵니다. 그 눈치를 보고 비킵니다. */
+const MENU_H=52;          // 사파리 메뉴가 차지하는 높이쯤
 function selbarAt(){
   const b=$('#selbar'); b.classList.add('on');
   $('#selpv').textContent = PICK&&PICK.t ? '"'+PICK.t.replace(/\s+/g,' ').slice(0,40)+'"' : '';
-  const pager=$('#drawPager').classList.contains('on');
-  b.style.bottom=`calc(var(--sb) + ${pager?66:14}px)`;
+  b.style.bottom='auto';
+  const h=b.offsetHeight||44;
+  const bx=PICKBOX;
+  if(!bx){ b.style.top=(innerHeight-h-70)+'px'; return; }
+  // 고른 글이 화면 위쪽이면 사파리 메뉴가 '아래'로 내려옵니다 → 우리는 더 아래로
+  const gap = bx.top < MENU_H+40 ? MENU_H+14 : 12;
+  let T = bx.bottom + gap;
+  const pagerH = $('#drawPager').classList.contains('on') ? 64 : 8;
+  if(T + h > innerHeight - pagerH){          // 아래가 모자라면 위로
+    T = bx.top - h - (bx.top < MENU_H+40 ? 12 : MENU_H+14);
+  }
+  b.style.top = Math.max(8, Math.min(innerHeight-h-8, T)) + 'px';
 }
-function selbarOff(){ $('#selbar').classList.remove('on'); PICK=null; }
+function selbarOff(){ $('#selbar').classList.remove('on'); PICK=null; PICKBOX=null; lastSel=''; }
 $$('#selbar .col').forEach(x=>x.onclick=()=>{
   if(!PICK)return;
   const o=hlAdd(Object.assign({col:x.dataset.c},PICK));
@@ -1413,6 +1425,8 @@ function takeRange(r,doc,off,below){
   if(!t){ log('고른 글이 비어 있습니다'); return clearOv(); }
   const rc=[...r.getClientRects()].filter(c=>c.width>0.5&&c.height>0.5);
   if(!rc.length){ log('고른 글의 자리를 재지 못했습니다'); return clearOv(); }
+  PICKBOX={ top:Math.min(...rc.map(c=>c.top))+off.y,
+            bottom:Math.max(...rc.map(c=>c.bottom))+off.y };
   if(KIND==='epub'){
     // 넘겨받은 것 대신, 고른 글이 실제로 들어 있는 문서를 씁니다
     const d2=(r.startContainer&&r.startContainer.ownerDocument)||doc;
@@ -1524,7 +1538,7 @@ function bindDrawEpub(view){
   const fwd=e=>{ const p=ptOf(e);
     return { clientX:p.clientX+dragOff.x, clientY:p.clientY+dragOff.y,
              cancelable:e.cancelable, preventDefault:()=>{ try{e.preventDefault();}catch(x){} } }; };
-  bindSelEpub(doc);
+  bindSelEpub(doc); bindDismissEpub(doc);
   const dn=e=>drawStart(e,doc,offOf());
   doc.addEventListener('pointerdown',dn);
   doc.addEventListener('touchstart',dn,{passive:false});
@@ -1582,6 +1596,22 @@ function grabSel(){
   return null;
 }
 let lastSel='';
+/* 다른 곳을 누르면 막대를 바로 내립니다.
+   아이패드는 딴 데를 눌러도 고른 글이 그대로 남아 있는 일이 잦아,
+   가만두면 막대가 계속 붙어 있습니다. */
+function dismissSel(e){
+  if(!$('#selbar').classList.contains('on'))return;
+  const t=e&&e.target;
+  if(t&&t.closest&&t.closest('#selbar, .pan, .sheet, #drawPager'))return;
+  clearSel(); clearOv(); selbarOff();
+}
+addEventListener('pointerdown',dismissSel,true);
+addEventListener('touchstart',dismissSel,{capture:true,passive:true});
+/* 책 안쪽(EPUB)에서도 */
+function bindDismissEpub(doc){
+  try{ doc.addEventListener('pointerdown',()=>dismissSel({}),true);
+       doc.addEventListener('touchstart',()=>dismissSel({}),{capture:true,passive:true}); }catch(e){}
+}
 setInterval(()=>{
   if(!readerOn()){ if(lastSel){ lastSel=''; selbarOff(); } return; }
   if(dragOn)return;                       // 훑는 중에는 건드리지 않습니다
@@ -1820,6 +1850,7 @@ function showPdfFoot(){
 }
 function onPdfScroll(){
   const host=$('#pdf'); if(!pdfDoc||P.pnav==='page')return;
+  if(!dragOn&&$('#selbar').classList.contains('on')&&!PICK)selbarOff();
   const y=host.scrollTop+host.clientHeight*0.35;
   let n=1; const ch=host.children;
   for(let i=0;i<ch.length;i++){ if(ch[i].offsetTop-host.offsetTop<=y)n=i+1; else break; }
@@ -2260,10 +2291,10 @@ $('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인�
   catch(e){ toast(e.message,5000); } };
 $('#btnClose').onclick=closeReader;
 /* 좌우 넘기기 — EPUB 이든 '한 쪽씩 보는' PDF 든 같은 손놀림 */
-function pageBack(){ if(!readerOn())return;
+function pageBack(){ if(!readerOn())return; clearSel(); clearOv(); selbarOff();
   if(KIND==='epub'&&rend)rend.prev();
   else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg-1); }
-function pageFwd(){ if(!readerOn())return;
+function pageFwd(){ if(!readerOn())return; clearSel(); clearOv(); selbarOff();
   if(KIND==='epub'&&rend)rend.next();
   else if(KIND==='pdf'&&P.pnav==='page')goPdfPage(pdfPg+1); }
 $('#tapL').onclick=pageBack;
