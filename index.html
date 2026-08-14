@@ -586,6 +586,13 @@
       <button id="setSave" class="pri">저장하고 새로고침</button></div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
 
+    <div class="sect">기기끼리 맞추기<span id="syncInfo"></span></div>
+    <div class="btns"><button id="btnSync" class="pri">지금 맞추기</button></div>
+    <div class="btns"><button id="btnSyncAuto">자동으로 맞추기: 켬</button></div>
+    <p class="note">읽은 기록·형광펜·메모·내 서가를 <b>내 구글 드라이브</b>에 담아
+      아이패드·PC·폰이 같은 화면을 보게 합니다.
+      펜슬 필기와 받아둔 파일, 보기 설정은 기기마다 따로 둡니다.</p>
+
     <div class="sect">저장 공간<span id="useInfo"></span></div>
     <div class="btns"><button id="btnClearDone">다 읽은 책 파일 비우기</button></div>
     <div class="btns"><button id="btnClearBooks">받아둔 파일 모두 비우기</button></div>
@@ -627,14 +634,17 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v15b';
+const BUILD='v16';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
   tok:'maumpro-library-2026',
   cid:'552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com'
 };
-const SCOPE='https://www.googleapis.com/auth/drive.readonly';
+/* drive.appdata — 구글이 앱마다 하나씩 내주는, 눈에 안 보이는 칸입니다.
+   기기끼리 기록을 맞추는 데만 씁니다. 사용자의 다른 파일은 못 봅니다. */
+const SCOPE='https://www.googleapis.com/auth/drive.readonly '
+          + 'https://www.googleapis.com/auth/drive.appdata';
 const PAGE=60;
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -657,7 +667,8 @@ let RQ=[]; try{ RQ=JSON.parse(localStorage.getItem('ebl_rq')||'[]'); }catch(e){ 
 function pushRQ(q){
   q=String(q||'').trim(); if(q.length<2) return;
   RQ=[q].concat(RQ.filter(x=>x!==q)).slice(0,8);
-  try{ localStorage.setItem('ebl_rq',JSON.stringify(RQ)); }catch(e){}
+  try{ localStorage.setItem('ebl_rq',JSON.stringify(RQ));
+        localStorage.setItem('ebl_rqat',String(Date.now())); }catch(e){}
 }
 
 /* 가나다 정렬 — 글자를 한 자 칠 때마다 3.7만 권을 다시 줄 세우면
@@ -776,7 +787,7 @@ const saveRD = (()=>{
   return f;
 })();
 addEventListener('pagehide',()=>saveRD.now());
-addEventListener('visibilitychange',()=>{ if(document.hidden)saveRD.now(); });
+addEventListener('visibilitychange',()=>{ if(document.hidden){ saveRD.now(); syncSoon(); } });
 const DONE_AT = 0.985;                       // 이 이상 읽으면 '다 읽음'
 
 function markRead(id,p,forceDone,forceReading){
@@ -1135,7 +1146,7 @@ function hlDel(id){
   if(k<0)return;
   const o=a[k]; a.splice(k,1);
   if(!a.length)delete HL[curB.i];
-  saveHL();
+  DEL[o.i]=Date.now(); saveDEL(); saveHL();
   if(o.k==='epub') paintEpubHl();
   else if(o.k==='pdf') paintPdfHl();
   else paintTxtHl();
@@ -1206,7 +1217,7 @@ function openMemo(id){
 }
 $('#memoOk').onclick=()=>{
   const o=hlGet(memoId);
-  if(o){ o.n=$('#memoTx').value.trim(); saveHL.now(); repaintHl(o); }
+  if(o){ o.n=$('#memoTx').value.trim(); o.up=Date.now(); saveHL.now(); repaintHl(o); }
   panOff(); paintHl(); toast('메모를 저장했습니다');
 };
 $('#memoDel').onclick=()=>{
@@ -1219,6 +1230,8 @@ $('#hlWipe').onclick=()=>{
   if(!curB)return;
   const n=hlOf(curB.i).length; if(!n)return;
   if(!confirm(`이 책의 형광펜·메모 ${n}개를 모두 지웁니다.\n되돌릴 수 없습니다.`))return;
+  const now=Date.now();
+  hlOf(curB.i).forEach(o=>DEL[o.i]=now); saveDEL();
   delete HL[curB.i]; saveHL.now();
   if(KIND==='pdf')paintPdfHl(); else if(KIND==='txt')paintTxtHl(); else paintEpubHl();
   paintHlBadge(); paintHl(); toast(`${n}개를 지웠습니다`);
@@ -1705,6 +1718,147 @@ function paintPdfHl(){
     });
   });
 }
+
+/* ══════════ 기기끼리 맞추기 ══════════
+   각자의 구글 드라이브 '앱 전용 칸'에 기록을 둡니다.
+   가족이 함께 써도 계정이 다르니 서로 섞이지 않습니다.
+
+   맞추는 것 : 읽은 기록 · 형광펜 · 메모 · 내 서가 · 최근 검색어
+   안 맞추는 것 : 펜슬 필기(무거움) · 받아둔 파일(기기마다 다름) · 보기 설정(화면이 다름)
+
+   지운 것이 되살아나지 않도록 '지웠다'는 표시를 따로 남깁니다.
+   안 그러면 한쪽에서 지워도 다른 기기가 도로 밀어 넣습니다. */
+const SFILE='ebl-state.json';
+let DEL={}, RDEL={};          // 지운 형광펜 / 지운 읽은 기록
+try{ DEL=JSON.parse(localStorage.getItem('ebl_del')||'{}'); }catch(e){}
+try{ RDEL=JSON.parse(localStorage.getItem('ebl_rdel')||'{}'); }catch(e){}
+const saveDEL=()=>{ try{
+  localStorage.setItem('ebl_del',JSON.stringify(DEL));
+  localStorage.setItem('ebl_rdel',JSON.stringify(RDEL)); }catch(e){} };
+let SYNCAT=Number(localStorage.getItem('ebl_syncat')||0);
+
+function localState(){
+  return { v:1, at:Date.now(), rd:RD, hl:HL, del:DEL, rdel:RDEL,
+           pins:P.pins||[], rq:RQ,
+           pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
+           rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
+}
+/* 두 쪽을 합칩니다. 나중 것이 이기되, 지운 표시가 가장 셉니다. */
+function mergeState(a,b){
+  if(!a)return b; if(!b)return a;
+  const out={ v:1, at:Date.now(), rd:{}, hl:{}, del:{}, rdel:{},
+              pins:[], rq:[], pinsAt:0, rqAt:0 };
+  const maxMap=(x,y)=>{ const m=Object.assign({},x||{});
+    Object.entries(y||{}).forEach(([k,v])=>{ if(!(k in m)||v>m[k])m[k]=v; }); return m; };
+  out.del =maxMap(a.del ,b.del);
+  out.rdel=maxMap(a.rdel,b.rdel);
+
+  // 읽은 기록 — 나중에 읽은 쪽
+  const ids=new Set([...Object.keys(a.rd||{}),...Object.keys(b.rd||{})]);
+  ids.forEach(id=>{
+    const x=(a.rd||{})[id], y=(b.rd||{})[id];
+    const pick = !x ? y : !y ? x : ((y.t||0)>(x.t||0) ? y : x);
+    if(!pick)return;
+    const gone=out.rdel[id]||0;
+    if(gone && gone>=(pick.t||0))return;      // 지운 뒤로 안 읽었으면 되살리지 않습니다
+    out.rd[id]=pick;
+  });
+
+  // 형광펜·메모 — 양쪽을 합치고, 같은 것은 나중에 고친 쪽
+  const bks=new Set([...Object.keys(a.hl||{}),...Object.keys(b.hl||{})]);
+  bks.forEach(bk=>{
+    const m={};
+    [...((a.hl||{})[bk]||[]),...((b.hl||{})[bk]||[])].forEach(o=>{
+      if(!o||!o.i)return;
+      if(out.del[o.i])return;                 // 지운 것
+      const old=m[o.i];
+      if(!old||(o.up||o.at||0)>(old.up||old.at||0))m[o.i]=o;
+    });
+    const arr=Object.values(m);
+    if(arr.length)out.hl[bk]=arr;
+  });
+
+  // 내 서가 · 최근 검색어 — 나중에 고친 쪽 통째로
+  if((a.pinsAt||0)>=(b.pinsAt||0)){ out.pins=a.pins||[]; out.pinsAt=a.pinsAt||0; }
+  else                            { out.pins=b.pins||[]; out.pinsAt=b.pinsAt||0; }
+  if((a.rqAt||0)>=(b.rqAt||0)){ out.rq=a.rq||[]; out.rqAt=a.rqAt||0; }
+  else                        { out.rq=b.rq||[]; out.rqAt=b.rqAt||0; }
+  return out;
+}
+function applyState(s){
+  RD=s.rd||{}; HL=s.hl||{}; DEL=s.del||{}; RDEL=s.rdel||{};
+  P.pins=s.pins||[]; RQ=s.rq||[];
+  saveRD.now(); saveHL.now(); saveDEL(); savePref();
+  try{ localStorage.setItem('ebl_rq',JSON.stringify(RQ));
+       localStorage.setItem('ebl_pinsat',String(s.pinsAt||0));
+       localStorage.setItem('ebl_rqat',String(s.rqAt||0)); }catch(e){}
+}
+
+/* ── 드라이브 앱 전용 칸 다루기 ── */
+async function dv(url,at,opt){
+  const o=Object.assign({headers:{}},opt||{});
+  o.headers=Object.assign({Authorization:'Bearer '+at},o.headers||{});
+  const r=await fetch(url,o);
+  if(!r.ok)throw new Error('드라이브 '+r.status+(r.status===403?' (권한 — 🔑 로 다시 로그인해 주세요)':''));
+  return r;
+}
+async function findState(at){
+  const q=encodeURIComponent(`name='${SFILE}' and trashed=false`);
+  const r=await dv(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}`
+    +`&fields=files(id,modifiedTime)&pageSize=1`,at);
+  const j=await r.json();
+  return (j.files&&j.files[0])||null;
+}
+async function putState(file,data,at){
+  const body=JSON.stringify(data);
+  if(file){
+    await dv(`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media`,at,
+      {method:'PATCH',headers:{'Content-Type':'application/json'},body});
+    return file;
+  }
+  const meta=JSON.stringify({name:SFILE,parents:['appDataFolder']});
+  const B='ebl'+Date.now();
+  const multi=`--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`
+    +`--${B}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${B}--`;
+  const r=await dv(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`,at,
+    {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+B},body:multi});
+  return await r.json();
+}
+let syncing=false;
+async function syncNow(inter){
+  if(syncing)return;
+  syncing=true;
+  try{
+    const at=await needToken(!!inter);
+    const f=await findState(at);
+    let remote=null;
+    if(f){ try{ const r=await dv(
+      `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,at); remote=await r.json(); }
+      catch(e){ log('맞추기 — 가져오기 실패: '+(e.message||e)); } }
+    const merged=mergeState(remote,localState());
+    applyState(merged);
+    await putState(f,merged,at);
+    SYNCAT=Date.now(); localStorage.setItem('ebl_syncat',String(SYNCAT));
+    paintSync();
+    if(readerOn()){ paintHlBadge(); if(KIND==='epub')paintEpubHl();
+      else if(KIND==='pdf')paintPdfHl(); else paintTxtHl(); }
+    else { paintTabs(); render(true); }
+    if(inter)toast('기기끼리 맞췄습니다');
+    log('맞추기 완료 — 책 '+Object.keys(merged.rd||{}).length+'권, 형광펜 '
+      +Object.values(merged.hl||{}).reduce((a,x)=>a+x.length,0)+'개');
+  }catch(e){
+    log('맞추기 실패: '+(e.message||e));
+    if(inter)toast('맞추지 못했습니다\n'+(e.message||e),5000);
+  }finally{ syncing=false; }
+}
+function paintSync(){
+  const el=$('#syncInfo'); if(!el)return;
+  el.textContent = SYNCAT ? '  ·  마지막 '+new Date(SYNCAT).toLocaleString('ko-KR',
+    {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '  ·  아직 안 맞춤';
+}
+/* 자동으로 맞추는 순간들 */
+function syncSoon(){ if(P.sync===false)return;
+  clearTimeout(syncSoon._t); syncSoon._t=setTimeout(()=>syncNow(false),1200); }
 
 /* ══════════ 펜슬 필기 ══════════
    INK[쪽번호] = [ {c:색, w:굵기, h:형광펜인가, p:[[x,y,힘],…] } ]
@@ -2231,7 +2385,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); setPen(false);
+function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; epubC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
@@ -2258,7 +2412,7 @@ $$('.pan [data-close]').forEach(b=>b.onclick=panOff);
 /* ── 책 하나 손질하기 ── */
 let panB=null;
 function clearRead(id){
-  delete RD[id]; saveRD();
+  delete RD[id]; RDEL[id]=Date.now(); saveDEL(); saveRD();
   try{ localStorage.removeItem('ebl_pos_'+id); }catch(e){}
 }
 function openPanBook(b){
@@ -2524,7 +2678,8 @@ function paintPin(){
       if(i>=0)P.pins.splice(i,1);
       else{ if(P.pins.length>=8){ toast('서가는 8개까지 담을 수 있습니다'); return; }
             P.pins.push(k); }
-      savePref(); paintPin();
+      savePref(); try{localStorage.setItem('ebl_pinsat',String(Date.now()));}catch(e){}
+      paintPin();
     };
     f.appendChild(b);
   });
@@ -2574,7 +2729,7 @@ window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
 $('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
   $('#sCid').value=cfg('cid'); $('#log').textContent=LOG.join('\n');
-  $('#setSheet').classList.add('on'); useInfo(); };
+  $('#setSheet').classList.add('on'); useInfo(); paintSync(); paintSyncAuto(); };
 $('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
 $('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); location.reload(); };
@@ -2609,12 +2764,22 @@ $('#btnClearRead').onclick=()=>{
   const n=Object.keys(RD).length;
   if(!n){ toast('지울 기록이 없습니다'); return; }
   if(!confirm(`${n}권의 읽은 기록을 지웁니다.\n진도와 '다 읽음' 표시가 사라집니다.\n파일은 그대로 둡니다.`)) return;
+  const now=Date.now(); Object.keys(RD).forEach(k=>RDEL[k]=now); saveDEL();
   RD={}; saveRD();
   try{ Object.keys(localStorage).filter(k=>k.indexOf('ebl_pos_')===0)
         .forEach(k=>localStorage.removeItem(k)); }catch(e){}
   TAB=''; localStorage.setItem('ebl_tab','');
   toast('읽은 기록을 지웠습니다'); paintTabs(); render(true);
 };
+$('#btnSync').onclick=()=>syncNow(true);
+$('#btnSyncAuto').onclick=()=>{
+  P.sync = P.sync===false; savePref(); paintSyncAuto();
+  toast(P.sync!==false?'앱을 열고 닫을 때 저절로 맞춥니다':'이제 [지금 맞추기] 를 누르실 때만 맞춥니다');
+};
+function paintSyncAuto(){
+  $('#btnSyncAuto').textContent='자동으로 맞추기: '+(P.sync===false?'끔':'켬');
+}
+
 /* 서비스 워커가 옛 화면을 붙들고 있을 때 빠져나오는 길 */
 $('#btnFresh').onclick=async()=>{
   toast('앱 파일을 새로 받는 중…');
@@ -2638,7 +2803,9 @@ window.addEventListener('unhandledrejection',e=>log('오류(비동기): '+(e.rea
 log('빌드 '+BUILD);
 applyRead();
 markLogin(false);
-(async()=>{ await boot(); paintTabs(); buildChips(); render(true); })();
+(async()=>{ await boot(); paintTabs(); buildChips(); render(true);
+  setTimeout(()=>syncSoon(),2500);   // 목록이 자리를 잡은 뒤 조용히 맞춥니다
+})();
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(r=>{ r.update();
     r.addEventListener('updatefound',()=>{ const w=r.installing;
