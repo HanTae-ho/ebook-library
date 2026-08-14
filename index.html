@@ -847,14 +847,18 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v26a';
+const BUILD='v27';
 
+/* 이 파일은 깃허브에 공개돼 있습니다.
+   그래서 주소·토큰·폴더는 여기 두지 않습니다.
+   초대 링크가 실어다 주거나, 서재를 차린 사람이 🛠 관리 에 한 번 넣습니다.
+   클라이언트 ID 는 원래 공개되는 값이라 편의를 위해 남겨둡니다. */
 const DEF={
-  url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
-  tok:'maumpro-library-2026',
+  url:'',     // Apps Script 웹앱 주소
+  tok:'',     // 토큰
   cid:'552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com',
   fol:'',     // 도서 폴더 링크 — 승인 요청을 보낼 자리
-  adm:''      // 관리자 열쇠 — 팀장님 기기에만
+  adm:''      // 관리자 열쇠 — 서재를 차린 사람 기기에만
 };
 /* drive.appdata — 구글이 앱마다 하나씩 내주는, 눈에 안 보이는 칸입니다.
    기기끼리 기록을 맞추는 데만 씁니다. 사용자의 다른 파일은 못 봅니다. */
@@ -1003,6 +1007,17 @@ function needToken(inter){ return new Promise((ok,ng)=>{
 
 /* ── 색인 ── */
 async function boot(){
+  /* 주소와 토큰은 소스에 두지 않습니다.
+     초대 링크가 실어다 주거나, 서재를 차린 사람이 🛠 관리 에 한 번 넣습니다.
+     저장소를 열기 전에 먼저 봅니다 — 저장소가 말썽이어도 안내는 떠야 하니까요. */
+  if(!cfg('url')||!cfg('tok')){
+    stat('아직 서재에 연결되지 않았습니다.\n\n'
+        +'· 초대 링크를 받으셨다면 그 링크로 열어주세요\n'
+        +'· 서재를 차리신 분이라면 아래 🛠 관리 에\n'
+        +'  주소와 토큰을 넣고 [저장하고 새로고침]');
+    setTimeout(()=>{ const e=$('#setSheet'); if(e)e.classList.add('on'); },700);
+    return;
+  }
   try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
   let c=null; try{ c=await DB.get('kv','index'); }catch(e){}
   if(c){ apply(c); render(true); log('저장된 색인 ('+BOOKS.length+'권)'); }
