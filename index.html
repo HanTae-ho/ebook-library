@@ -177,7 +177,7 @@
   /* ── 홈 ──
      3.7만 권을 첫 화면에 늘어놓지 않습니다.
      위에서 아래로 갈수록 덜 급한 것이 오도록 두었습니다. */
-  /* 최상위 — 나 / 가족 */
+  /* 최상위 — 나 / 모임들 */
   #hseg{display:flex;gap:6px;margin-top:10px}
   #hseg button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
     background:var(--panel);font-size:14px;color:var(--dim)}
@@ -238,7 +238,7 @@
   #pinList button.on{color:var(--acc);font-weight:600}
   #pinList .cnt{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
   #pinList .lv{color:var(--dim);font-size:11px;margin-left:6px;font-weight:400}
-  /* 가족 명단 */
+  /* 모임원 명단 */
   .mate{display:flex;justify-content:space-between;align-items:center;gap:8px;
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
@@ -463,16 +463,16 @@
 
   <div id="famPane">
       <div class="hs" id="hsShelf">
-        <div class="hh"><b>가족 서가</b><button id="hShelfNew">＋ 새 칸</button></div>
+        <div class="hh"><b>서가</b><button id="hShelfNew">＋ 새 칸</button></div>
         <div class="hrow" id="hShelf"></div>
         <div class="hnone" id="hShelfNone">아직 만든 칸이 없습니다.
-          자주 권하실 책을 묶어두면 그 모임 모두의 홈에 뜹니다.</div>
+          자주 권하실 책을 묶어두면 그 모임원 모두의 홈에 뜹니다.</div>
       </div>
 
       <div id="hRec"></div>
       <div class="hnone" id="hRecNone" style="margin-top:18px">
         아직 오간 책이 없습니다.
-        표지를 길게 누르면 가족에게 권할 수 있습니다.</div>
+        표지를 길게 누르면 모임원에게 권할 수 있습니다.</div>
 
       <div class="hlinks">
         <button id="lkReq">이 책 넣어주세요 <span id="lkReqN"></span></button>
@@ -661,7 +661,7 @@
     <div class="sect">나</div>
     <label>이 기기를 쓰는 사람</label>
     <input id="sMe" placeholder="예) 아빠 · 아내 · 지수(딸) · 지우(아들)" autocomplete="off">
-    <p class="note">가족 도서관에서 이 이름으로 보입니다.
+    <p class="note">모임에서 이 이름으로 보입니다.
       바꿔도 읽은 기록은 그대로 따라옵니다.</p>
 
     <div class="sect">기기끼리 맞추기<span id="syncInfo"></span></div>
@@ -699,14 +699,14 @@
   <div class="box">
     <h3>관리</h3>
     <p class="note" style="margin-top:0">서재를 차린 사람만 쓰는 자리입니다.
-      가족은 여기를 볼 일이 없습니다.</p>
+      모임원은 여기를 볼 일이 없습니다.</p>
 
     <div class="sect">연결</div>
     <label>Apps Script 웹앱 주소</label><input id="sUrl">
     <label>토큰</label><input id="sTok">
     <label>구글 클라이언트 ID</label><input id="sCid">
     <label>도서 폴더 링크 <span style="color:var(--dim);font-weight:400">
-      — 막혔을 때 가족이 여기로 승인을 요청합니다</span></label><input id="sFol"
+      — 막혔을 때 모임원이 여기로 승인을 요청합니다</span></label><input id="sFol"
       placeholder="https://drive.google.com/drive/folders/...">
     <label>관리자 열쇠 <span style="color:var(--dim);font-weight:400">
       — 이걸 넣어야 모임·서가·차단이 열립니다</span></label><input id="sAdm"
@@ -721,18 +721,18 @@
       맨 위 탭에 그 이름이 붙습니다.
       <br>모임마다 서가·권하기·요청이 따로 돕니다. 서로 안 섞입니다.</p>
 
-    <div class="sect">가족에게 나눠주기</div>
+    <div class="sect">모임원 초대</div>
     <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
     <div id="mateList"></div>
     <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
       받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
       <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
 
-    <div class="sect">가족 칸<span id="famInfo"></span></div>
-    <div class="btns"><button id="btnFam">가족 칸 확인</button></div>
-    <p class="note">가족 서가·권하기·책 요청이 오가는 공용 칸입니다.
+    <div class="sect">모임 칸<span id="famInfo"></span></div>
+    <div class="btns"><button id="btnFam">모임 칸 확인</button></div>
+    <p class="note">서가·권하기·책 요청이 오가는 공용 칸입니다.
       읽은 기록과 밑줄은 여기 올라오지 않습니다.
-      <br><b>모임은 가족 화면 맨 위에서 만듭니다.</b></p>
+      <br><b>모임은 위쪽 '모임' 칸에서 만듭니다.</b></p>
 
     <div class="sect">위험</div>
     <div class="btns"><button id="btnClearAll">전부 초기화</button></div>
@@ -847,7 +847,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v25';
+const BUILD='v26';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -901,7 +901,7 @@ function order(s){
 }
 
 let BOOKS=[],HAY=[],UPDATED='',shown=0,rows=[];
-let HSIDE=localStorage.getItem('ebl_hside')||'me';   // 나 / 가족
+let HSIDE=localStorage.getItem('ebl_hside')||'me';   // 나 / 모임번호
 let TAB=localStorage.getItem('ebl_tab')||'home';   // 상태 탭 (기본은 홈)
 let PIN='';                               // 내 서가에서 고른 분류
 let PATH=[];                              // 계층 탐색 경로 [대,중]
@@ -1959,11 +1959,11 @@ function paintPdfHl(){
   });
 }
 
-/* ══════════ 가족 도서관 — 공용 칸 ══════════
+/* ══════════ 모임 칸 — 함께 보는 자리 ══════════
    각자의 읽은 기록·밑줄은 그대로 각자 구글 드라이브에 둡니다.
    여기에는 '나누기로 한 것' 만 오갑니다.
 
-     shelf      가족 서가 (칸 이름)
+     shelf      서가 (칸 이름)
      shelfbook  그 칸에 담긴 책
      rec        권하기
      req        책 요청
@@ -1994,8 +1994,8 @@ async function famLoad(){
     if(d.groups){ GROUPS=Object.keys(d.groups).map(id=>({id:id,name:d.groups[id]}));
       saveGroups(); paintSeg(); }
     if(d.me&&d.me!=='*'){ setMyGroup(d.me,d.gname||ME.grpN); paintSeg(); }
-    log('가족 칸 '+FAM.length+'줄'+(d.me&&d.me!=='*'?' ('+(d.gname||'')+')':''));
-  }catch(e){ log('가족 칸 못 받음: '+(e.message||e)); }
+    log('모임 칸 '+FAM.length+'줄'+(d.me&&d.me!=='*'?' ('+(d.gname||'')+')':''));
+  }catch(e){ log('모임 칸 못 받음: '+(e.message||e)); }
   return FAM;
 }
 /* 한 줄 올리기 */
@@ -2072,9 +2072,9 @@ function grpList(){
   return ME.grp ? [{id:ME.grp,name:ME.grpN||'우리 모임'}] : [];
 }
 
-/* ── 가족 서가 · 권하기 · 요청 ── */
+/* ── 서가 · 권하기 · 요청 ── */
 const isOwner = () => !!cfg('adm');            // 관리자 열쇠가 있으면 사서
-/* 권할 상대 목록 — 팀장님은 명단에서, 가족은 지금까지 오간 기록에서 */
+/* 권할 상대 목록 — 만든 이는 명단에서, 모임원은 지금까지 오간 기록에서 */
 function roster(){
   const g=curGrp(), m={};
   MATES.forEach(x=>{ if(x.id===ME.id)return;
@@ -2083,7 +2083,7 @@ function roster(){
   FAM.forEach(o=>{ const id=o['누가'], nm=o['이름'];
     if(!id||id===ME.id||m[id])return;
     if(g&&grpOf(o)&&grpOf(o)!==g)return;
-    m[id]={id:id,name:nm||'가족'}; });
+    m[id]={id:id,name:nm||'모임원'}; });
   return Object.values(m);
 }
 async function newShelf(){
@@ -2144,12 +2144,12 @@ function nameOf(id){
   const m=MATES.find(x=>x.id===id); if(m)return m.name;
   const f=FAM.find(o=>o['누가']===id&&o['이름']); if(f)return f['이름'];
   const t=FAM.find(o=>o['대상']===id&&unpackVal(o['값']).n); if(t)return unpackVal(t['값']).n;
-  return '가족';
+  return '모임원';
 }
 
 /* ══════════ 기기끼리 맞추기 ══════════
    각자의 구글 드라이브 '앱 전용 칸'에 기록을 둡니다.
-   가족이 함께 써도 계정이 다르니 서로 섞이지 않습니다.
+   여럿이 함께 써도 계정이 다르니 서로 섞이지 않습니다.
 
    맞추는 것 : 읽은 기록 · 형광펜 · 메모 · 내 서가 · 최근 검색어
    안 맞추는 것 : 펜슬 필기(무거움) · 받아둔 파일(기기마다 다름) · 보기 설정(화면이 다름)
@@ -2988,10 +2988,10 @@ function hcards(el,arr){
   el.appendChild(f);
   P.mode=m;
 }
-/* ── 가족 쪽 화면 ── */
+/* ── 모임 화면 ── */
 function buildFam(){
   VIEWG = (HSIDE==='me') ? VIEWG : HSIDE;
-  /* 가족 서가 */
+  /* 서가 */
   const sh=shelves();
   const se=$('#hShelf'); se.innerHTML='';
   sh.forEach(o=>{
@@ -3008,7 +3008,7 @@ function buildFam(){
   $('#hShelfNew').style.display=isOwner()?'':'none';
   $('#hsShelf').style.display=(sh.length||isOwner())?'':'none';
 
-  /* 서로 권한 책 — 가족끼리 오간 것 */
+  /* 서로 권한 책 — 모임원끼리 오간 것 */
   const rc=$('#hRec'); rc.innerHTML='';
   const recs=famOf('rec').slice().sort((x,y)=>String(y['언제']).localeCompare(String(x['언제'])));
   const mine=recs.filter(o=>o['대상']===ME.id);
@@ -3031,10 +3031,10 @@ function buildFam(){
     }
   });
 
-  /* ② 가족끼리 오간 것 */
+  /* ② 모임원끼리 오간 것 */
   if(rest.length){
     const d=document.createElement('div'); d.className='hs';
-    d.innerHTML='<div class="hh"><b>가족끼리 권한 책 ('+rest.length+')</b></div>';
+    d.innerHTML='<div class="hh"><b>서로 권한 책 ('+rest.length+')</b></div>';
     const box=document.createElement('div'); box.className='reclist';
     rest.slice(0,20).forEach(o=>{
       const bk=bookOf(o['책ID']);
@@ -3055,8 +3055,8 @@ function buildFam(){
   $('#lkReqN').textContent = (isOwner()&&rq) ? rq+'건 ›' : '›';
   const sb=famOf('shelfbook').length, rn=famOf('rec').length;
   $('#famstat').textContent = FAM.length
-    ? `가족 서가 ${shelves().length}칸 · ${sb}권  ·  권한 책 ${rn}권`
-    : '가족과 나눈 것이 아직 없습니다';
+    ? `서가 ${shelves().length}칸 · ${sb}권  ·  권한 책 ${rn}권`
+    : '아직 나눈 것이 없습니다';
 }
 
 /* 홈의 표지 줄 하나 — 제목(권수) + 모두 보기 + 표지 12권 */
@@ -3155,7 +3155,7 @@ function buildHome(){
 
 }
 /* 최상위 탭 — 나 · 모임들
-   가족은 자기 모임 하나만, 팀장님은 모든 모임이 보입니다. */
+   모임원은 자기 모임 하나만, 만든 이는 모든 모임이 보입니다. */
 function paintSeg(){
   const el=$('#hseg'); el.innerHTML='';
   const gl=grpList();
@@ -3297,7 +3297,7 @@ async function pickShelf(b){
 /* 이 책을 누구에게 권할까 */
 async function pickWho(b){
   const who=roster();
-  if(!who.length){ toast('아직 가족이 들어오지 않았습니다',4000); return; }
+  if(!who.length){ toast('아직 모임원이 없습니다',4000); return; }
   const el=$('#pbActs'); el.innerHTML='';
   $('#pbT').textContent='누구에게 권할까요?';
   $('#pbS').textContent=b.t||'';
@@ -3611,7 +3611,7 @@ function addMate(name,grp){
   MATES.push(m); saveMates(); return m;
 }
 
-/* ── 가족 초대 링크 ──
+/* ── 초대 링크 ──
    설정 세 칸과 이름·번호를 주소 뒤에 실어 보냅니다.
    받는 쪽은 링크를 누르는 것만으로 준비가 끝납니다. */
 const b64=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))))
@@ -3742,7 +3742,7 @@ $('#invMake').onclick=()=>{
 $('#invSend').onclick=()=>{
   if(!invM)return;
   const L=inviteLink(invM);
-  const msg=`${invM.name} 우리집 서재예요.\n이 링크를 누르면 바로 쓸 수 있어요.\n\n${L}`;
+  const msg=`${invM.name} 우리 서재예요.\n이 링크를 누르면 바로 쓸 수 있어요.\n\n${L}`;
   if(navigator.share){
     navigator.share({title:'우리집 서재',text:msg})
       .catch(e=>{ if(e&&e.name!=='AbortError')toast('보내지 못했습니다.\n[복사] 를 눌러보세요',4000); });
@@ -3786,12 +3786,12 @@ $('#sMe').addEventListener('change',()=>{
   setMe(v); toast(`이제 '${ME.name}' 으로 보입니다`); syncSoon();
 });
 $('#btnFam').onclick=async()=>{
-  toast('가족 칸을 확인하는 중…');
+  toast('모임 칸을 확인하는 중…');
   await famLoad();
   const n={ shelf:0, shelfbook:0, rec:0, req:0, note:0 };
   FAM.forEach(o=>{ if(n[o['종류']]!=null)n[o['종류']]++; });
   paintFam();
-  toast(`가족 칸 ${FAM.length}줄\n서가 ${n.shelf} · 담긴 책 ${n.shelfbook}`
+  toast(`모임 칸 ${FAM.length}줄\n서가 ${n.shelf} · 담긴 책 ${n.shelfbook}`
     +`\n권함 ${n.rec} · 요청 ${n.req} · 한 줄 평 ${n.note}`,6000);
 };
 function paintFam(){
