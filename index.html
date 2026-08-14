@@ -177,6 +177,24 @@
   /* ── 홈 ──
      3.7만 권을 첫 화면에 늘어놓지 않습니다.
      위에서 아래로 갈수록 덜 급한 것이 오도록 두었습니다. */
+  /* 최상위 — 나 / 가족 */
+  #hseg{display:flex;gap:6px;margin-top:10px}
+  #hseg button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel);font-size:14px;color:var(--dim)}
+  #hseg button.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:700}
+  #famPane{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;
+    padding:6px 0 calc(var(--sb) + 30px)}
+  .recmsg{padding:8px 12px 0;font-size:12.5px;color:var(--dim);line-height:1.6}
+  .recmsg i{font-style:normal;color:var(--acc);opacity:.8}
+  .reclist{padding:0 12px}
+  .recrow{display:flex;flex-direction:column;gap:2px;padding:11px 2px;
+    border-bottom:1px solid var(--line);cursor:pointer}
+  .recrow:last-child{border-bottom:none}
+  .recrow .who{font-size:11.5px;color:var(--dim)}
+  .recrow .who b{color:var(--acc);font-weight:600}
+  .recrow .ti{font-size:13.5px}
+  .recrow .ms{font-size:12px;color:var(--dim)}
+  #famstat{padding:18px 14px 4px;color:var(--dim);font-size:12px;text-align:center;line-height:1.7}
   #home{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding:2px 0 calc(var(--sb) + 30px);display:none}
   .hs{margin:20px 0 0}
@@ -223,6 +241,13 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  #reqList{margin-top:14px;max-height:40vh;overflow-y:auto}
+  #reqList .it{padding:10px 2px;border-bottom:1px solid var(--line);font-size:13px}
+  #reqList .it:last-child{border-bottom:none}
+  #reqList .w{font-size:11px;color:var(--dim);margin-top:3px;
+    display:flex;justify-content:space-between;align-items:center}
+  #reqList .w button{font-size:11px;color:var(--bad);padding:2px 6px}
+  .hrow .chip.mine{border-color:var(--acc)}
   .mate .b{display:flex;gap:4px;flex:0 0 auto}
   .mate .b button{font-size:11.5px;color:var(--acc);padding:3px 6px}
   .mate .b button.warn{color:var(--bad)}
@@ -389,6 +414,9 @@
       <button class="ib" id="btnView" title="보기 설정">☰</button>
       <button class="ib" id="btnSet" title="설정">⚙</button>
     </div>
+    <div class="seg" id="hseg">
+      <button data-v="me">나</button><button data-v="fam">가족</button>
+    </div>
     <div id="tabs">
       <button data-v="home">홈</button>
       <button data-v="">전체</button>
@@ -423,6 +451,26 @@
     </div>
 
     <div id="hstat"></div>
+  </div>
+
+  <div id="famPane">
+      <div class="hs" id="hsShelf">
+        <div class="hh"><b>가족 서가</b><button id="hShelfNew">＋ 새 칸</button></div>
+        <div class="hrow" id="hShelf"></div>
+        <div class="hnone" id="hShelfNone">아직 만든 칸이 없습니다.
+          자주 권하실 책을 묶어두면 가족 모두의 홈에 뜹니다.</div>
+      </div>
+
+      <div id="hRec"></div>
+      <div class="hnone" id="hRecNone" style="margin-top:18px">
+        아직 오간 책이 없습니다.
+        표지를 길게 누르면 가족에게 권할 수 있습니다.</div>
+
+      <div class="hlinks">
+        <button id="lkReq">이 책 넣어주세요 <span id="lkReqN"></span></button>
+      </div>
+
+      <div id="famstat"></div>
   </div>
 
   <div id="grid" class="g"></div>
@@ -659,6 +707,32 @@
   </div>
 </div>
 
+<div class="sheet" id="askSheet">
+  <div class="box">
+    <h3 id="askT">입력</h3>
+    <input id="askI" autocomplete="off">
+    <div class="btns">
+      <button id="askOk" class="pri">확인</button>
+      <button id="askNo">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="reqSheet">
+  <div class="box">
+    <h3>이 책 넣어주세요</h3>
+    <label>책 제목 (아는 만큼만 적으셔도 됩니다)</label>
+    <input id="reqT" placeholder="예) 아몬드 · 손원평" autocomplete="off">
+    <label>한마디</label>
+    <input id="reqM" placeholder="왜 읽고 싶은지 (안 적으셔도 됩니다)" autocomplete="off">
+    <div class="btns">
+      <button id="reqOk" class="pri">보내기</button>
+      <button id="reqClose">닫기</button>
+    </div>
+    <div id="reqList"></div>
+  </div>
+</div>
+
 <div class="sheet" id="addSheet">
   <div class="box">
     <h3 id="addT">앱처럼 쓰시겠어요?</h3>
@@ -733,7 +807,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v20';
+const BUILD='v21';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -787,6 +861,7 @@ function order(s){
 }
 
 let BOOKS=[],HAY=[],UPDATED='',shown=0,rows=[];
+let HSIDE=localStorage.getItem('ebl_hside')||'me';   // 나 / 가족
 let TAB=localStorage.getItem('ebl_tab')||'home';   // 상태 탭 (기본은 홈)
 let PIN='';                               // 내 서가에서 고른 분류
 let PATH=[];                              // 계층 탐색 경로 [대,중]
@@ -1002,6 +1077,7 @@ function filter(){
   return out;
 }
 function render(reset){
+  if(HSIDE==='fam'){ setView(); buildFam(); return; }
   if(TAB==='home'){ setView(); buildHome(); return; }
   setView();
   const g=$('#grid');
@@ -1883,12 +1959,50 @@ async function famDel(id){
     return true;
   }catch(e){ toast('지우지 못했습니다',4000); return false; }
 }
+/* ── 가족 서가 · 권하기 · 요청 ── */
+const isOwner = () => !!cfg('adm');            // 관리자 열쇠가 있으면 사서
+/* 권할 상대 목록 — 팀장님은 명단에서, 가족은 지금까지 오간 기록에서 */
+function roster(){
+  const m={};
+  MATES.forEach(x=>{ if(x.id!==ME.id)m[x.id]={id:x.id,name:x.name}; });
+  FAM.forEach(o=>{ const id=o['누가'], nm=o['이름'];
+    if(id&&id!==ME.id&&!m[id])m[id]={id:id,name:nm||'가족'}; });
+  return Object.values(m);
+}
+async function newShelf(){
+  const nm=(await ask('새 칸 이름','예) 아빠의 추천 · 이번 방학에 읽을 책'))||'';
+  if(!nm.trim())return;
+  const r=await famPut({kind:'shelf',title:nm.trim()});
+  if(r){ toast(`'${nm.trim()}' 칸을 만들었습니다`); render(true); }
+}
+/* 앱 안쪽 입력창 — 사파리에서 prompt 를 쓰면 그 뒤 동작이 막힙니다 */
+function ask(title,ph,val){
+  return new Promise(ok=>{
+    $('#askT').textContent=title; $('#askI').placeholder=ph||''; $('#askI').value=val||'';
+    $('#askSheet').classList.add('on');
+    setTimeout(()=>$('#askI').focus(),250);
+    ask._ok=v=>{ $('#askSheet').classList.remove('on'); ok(v); };
+  });
+}
+$('#askOk').onclick=()=>ask._ok&&ask._ok($('#askI').value);
+$('#askNo').onclick=()=>ask._ok&&ask._ok(null);
+$('#askI').addEventListener('keydown',e=>{ if(e.key==='Enter')$('#askOk').click(); });
+
 /* 골라 보기 */
 const famOf   = k => FAM.filter(o=>o['종류']===k);
 const shelves = () => famOf('shelf').sort((a,b)=>String(a['언제']).localeCompare(String(b['언제'])));
 const shelfBooks = sid => famOf('shelfbook').filter(o=>o['대상']===sid);
 const recsToMe   = () => famOf('rec').filter(o=>o['대상']===ME.id);
 const bookOf  = id => BOOKS.find(b=>b.i===id);
+/* 번호로 이름 찾기 — 지금까지 오간 기록과 명단에서 */
+function nameOf(id){
+  if(!id)return '';
+  if(id===ME.id)return ME.name||'나';
+  const m=MATES.find(x=>x.id===id); if(m)return m.name;
+  const f=FAM.find(o=>o['누가']===id&&o['이름']); if(f)return f['이름'];
+  const t=FAM.find(o=>o['대상']===id&&o['대상이름']); if(t)return t['대상이름'];
+  return '가족';
+}
 
 /* ══════════ 기기끼리 맞추기 ══════════
    각자의 구글 드라이브 '앱 전용 칸'에 기록을 둡니다.
@@ -2696,13 +2810,16 @@ $$('#tabs button').forEach(x=>x.onclick=()=>goTab(x.dataset.v));
 /* ── 홈 ── */
 function setView(){
   // 표지 크기는 앱 전체가 이 값 하나를 따릅니다.
-  // 홈·목록 어느 쪽을 그리든 늘 먼저 물려둡니다.
   document.documentElement.style.setProperty('--cw',P.size+'px');
+  const fam  = HSIDE==='fam';
   const home = TAB==='home';
-  $('#home').style.display = home?'block':'none';
-  $('#grid').style.display = home?'none':'';
-  $('#chips').style.display = home?'none':'flex';
-  $('#stat').style.display = home?'none':'block';
+  $$('#hseg button').forEach(b=>b.classList.toggle('on',b.dataset.v===HSIDE));
+  $('#famPane').style.display = fam?'block':'none';
+  $('#tabs').style.display    = fam?'none':'flex';
+  $('#home').style.display    = (!fam&&home)?'block':'none';
+  $('#grid').style.display    = (!fam&&!home)?'':'none';
+  $('#chips').style.display   = (!fam&&!home)?'flex':'none';
+  $('#stat').style.display    = (!fam&&!home)?'block':'none';
 }
 function goList(tab,pin){
   TAB=tab; localStorage.setItem('ebl_tab',TAB);
@@ -2728,6 +2845,76 @@ function hcards(el,arr){
   el.appendChild(f);
   P.mode=m;
 }
+/* ── 가족 쪽 화면 ── */
+function buildFam(){
+  /* 가족 서가 */
+  const sh=shelves();
+  const se=$('#hShelf'); se.innerHTML='';
+  sh.forEach(o=>{
+    const cnt=shelfBooks(o.id).length;
+    const b=document.createElement('button');
+    b.className='chip'+(o['누가']===ME.id?' mine':'');
+    b.textContent=(o['제목']||'이름 없는 칸')+' '+cnt;
+    b.onclick=()=>goShelf(o);
+    if(isOwner())b.oncontextmenu=e=>{ e.preventDefault(); editShelf(o); };
+    se.appendChild(b);
+  });
+  se.style.display=sh.length?'flex':'none';
+  $('#hShelfNone').style.display=sh.length?'none':'block';
+  $('#hShelfNew').style.display=isOwner()?'':'none';
+  $('#hsShelf').style.display=(sh.length||isOwner())?'':'none';
+
+  /* 서로 권한 책 — 가족끼리 오간 것 */
+  const rc=$('#hRec'); rc.innerHTML='';
+  const recs=famOf('rec').slice().sort((x,y)=>String(y['언제']).localeCompare(String(x['언제'])));
+  const mine=recs.filter(o=>o['대상']===ME.id);
+  const rest=recs.filter(o=>o['대상']!==ME.id);
+
+  /* ① 나에게 온 것 — 권한 사람별로 */
+  const byWho={};
+  mine.forEach(o=>{ const k=o['이름']||nameOf(o['누가']);
+    (byWho[k]=byWho[k]||[]).push(o); });
+  Object.keys(byWho).forEach(who=>{
+    const list=byWho[who];
+    const arr=list.map(o=>bookOf(o['책ID'])).filter(Boolean);
+    if(!arr.length)return;
+    hsec(rc, who+'가 권한 책', 'rec', arr, arr.length, '');
+    const words=list.filter(o=>o['내용']).slice(0,3);
+    if(words.length){
+      const p=document.createElement('div'); p.className='recmsg';
+      p.innerHTML=words.map(o=>`<div>“${esc(o['내용'])}” <i>${esc(o['제목']||'')}</i></div>`).join('');
+      rc.lastChild.appendChild(p);
+    }
+  });
+
+  /* ② 가족끼리 오간 것 */
+  if(rest.length){
+    const d=document.createElement('div'); d.className='hs';
+    d.innerHTML='<div class="hh"><b>가족끼리 권한 책 ('+rest.length+')</b></div>';
+    const box=document.createElement('div'); box.className='reclist';
+    rest.slice(0,20).forEach(o=>{
+      const bk=bookOf(o['책ID']);
+      const r=document.createElement('div'); r.className='recrow';
+      r.innerHTML=`<span class="who">${esc(o['이름']||nameOf(o['누가']))}`
+        +` <b>→</b> ${esc(o['값']||nameOf(o['대상']))}</span>`
+        +`<span class="ti">${esc(o['제목']||'')}</span>`
+        +(o['내용']?`<span class="ms">“${esc(o['내용'])}”</span>`:'');
+      if(bk)r.onclick=()=>openBook(bk);
+      box.appendChild(r);
+    });
+    d.appendChild(box); rc.appendChild(d);
+  }
+
+  $('#hRecNone').style.display = $('#hRec').children.length?'none':'block';
+
+  const rq=famOf('req').length;
+  $('#lkReqN').textContent = (isOwner()&&rq) ? rq+'건 ›' : '›';
+  const sb=famOf('shelfbook').length, rn=famOf('rec').length;
+  $('#famstat').textContent = FAM.length
+    ? `가족 서가 ${shelves().length}칸 · ${sb}권  ·  권한 책 ${rn}권`
+    : '가족과 나눈 것이 아직 없습니다';
+}
+
 /* 홈의 표지 줄 하나 — 제목(권수) + 모두 보기 + 표지 12권 */
 const HN=12;
 function hsec(host,title,tab,arr,total,none){
@@ -2813,6 +3000,7 @@ function buildHome(){
 
   $('#lkAll').textContent = n[''].toLocaleString()+'권 ›';
 
+
   /* 올해 */
   const yr=new Date().getFullYear();
   let dy=0; Object.keys(RD).forEach(k=>{ const r=RD[k];
@@ -2820,7 +3008,118 @@ function buildHome(){
   $('#hstat').textContent =
     `${yr}년 · 다 읽음 ${dy}권 · 읽는 중 ${n.reading}권`
     + (UPDATED?`\n갱신 ${UPDATED} · ${BUILD}`:`\n${BUILD}`);
+
 }
+$$('#hseg button').forEach(b=>b.onclick=()=>{
+  HSIDE=b.dataset.v; localStorage.setItem('ebl_hside',HSIDE);
+  if(HSIDE==='fam'){ buildFam(); famLoad().then(buildFam); }
+  else render(true);
+  setView();
+  $('#home').scrollTop=0; $('#famPane').scrollTop=0;
+});
+$('#hShelfNew').onclick=newShelf;
+/* 서가 칸 들어가기 */
+function goShelf(o){
+  SHELF=o.id; SHELFNM=o['제목']||'';
+  TAB='shelf'; localStorage.setItem('ebl_tab','');
+  SEL=''; PATH=[]; PIN='';
+  paintTabs(); buildChips(); render(true);
+}
+async function editShelf(o){
+  const nm=await ask('칸 이름 고치기','',o['제목']||'');
+  if(nm===null)return;
+  if(!nm.trim()){
+    if(confirm(`'${o['제목']}' 칸을 지웁니다.\n담긴 책 표시도 함께 사라집니다.`)){
+      for(const x of shelfBooks(o.id)) await famDel(x.id);
+      await famDel(o.id); toast('칸을 지웠습니다'); render(true);
+    }
+    return;
+  }
+  await famPut({kind:'shelf',id:o.id,title:nm.trim()});
+  toast('이름을 바꿨습니다'); render(true);
+}
+/* 이 책을 어느 칸에 담을까 */
+async function pickShelf(b){
+  const sh=shelves();
+  if(!sh.length){ toast('먼저 홈에서 칸을 만들어 주세요',4000); return; }
+  const inIt=id=>shelfBooks(id).some(x=>x['책ID']===b.i);
+  const el=$('#pbActs'); el.innerHTML='';
+  $('#pbT').textContent='어느 칸에 담을까요?';
+  $('#pbS').textContent=b.t||'';
+  sh.forEach(o=>{
+    const on=inIt(o.id);
+    const x=document.createElement('button');
+    x.innerHTML=(on?'✓ ':'')+esc(o['제목']||'')+`<span class="h">${shelfBooks(o.id).length}권`
+      +(on?' · 누르면 뺍니다':'')+`</span>`;
+    if(on)x.style.color='var(--acc)';
+    x.onclick=async()=>{
+      panOff();
+      if(on){ const hit=shelfBooks(o.id).find(y=>y['책ID']===b.i);
+        if(hit&&await famDel(hit.id))toast('칸에서 뺐습니다'); }
+      else{ if(await famPut({kind:'shelfbook',to:o.id,book:b.i,title:b.t||''}))
+        toast(`'${o['제목']}' 에 담았습니다`); }
+      render(true);
+    };
+    el.appendChild(x);
+  });
+  pan('#panBook',true);
+}
+/* 이 책을 누구에게 권할까 */
+async function pickWho(b){
+  const who=roster();
+  if(!who.length){ toast('아직 가족이 들어오지 않았습니다',4000); return; }
+  const el=$('#pbActs'); el.innerHTML='';
+  $('#pbT').textContent='누구에게 권할까요?';
+  $('#pbS').textContent=b.t||'';
+  who.forEach(m=>{
+    const x=document.createElement('button');
+    x.textContent=m.name;
+    x.onclick=async()=>{
+      panOff();
+      const msg=await ask(`'${m.name}' 에게 한마디`,'안 적으셔도 됩니다');
+      if(msg===null)return;
+      if(await famPut({kind:'rec',to:m.id,book:b.i,title:b.t||'',
+            text:(msg||'').trim(),val:m.name}))
+        toast(`${m.name} 에게 권했습니다`);
+    };
+    el.appendChild(x);
+  });
+  pan('#panBook',true);
+}
+/* 없는 책 요청 */
+$('#lkReq').onclick=()=>{ $('#reqT').value=''; $('#reqM').value='';
+  paintReq(); $('#reqSheet').classList.add('on'); setTimeout(()=>$('#reqT').focus(),250); };
+$('#reqClose').onclick=()=>$('#reqSheet').classList.remove('on');
+$('#reqOk').onclick=async()=>{
+  const t=$('#reqT').value.trim();
+  if(!t){ toast('책 제목을 적어주세요'); return; }
+  if(await famPut({kind:'req',title:t,text:$('#reqM').value.trim()})){
+    toast('보냈습니다'); $('#reqT').value=''; $('#reqM').value=''; paintReq(); render(true); }
+};
+function paintReq(){
+  const el=$('#reqList'); el.innerHTML='';
+  const rows=famOf('req').slice().reverse();
+  const mine=rows.filter(o=>o['누가']===ME.id);
+  const show=isOwner()?rows:mine;
+  if(!show.length)return;
+  const h=document.createElement('div'); h.className='sect';
+  h.textContent=isOwner()?`들어온 요청 ${rows.length}건`:'내가 보낸 것';
+  el.appendChild(h);
+  show.forEach(o=>{
+    const d=document.createElement('div'); d.className='it';
+    d.innerHTML=`<div>${esc(o['제목']||'')}</div>`
+      +(o['내용']?`<div style="color:var(--dim);font-size:12px;margin-top:3px">${esc(o['내용'])}</div>`:'');
+    const w=document.createElement('div'); w.className='w';
+    w.innerHTML=`<span>${esc(o['이름']||'')} · ${String(o['언제']||'').slice(5,10)}</span>`;
+    if(isOwner()||o['누가']===ME.id){
+      const x=document.createElement('button'); x.textContent='지우기';
+      x.onclick=async()=>{ if(await famDel(o.id)){ paintReq(); render(true); } };
+      w.appendChild(x);
+    }
+    d.appendChild(w); el.appendChild(d);
+  });
+}
+
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
