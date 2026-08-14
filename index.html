@@ -218,6 +218,14 @@
   #pinList button.on{color:var(--acc);font-weight:600}
   #pinList .cnt{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
   #pinList .lv{color:var(--dim);font-size:11px;margin-left:6px;font-weight:400}
+  /* 가족 명단 */
+  .mate{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .mate:last-child{border-bottom:none}
+  #mateList{margin-top:6px}
+  .mate .b{display:flex;gap:4px;flex:0 0 auto}
+  .mate .b button{font-size:11.5px;color:var(--acc);padding:3px 6px}
+  .mate .b button.warn{color:var(--bad)}
 
   /* 책 하나 손질하기 */
   .acts{margin-top:4px}
@@ -589,10 +597,17 @@
       <button id="setSave" class="pri">저장하고 새로고침</button></div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
 
+    <div class="sect">나</div>
+    <label>이 기기를 쓰는 사람</label>
+    <input id="sMe" placeholder="예) 아빠 · 지수(딸) · 아내" autocomplete="off">
+    <p class="note">가족 도서관에서 이 이름으로 보입니다.
+      바꿔도 읽은 기록은 그대로 따라옵니다.</p>
+
     <div class="sect">가족에게 나눠주기</div>
     <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
-    <p class="note">주소·토큰·클라이언트 ID 가 담긴 링크를 만듭니다.
-      가족이 그 링크를 누르면 <b>설정이 저절로 채워집니다.</b>
+    <div id="mateList"></div>
+    <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
+      받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
       각자 <b>🔑</b> 로 자기 구글 계정에 로그인한 뒤 홈 화면에 추가하면 앱처럼 씁니다.
       <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
 
@@ -644,7 +659,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v16a';
+const BUILD='v17';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1748,7 +1763,9 @@ const saveDEL=()=>{ try{
 let SYNCAT=Number(localStorage.getItem('ebl_syncat')||0);
 
 function localState(){
-  return { v:1, at:Date.now(), rd:RD, hl:HL, del:DEL, rdel:RDEL,
+  return { v:1, at:Date.now(), me:{id:ME.id,name:ME.name,
+           at:Number(localStorage.getItem('ebl_menameat')||0)},
+           rd:RD, hl:HL, del:DEL, rdel:RDEL,
            pins:P.pins||[], rq:RQ,
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
            rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
@@ -1758,6 +1775,9 @@ function mergeState(a,b){
   if(!a)return b; if(!b)return a;
   const out={ v:1, at:Date.now(), rd:{}, hl:{}, del:{}, rdel:{},
               pins:[], rq:[], pinsAt:0, rqAt:0 };
+  // 이름은 나중에 고친 쪽
+  const ma=(a.me||{}), mb=(b.me||{});
+  out.me = (ma.at||0)>=(mb.at||0) ? ma : mb;
   const maxMap=(x,y)=>{ const m=Object.assign({},x||{});
     Object.entries(y||{}).forEach(([k,v])=>{ if(!(k in m)||v>m[k])m[k]=v; }); return m; };
   out.del =maxMap(a.del ,b.del);
@@ -1796,6 +1816,11 @@ function mergeState(a,b){
   return out;
 }
 function applyState(s){
+  if(s.me&&s.me.name&&(s.me.at||0)>Number(localStorage.getItem('ebl_menameat')||0)){
+    ME.name=s.me.name; localStorage.setItem('ebl_mename',ME.name);
+    localStorage.setItem('ebl_menameat',String(s.me.at));
+    const el=$('#sMe'); if(el)el.value=ME.name;
+  }
   RD=s.rd||{}; HL=s.hl||{}; DEL=s.del||{}; RDEL=s.rdel||{};
   P.pins=s.pins||[]; RQ=s.rq||[];
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
@@ -2739,7 +2764,9 @@ window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
 $('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
   $('#sCid').value=cfg('cid'); $('#log').textContent=LOG.join('\n');
-  $('#setSheet').classList.add('on'); useInfo(); paintSync(); paintSyncAuto(); };
+  $('#sMe').value=ME.name;
+  $('#setSheet').classList.add('on');
+  useInfo(); paintSync(); paintSyncAuto(); paintMates(); };
 $('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
 $('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); location.reload(); };
@@ -2781,22 +2808,76 @@ $('#btnClearRead').onclick=()=>{
   TAB=''; localStorage.setItem('ebl_tab','');
   toast('읽은 기록을 지웠습니다'); paintTabs(); render(true);
 };
+/* ── 누구인가 ──
+   겉으로는 이름, 속으로는 번호로 다룹니다.
+   이름을 바꿔도 번호가 그대로라 읽은 기록이 따라옵니다. */
+const newId=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3);
+let ME={ id:localStorage.getItem('ebl_meid')||'', name:localStorage.getItem('ebl_mename')||'' };
+if(!ME.id){ ME.id=newId(); localStorage.setItem('ebl_meid',ME.id); }
+function setMe(name){
+  ME.name=String(name||'').trim().slice(0,20);
+  localStorage.setItem('ebl_mename',ME.name);
+  localStorage.setItem('ebl_menameat',String(Date.now()));
+}
+if(!ME.name) setMe('나');
+
+/* 팀장님 기기에만 두는 명단 — 누구에게 링크를 보냈는지 */
+let MATES=[]; try{ MATES=JSON.parse(localStorage.getItem('ebl_mates')||'[]'); }catch(e){}
+const saveMates=()=>{ try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES)); }catch(e){} };
+function addMate(name){
+  const m={ id:newId(), name:name, at:Date.now() };
+  MATES.push(m); saveMates(); return m;
+}
+
 /* ── 가족 초대 링크 ──
-   설정 세 칸을 주소 뒤에 실어 보냅니다. 받는 쪽은 누르기만 하면 됩니다. */
+   설정 세 칸과 이름·번호를 주소 뒤에 실어 보냅니다.
+   받는 쪽은 링크를 누르는 것만으로 준비가 끝납니다. */
 const b64=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))))
   .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const unb64=t=>JSON.parse(decodeURIComponent(escape(
-  atob(t.replace(/-/g,'+').replace(/_/g,'/'))))); 
-function inviteLink(){
+  atob(t.replace(/-/g,'+').replace(/_/g,'/')))));
+function inviteLink(m){
   const o={u:cfg('url'),t:cfg('tok'),c:cfg('cid')};
+  if(m){ o.n=m.name; o.i=m.id; }
   return location.origin+location.pathname+'#s='+b64(o);
 }
-$('#btnInvite').onclick=async()=>{
-  const L=inviteLink();
+function paintMates(){
+  const el=$('#mateList'); if(!el)return;
+  el.innerHTML='';
+  if(!MATES.length)return;
+  const f=document.createDocumentFragment();
+  MATES.forEach((m,k)=>{
+    const d=document.createElement('div'); d.className='mate';
+    d.innerHTML=`<span>${esc(m.name)}</span>`;
+    const wrap=document.createElement('span'); wrap.className='b';
+    const send=document.createElement('button'); send.textContent='링크 다시 보내기';
+    send.onclick=()=>shareInvite(m);
+    const del=document.createElement('button'); del.textContent='지우기'; del.className='warn';
+    del.onclick=()=>{ if(confirm(`명단에서 '${m.name}' 을 지웁니다.\n이미 보낸 링크는 그대로 씁니다.`)){
+      MATES.splice(k,1); saveMates(); paintMates(); } };
+    wrap.append(send,del); d.appendChild(wrap);
+    f.appendChild(d);
+  });
+  el.appendChild(f);
+}
+/* 복사만 하지 않고, 되는 기기에서는 바로 보냅니다 */
+async function shareInvite(m){
+  const L=inviteLink(m);
+  const msg=`${m.name} 우리집 서재예요.\n이 링크를 누르면 바로 쓸 수 있어요.\n\n${L}`;
+  if(navigator.share){
+    try{ await navigator.share({title:'우리집 서재',text:msg}); return; }catch(e){ if(e&&e.name==='AbortError')return; }
+  }
   try{ await navigator.clipboard.writeText(L);
-    toast('초대 링크를 복사했습니다.\n가족에게 보내세요',5000); }
-  catch(e){ prompt('이 링크를 가족에게 보내세요', L); }
-  log('초대 링크: '+L);
+    toast(`'${m.name}' 링크를 복사했습니다.\n그대로 보내주세요`,5000); }
+  catch(e){ prompt(`'${m.name}' 에게 이 링크를 보내세요`, L); }
+}
+$('#btnInvite').onclick=async()=>{
+  const nm=(prompt('누구에게 보낼 링크인가요?\n예) 지수(딸) · 아내 · 민준(아들)','')||'').trim();
+  if(!nm)return;
+  const m=addMate(nm);
+  paintMates();
+  await shareInvite(m);
+  log('초대 링크('+nm+') 만듦');
 };
 /* 링크를 타고 들어왔으면 설정을 채워 넣습니다 */
 (function(){
@@ -2804,11 +2885,18 @@ $('#btnInvite').onclick=async()=>{
   try{
     const o=unb64(m[1]);
     if(o.u)setCfg('url',o.u); if(o.t)setCfg('tok',o.t); if(o.c)setCfg('cid',o.c);
+    if(o.i){ ME.id=o.i; localStorage.setItem('ebl_meid',o.i); }
+    if(o.n) setMe(o.n);
     history.replaceState(null,'',location.pathname);   // 주소창에서 토큰을 지웁니다
-    setTimeout(()=>toast('설정을 받았습니다.\n🔑 를 눌러 구글에 로그인해 주세요',6000),900);
+    setTimeout(()=>toast((o.n?o.n+' 님, 반갑습니다.\n':'설정을 받았습니다.\n')
+      +'🔑 를 눌러 구글에 로그인해 주세요',6000),900);
   }catch(e){}
 })();
 
+$('#sMe').addEventListener('change',()=>{
+  const v=$('#sMe').value.trim(); if(!v)return;
+  setMe(v); toast(`이제 '${ME.name}' 으로 보입니다`); syncSoon();
+});
 $('#btnSync').onclick=()=>syncNow(true);
 $('#btnSyncAuto').onclick=()=>{
   P.sync = P.sync===false; savePref(); paintSyncAuto();
