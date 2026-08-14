@@ -602,7 +602,7 @@
 
     <div class="sect">나</div>
     <label>이 기기를 쓰는 사람</label>
-    <input id="sMe" placeholder="예) 아빠 · 지수(딸) · 아내" autocomplete="off">
+    <input id="sMe" placeholder="예) 아빠 · 아내 · 지수(딸) · 지우(아들)" autocomplete="off">
     <p class="note">가족 도서관에서 이 이름으로 보입니다.
       바꿔도 읽은 기록은 그대로 따라옵니다.</p>
 
@@ -672,7 +672,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v17a';
+const BUILD='v17c';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -2921,7 +2921,7 @@ async function shareInvite(m){
   catch(e){ prompt(`'${m.name}' 에게 이 링크를 보내세요`, L); }
 }
 $('#btnInvite').onclick=async()=>{
-  const nm=(prompt('누구에게 보낼 링크인가요?\n예) 지수(딸) · 아내 · 민준(아들)','')||'').trim();
+  const nm=(prompt('누구에게 보낼 링크인가요?\n예) 아빠 · 아내 · 지수(딸) · 지우(아들)','')||'').trim();
   if(!nm)return;
   const m=addMate(nm);
   paintMates();
