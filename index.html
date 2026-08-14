@@ -362,6 +362,9 @@
     border:1px solid var(--line);background:var(--bg);color:var(--tx);
     font:inherit;line-height:1.6;resize:vertical;outline:none}
   #memoTx:focus{border-color:var(--acc)}
+  #invLink{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);
+    background:var(--bg);color:var(--tx);font-size:12px;line-height:1.5;
+    word-break:break-all;resize:none;-webkit-user-select:text;user-select:text}
   #memoQ{font-size:12.5px;color:var(--dim);line-height:1.55;margin:2px 0 10px;
     border-left:3px solid var(--line);padding-left:9px;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -645,6 +648,26 @@
   </div>
 </div>
 
+<div class="sheet" id="invSheet">
+  <div class="box">
+    <h3>초대 링크</h3>
+    <label>누구에게 보낼 링크인가요?</label>
+    <input id="invName" placeholder="예) 아빠 · 아내 · 지수(딸) · 지우(아들)" autocomplete="off">
+    <div class="btns"><button id="invMake" class="pri">링크 만들기</button></div>
+
+    <div id="invDone" style="display:none">
+      <label id="invFor">링크</label>
+      <textarea id="invLink" readonly rows="3"></textarea>
+      <p class="note">눌러서 직접 골라 복사하셔도 됩니다.</p>
+      <div class="btns">
+        <button id="invSend" class="pri">보내기</button>
+        <button id="invCopy">복사</button>
+      </div>
+    </div>
+    <div class="btns"><button id="invClose">닫기</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="cutSheet">
   <div class="box">
     <h3>더 이상 쓸 수 없습니다</h3>
@@ -686,7 +709,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v18';
+const BUILD='v18a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -2942,7 +2965,7 @@ function paintMates(){
     const wrap=document.createElement('span'); wrap.className='b';
     if(!off){
       const send=document.createElement('button'); send.textContent='링크 다시 보내기';
-      send.onclick=()=>shareInvite(m); wrap.appendChild(send);
+      send.onclick=()=>openInvite(m); wrap.appendChild(send);
     }
     const cut=document.createElement('button');
     cut.textContent=off?'풀기':'차단'; if(!off)cut.className='warn';
@@ -2959,24 +2982,51 @@ function paintMates(){
   });
   el.appendChild(f);
 }
-/* 복사만 하지 않고, 되는 기기에서는 바로 보냅니다 */
-async function shareInvite(m){
-  const L=inviteLink(m);
-  const msg=`${m.name} 우리집 서재예요.\n이 링크를 누르면 바로 쓸 수 있어요.\n\n${L}`;
-  if(navigator.share){
-    try{ await navigator.share({title:'우리집 서재',text:msg}); return; }catch(e){ if(e&&e.name==='AbortError')return; }
-  }
-  try{ await navigator.clipboard.writeText(L);
-    toast(`'${m.name}' 링크를 복사했습니다.\n그대로 보내주세요`,5000); }
-  catch(e){ prompt(`'${m.name}' 에게 이 링크를 보내세요`, L); }
+/* 아이패드는 브라우저 prompt 가 뜨면 '사용자가 누른 것' 으로 안 칩니다.
+   그 뒤로는 공유도 복사도 막히므로, 창을 앱 안쪽 것으로 씁니다. */
+let invM=null;
+function openInvite(m){
+  invM=m||null;
+  $('#invName').value = m?m.name:'';
+  $('#invDone').style.display = m?'block':'none';
+  if(m){ $('#invFor').textContent=`'${m.name}' 에게 보낼 링크`;
+         $('#invLink').value=inviteLink(m); }
+  $('#invSheet').classList.add('on');
+  if(!m)setTimeout(()=>$('#invName').focus(),250);
 }
-$('#btnInvite').onclick=async()=>{
-  const nm=(prompt('누구에게 보낼 링크인가요?\n예) 아빠 · 아내 · 지수(딸) · 지우(아들)','')||'').trim();
-  if(!nm)return;
-  const m=addMate(nm);
-  paintMates();
-  await shareInvite(m);
+$('#btnInvite').onclick=()=>openInvite(null);
+$('#invClose').onclick=()=>$('#invSheet').classList.remove('on');
+$('#invMake').onclick=()=>{
+  const nm=$('#invName').value.trim();
+  if(!nm){ toast('이름을 적어주세요'); return; }
+  invM=addMate(nm); paintMates();
+  $('#invFor').textContent=`'${nm}' 에게 보낼 링크`;
+  $('#invLink').value=inviteLink(invM);
+  $('#invDone').style.display='block';
   log('초대 링크('+nm+') 만듦');
+};
+/* 아래 두 개는 '누른 그 순간' 에 바로 부릅니다. 사이에 기다리는 것을 두면 막힙니다. */
+$('#invSend').onclick=()=>{
+  if(!invM)return;
+  const L=inviteLink(invM);
+  const msg=`${invM.name} 우리집 서재예요.\n이 링크를 누르면 바로 쓸 수 있어요.\n\n${L}`;
+  if(navigator.share){
+    navigator.share({title:'우리집 서재',text:msg})
+      .catch(e=>{ if(e&&e.name!=='AbortError')toast('보내지 못했습니다.\n[복사] 를 눌러보세요',4000); });
+  } else { $('#invCopy').click(); }
+};
+$('#invCopy').onclick=()=>{
+  const el=$('#invLink');
+  el.focus(); el.setSelectionRange(0, el.value.length);
+  let ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e){}
+  if(!ok&&navigator.clipboard){
+    navigator.clipboard.writeText(el.value)
+      .then(()=>toast('복사했습니다'))
+      .catch(()=>toast('아래 칸을 눌러 직접 골라 복사해 주세요',5000));
+    return;
+  }
+  toast(ok?'복사했습니다':'아래 칸을 눌러 직접 골라 복사해 주세요',ok?2600:5000);
 };
 /* 링크를 타고 들어왔으면 설정을 채워 넣습니다 */
 (function(){
