@@ -182,6 +182,8 @@
   #hseg button{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--line);
     background:var(--panel);font-size:14px;color:var(--dim)}
   #hseg button.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:700}
+  #famGrp{padding:12px 12px 2px}
+  #famGrp .chip.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
   #famPane{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;
     padding:6px 0 calc(var(--sb) + 30px)}
   .recmsg{padding:8px 12px 0;font-size:12.5px;color:var(--dim);line-height:1.6}
@@ -454,11 +456,13 @@
   </div>
 
   <div id="famPane">
+      <div class="hrow" id="famGrp"></div>
+
       <div class="hs" id="hsShelf">
         <div class="hh"><b>가족 서가</b><button id="hShelfNew">＋ 새 칸</button></div>
         <div class="hrow" id="hShelf"></div>
         <div class="hnone" id="hShelfNone">아직 만든 칸이 없습니다.
-          자주 권하실 책을 묶어두면 가족 모두의 홈에 뜹니다.</div>
+          자주 권하실 책을 묶어두면 그 모임 모두의 홈에 뜹니다.</div>
       </div>
 
       <div id="hRec"></div>
@@ -751,6 +755,10 @@
     <h3>초대 링크</h3>
     <label>누구에게 보낼 링크인가요?</label>
     <input id="invName" placeholder="예) 아빠 · 아내 · 지수(딸) · 지우(아들)" autocomplete="off">
+    <div id="invGrpWrap" style="display:none">
+      <label>어느 모임인가요?</label>
+      <div class="hrow" id="invGrp" style="padding:0"></div>
+    </div>
     <div class="btns"><button id="invMake" class="pri">링크 만들기</button></div>
 
     <div id="invDone" style="display:none">
@@ -807,7 +815,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v21';
+const BUILD='v23';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1919,7 +1927,8 @@ const saveFAM=()=>{ try{ localStorage.setItem('ebl_fam',JSON.stringify(FAM));
 function famUrl(mode,extra){
   let u=cfg('url')+(cfg('url').includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'))
     +'&mode='+mode+'&uid='+encodeURIComponent(ME.id)+'&name='+encodeURIComponent(ME.name||'');
-  if(cfg('adm'))u+='&admin='+encodeURIComponent(cfg('adm'));
+  if(cfg('adm')){ u+='&admin='+encodeURIComponent(cfg('adm'));
+    u+='&g='+encodeURIComponent(VIEWG||'*'); }   // 팀장님은 보고 있는 모임으로
   if(extra)u+=extra;
   return u;
 }
@@ -1931,7 +1940,10 @@ async function famLoad(){
     const d=await r.json();
     if(d.error){ if(d.error==='blocked')showCut(); throw new Error(d.error); }
     FAM=d.rows||[]; FAMAT=Date.now(); saveFAM();
-    log('가족 칸 '+FAM.length+'줄');
+    if(d.groups){ GROUPS=Object.keys(d.groups).map(id=>({id:id,name:d.groups[id]}));
+      saveGroups(); }
+    if(d.me&&d.me!=='*') setMyGroup(d.me,d.gname||ME.grpN);
+    log('가족 칸 '+FAM.length+'줄'+(d.me&&d.me!=='*'?' ('+(d.gname||'')+')':''));
   }catch(e){ log('가족 칸 못 받음: '+(e.message||e)); }
   return FAM;
 }
@@ -1959,21 +1971,95 @@ async function famDel(id){
     return true;
   }catch(e){ toast('지우지 못했습니다',4000); return false; }
 }
+/* ══════════ 모임 ══════════
+   원가족과 지금 가족은 다릅니다. 형제자매에게 보일 것과
+   아내·아이에게 보일 것이 같을 수 없어 모임으로 나눕니다.
+
+     우리집     아내 · 지수 · 지우
+     형제자매   남동생 · 누나
+
+   시트에는 손대지 않았습니다. 각 줄의 '값' 칸에 모임 번호를 함께 적어
+   앱이 걸러냅니다. Apps Script 는 그대로 둬도 됩니다. */
+let GROUPS=[]; try{ GROUPS=JSON.parse(localStorage.getItem('ebl_groups')||'[]'); }catch(e){}
+const saveGroups=()=>{ try{ localStorage.setItem('ebl_groups',JSON.stringify(GROUPS)); }catch(e){} };
+/* 내가 속한 모임 (초대 링크로 받습니다) */
+ME.grp  = localStorage.getItem('ebl_megrp')||'';
+ME.grpN = localStorage.getItem('ebl_megrpn')||'';
+function setMyGroup(id,name){
+  ME.grp=id||''; ME.grpN=name||'';
+  localStorage.setItem('ebl_megrp',ME.grp);
+  localStorage.setItem('ebl_megrpn',ME.grpN);
+}
+/* 팀장님이 지금 보고 있는 모임 */
+let VIEWG=localStorage.getItem('ebl_viewg')||'';
+
+/* '값' 칸에 모임 번호와 상대 이름을 함께 담습니다 */
+function packVal(o){ try{ return JSON.stringify(o); }catch(e){ return ''; } }
+function unpackVal(v){
+  if(!v)return {};
+  const s=String(v);
+  if(s.charAt(0)!=='{')return {n:s};        // 예전에 이름만 적힌 줄
+  try{ return JSON.parse(s); }catch(e){ return {n:s}; }
+}
+const grpOf = row => String(row['모임']||unpackVal(row['값']).g||'');
+/* 지금 보고 있는 모임 */
+function curGrp(){ return isOwner() ? VIEWG : ME.grp; }
+function grpName(id){
+  if(!id)return '모두';
+  const g=GROUPS.find(x=>x.id===id); if(g)return g.name;
+  return (id===ME.grp&&ME.grpN)?ME.grpN:'모임';
+}
+/* 이 줄을 지금 화면에서 보여줄까 */
+function inGrp(row){
+  if(!isOwner())return true;                 // 서버가 이미 걸러 보냈습니다
+  if(!VIEWG)return true;                     // 팀장님이 '모두' 를 보는 중
+  return String(row['모임']||'')===VIEWG;
+}
+/* 화면에 보이는 모임 목록 */
+function grpList(){
+  if(isOwner())return GROUPS;
+  return ME.grp ? [{id:ME.grp,name:ME.grpN||'우리 모임'}] : [];
+}
+
 /* ── 가족 서가 · 권하기 · 요청 ── */
 const isOwner = () => !!cfg('adm');            // 관리자 열쇠가 있으면 사서
 /* 권할 상대 목록 — 팀장님은 명단에서, 가족은 지금까지 오간 기록에서 */
 function roster(){
-  const m={};
-  MATES.forEach(x=>{ if(x.id!==ME.id)m[x.id]={id:x.id,name:x.name}; });
+  const g=curGrp(), m={};
+  MATES.forEach(x=>{ if(x.id===ME.id)return;
+    if(g&&x.grp&&x.grp!==g)return;             // 다른 모임 사람은 뺍니다
+    m[x.id]={id:x.id,name:x.name}; });
   FAM.forEach(o=>{ const id=o['누가'], nm=o['이름'];
-    if(id&&id!==ME.id&&!m[id])m[id]={id:id,name:nm||'가족'}; });
+    if(!id||id===ME.id||m[id])return;
+    if(g&&grpOf(o)&&grpOf(o)!==g)return;
+    m[id]={id:id,name:nm||'가족'}; });
   return Object.values(m);
 }
 async function newShelf(){
   const nm=(await ask('새 칸 이름','예) 아빠의 추천 · 이번 방학에 읽을 책'))||'';
   if(!nm.trim())return;
-  const r=await famPut({kind:'shelf',title:nm.trim()});
+  let g=curGrp();
+  // 모임이 여럿이면 어디에 만들지 묻습니다
+  if(isOwner()&&GROUPS.length>1&&!VIEWG){
+    g=await pickGrp('이 칸을 어느 모임에 만들까요?');
+    if(g===null)return;
+  }
+  const r=await famPut({kind:'shelf',title:nm.trim(),val:packVal({g:g})});
   if(r){ toast(`'${nm.trim()}' 칸을 만들었습니다`); render(true); }
+}
+/* 모임 고르기 */
+function pickGrp(title){
+  return new Promise(ok=>{
+    const el=$('#pbActs'); el.innerHTML='';
+    $('#pbT').textContent=title; $('#pbS').textContent='';
+    const add=(id,name,hint)=>{ const x=document.createElement('button');
+      x.innerHTML=esc(name)+(hint?`<span class="h">${esc(hint)}</span>`:'');
+      x.onclick=()=>{ panOff(); ok(id); }; el.appendChild(x); };
+    GROUPS.forEach(g=>add(g.id,g.name,''));
+    add('','모두','모임을 안 나눈 것 — 누구에게나 보입니다');
+    pan('#panBook',true);
+    pickGrp._no=()=>ok(null);
+  });
 }
 /* 앱 안쪽 입력창 — 사파리에서 prompt 를 쓰면 그 뒤 동작이 막힙니다 */
 function ask(title,ph,val){
@@ -1986,10 +2072,12 @@ function ask(title,ph,val){
 }
 $('#askOk').onclick=()=>ask._ok&&ask._ok($('#askI').value);
 $('#askNo').onclick=()=>ask._ok&&ask._ok(null);
+$('#bd').addEventListener('click',()=>{ if(pickGrp._no){ const f=pickGrp._no; pickGrp._no=null; f(); } });
 $('#askI').addEventListener('keydown',e=>{ if(e.key==='Enter')$('#askOk').click(); });
 
 /* 골라 보기 */
-const famOf   = k => FAM.filter(o=>o['종류']===k);
+const famOf   = k => FAM.filter(o=>o['종류']===k&&inGrp(o));
+/* 서버가 이미 그 사람 모임 것만 보냅니다. 아래는 팀장님이 '모두' 로 볼 때만 씁니다. */
 const shelves = () => famOf('shelf').sort((a,b)=>String(a['언제']).localeCompare(String(b['언제'])));
 const shelfBooks = sid => famOf('shelfbook').filter(o=>o['대상']===sid);
 const recsToMe   = () => famOf('rec').filter(o=>o['대상']===ME.id);
@@ -2000,7 +2088,7 @@ function nameOf(id){
   if(id===ME.id)return ME.name||'나';
   const m=MATES.find(x=>x.id===id); if(m)return m.name;
   const f=FAM.find(o=>o['누가']===id&&o['이름']); if(f)return f['이름'];
-  const t=FAM.find(o=>o['대상']===id&&o['대상이름']); if(t)return t['대상이름'];
+  const t=FAM.find(o=>o['대상']===id&&unpackVal(o['값']).n); if(t)return unpackVal(t['값']).n;
   return '가족';
 }
 
@@ -2847,6 +2935,24 @@ function hcards(el,arr){
 }
 /* ── 가족 쪽 화면 ── */
 function buildFam(){
+  /* 모임 고르기 — 나눠져 있을 때만 보입니다 */
+  const ge=$('#famGrp'); ge.innerHTML='';
+  const gl=grpList();
+  const show = isOwner() ? (GROUPS.length>0) : (gl.length>1);
+  ge.style.display = show?'flex':'none';
+  if(show){
+    const add=(id,name,on)=>{ const b=document.createElement('button');
+      b.className='chip'+(on?' on':''); b.textContent=name;
+      b.onclick=()=>{ VIEWG=id; localStorage.setItem('ebl_viewg',id); buildFam(); };
+      if(isOwner()&&id)b.oncontextmenu=e=>{ e.preventDefault(); editGrp(id); };
+      ge.appendChild(b); };
+    if(isOwner())add('','모두',!VIEWG);
+    gl.forEach(g=>add(g.id,g.name,curGrp()===g.id));
+    if(isOwner()){ const b=document.createElement('button');
+      b.className='chip add'; b.textContent='＋ 모임';
+      b.onclick=newGrp; ge.appendChild(b); }
+  }
+
   /* 가족 서가 */
   const sh=shelves();
   const se=$('#hShelf'); se.innerHTML='';
@@ -2896,7 +3002,7 @@ function buildFam(){
       const bk=bookOf(o['책ID']);
       const r=document.createElement('div'); r.className='recrow';
       r.innerHTML=`<span class="who">${esc(o['이름']||nameOf(o['누가']))}`
-        +` <b>→</b> ${esc(o['값']||nameOf(o['대상']))}</span>`
+        +` <b>→</b> ${esc(unpackVal(o['값']).n||nameOf(o['대상']))}</span>`
         +`<span class="ti">${esc(o['제목']||'')}</span>`
         +(o['내용']?`<span class="ms">“${esc(o['내용'])}”</span>`:'');
       if(bk)r.onclick=()=>openBook(bk);
@@ -3017,6 +3123,53 @@ $$('#hseg button').forEach(b=>b.onclick=()=>{
   setView();
   $('#home').scrollTop=0; $('#famPane').scrollTop=0;
 });
+async function newGrp(){
+  if(!isOwner()){ toast('관리자 열쇠가 필요합니다'); return; }
+  const nm=(await ask('새 모임 이름','예) 우리집 · 형제자매'))||'';
+  if(!nm.trim())return;
+  const g={id:newId(),name:nm.trim()};
+  toast('모임을 만드는 중…');
+  const d=await admin2('famgroup','&g='+encodeURIComponent(g.id)
+    +'&gname='+encodeURIComponent(g.name));
+  if(!d)return;
+  GROUPS.push(g); saveGroups();
+  VIEWG=g.id; localStorage.setItem('ebl_viewg',VIEWG);
+  buildFam();
+  toast(`'${g.name}' 모임을 만들었습니다.\n시트도 함께 생겼습니다`,4500);
+}
+/* 팀장님 전용 통로 */
+async function admin2(mode,extra){
+  const adm=cfg('adm');
+  if(!adm){ toast('먼저 ⚙ 에 관리자 열쇠를 넣어주세요',5000); return null; }
+  let u=cfg('url')+(cfg('url').includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'))
+    +'&mode='+mode+'&uid='+encodeURIComponent(ME.id)
+    +'&admin='+encodeURIComponent(adm)+(extra||'');
+  try{
+    const r=await fetch(u); const d=await r.json();
+    if(d.error){ toast(d.error==='admin_required'?'관리자 열쇠가 맞지 않습니다':d.error,5000); return null; }
+    return d;
+  }catch(e){ toast('서버에 닿지 못했습니다\n'+(e.message||e),5000); return null; }
+}
+async function editGrp(id){
+  const g=GROUPS.find(x=>x.id===id); if(!g)return;
+  const nm=await ask('모임 이름 고치기','',g.name);
+  if(nm===null)return;
+  if(!nm.trim()){
+    if(confirm(`'${g.name}' 모임을 목록에서 내립니다.\n`
+      +`시트와 그 안의 서가·권함은 그대로 남습니다.\n`
+      +`(시트를 정말 없애려면 스프레드시트에서 탭을 지우세요)`)){
+      GROUPS=GROUPS.filter(x=>x.id!==id); saveGroups();
+      if(VIEWG===id){ VIEWG=''; localStorage.setItem('ebl_viewg',''); }
+      buildFam();
+    }
+    return;
+  }
+  const d=await admin2('famrename','&g='+encodeURIComponent(id)
+    +'&gname='+encodeURIComponent(nm.trim()));
+  if(!d)return;
+  g.name=nm.trim(); saveGroups(); buildFam(); paintMates();
+  toast('이름을 바꿨습니다. 시트 이름도 함께 바뀌었습니다',4000);
+}
 $('#hShelfNew').onclick=newShelf;
 /* 서가 칸 들어가기 */
 function goShelf(o){
@@ -3056,7 +3209,8 @@ async function pickShelf(b){
       panOff();
       if(on){ const hit=shelfBooks(o.id).find(y=>y['책ID']===b.i);
         if(hit&&await famDel(hit.id))toast('칸에서 뺐습니다'); }
-      else{ if(await famPut({kind:'shelfbook',to:o.id,book:b.i,title:b.t||''}))
+      else{ if(await famPut({kind:'shelfbook',to:o.id,book:b.i,title:b.t||'',
+            val:packVal({g:grpOf(o)})}))
         toast(`'${o['제목']}' 에 담았습니다`); }
       render(true);
     };
@@ -3079,7 +3233,7 @@ async function pickWho(b){
       const msg=await ask(`'${m.name}' 에게 한마디`,'안 적으셔도 됩니다');
       if(msg===null)return;
       if(await famPut({kind:'rec',to:m.id,book:b.i,title:b.t||'',
-            text:(msg||'').trim(),val:m.name}))
+            text:(msg||'').trim(),val:packVal({g:curGrp(),n:m.name})}))
         toast(`${m.name} 에게 권했습니다`);
     };
     el.appendChild(x);
@@ -3093,7 +3247,8 @@ $('#reqClose').onclick=()=>$('#reqSheet').classList.remove('on');
 $('#reqOk').onclick=async()=>{
   const t=$('#reqT').value.trim();
   if(!t){ toast('책 제목을 적어주세요'); return; }
-  if(await famPut({kind:'req',title:t,text:$('#reqM').value.trim()})){
+  if(await famPut({kind:'req',title:t,text:$('#reqM').value.trim(),
+        val:packVal({g:curGrp()})})){
     toast('보냈습니다'); $('#reqT').value=''; $('#reqM').value=''; paintReq(); render(true); }
 };
 function paintReq(){
@@ -3244,7 +3399,7 @@ $('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('to
   $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm'); $('#log').textContent=LOG.join('\n');
   $('#sMe').value=ME.name;
   $('#setSheet').classList.add('on');
-  useInfo(); paintSync(); paintSyncAuto(); paintMates(); loadCut(); paintFam(); };
+  useInfo(); paintSync(); paintSyncAuto(); paintMates(); loadCut(); loadMembers(); paintFam(); };
 $('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
 $('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim()); setCfg('adm',$('#sAdm').value.trim()); location.reload(); };
@@ -3361,8 +3516,8 @@ if(!ME.name) setMe('나');
 /* 팀장님 기기에만 두는 명단 — 누구에게 링크를 보냈는지 */
 let MATES=[]; try{ MATES=JSON.parse(localStorage.getItem('ebl_mates')||'[]'); }catch(e){}
 const saveMates=()=>{ try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES)); }catch(e){} };
-function addMate(name){
-  const m={ id:newId(), name:name, at:Date.now() };
+function addMate(name,grp){
+  const m={ id:newId(), name:name, at:Date.now(), grp:grp||'' };
   MATES.push(m); saveMates(); return m;
 }
 
@@ -3376,7 +3531,8 @@ const unb64=t=>JSON.parse(decodeURIComponent(escape(
 function inviteLink(m){
   const o={u:cfg('url'),t:cfg('tok'),c:cfg('cid')};
   if(cfg('fol'))o.f=cfg('fol');
-  if(m){ o.n=m.name; o.i=m.id; }
+  if(m){ o.n=m.name; o.i=m.id;
+    if(m.grp){ o.g=m.grp; o.gn=(GROUPS.find(x=>x.id===m.grp)||{}).name||''; } }
   return location.origin+location.pathname+'#s='+b64(o);
 }
 /* ── 한 사람만 끊기 ──
@@ -3399,6 +3555,15 @@ async function admin(mode,m){
   return d;
 }
 async function loadCut(){ if(cfg('adm')){ try{ await admin('blocklist'); paintMates(); }catch(e){} } }
+/* 팀장님 명단·모임을 서버에서 받아옵니다 — 기기를 바꿔도 이어집니다 */
+async function loadMembers(){
+  if(!cfg('adm'))return;
+  const d=await admin2('fammembers');
+  if(!d)return;
+  if(d.groups){ GROUPS=Object.keys(d.groups).map(id=>({id:id,name:d.groups[id]})); saveGroups(); }
+  if(d.members){ MATES.forEach(m=>{ if(d.members[m.id])m.grp=d.members[m.id]; }); saveMates(); }
+  paintMates();
+}
 
 function paintMates(){
   const el=$('#mateList'); if(!el)return;
@@ -3408,7 +3573,10 @@ function paintMates(){
   MATES.forEach((m,k)=>{
     const off=!!CUT[m.id];
     const d=document.createElement('div'); d.className='mate'+(off?' off':'');
-    d.innerHTML=`<span>${esc(m.name)}${off?' <b>⛔ 끊김</b>':''}</span>`;
+    const gn=m.grp?grpName(m.grp):'';
+    d.innerHTML=`<span>${esc(m.name)}`
+      +(gn?` <i style="font-style:normal;color:var(--dim);font-size:11px">${esc(gn)}</i>`:'')
+      +`${off?' <b>⛔ 끊김</b>':''}</span>`;
     const wrap=document.createElement('span'); wrap.className='b';
     if(!off){
       const send=document.createElement('button'); send.textContent='링크 다시 보내기';
@@ -3421,6 +3589,18 @@ function paintMates(){
       const d2=await admin(off?'unblock':'block',m);
       if(d2){ paintMates(); toast(off?`'${m.name}' 을 풀었습니다`:`'${m.name}' 을 끊었습니다`); }
     };
+    if(GROUPS.length&&!off){
+      const mv=document.createElement('button'); mv.textContent='모임';
+      mv.onclick=async()=>{
+        const g=await pickGrp(`'${m.name}' 을 어느 모임으로?`);
+        if(g===null)return;
+        const d2=await admin2('famjoin','&uid='+encodeURIComponent(m.id)
+          +'&g='+encodeURIComponent(g||'-'));
+        if(d2){ m.grp=g||''; saveMates(); paintMates();
+          toast(g?`'${grpName(g)}' 으로 옮겼습니다`:'모임에서 뺐습니다'); }
+      };
+      wrap.appendChild(mv);
+    }
     const del=document.createElement('button'); del.textContent='지우기'; del.className='warn';
     del.onclick=()=>{ if(confirm(`명단에서 '${m.name}' 을 지웁니다.\n끊은 것은 그대로 남습니다.`)){
       MATES.splice(k,1); saveMates(); paintMates(); } };
@@ -3432,8 +3612,22 @@ function paintMates(){
 /* 아이패드는 브라우저 prompt 가 뜨면 '사용자가 누른 것' 으로 안 칩니다.
    그 뒤로는 공유도 복사도 막히므로, 창을 앱 안쪽 것으로 씁니다. */
 let invM=null;
+let invG='';
+function paintInvGrp(){
+  const w=$('#invGrpWrap'), e=$('#invGrp');
+  w.style.display=GROUPS.length?'block':'none';
+  if(!GROUPS.length)return;
+  e.innerHTML='';
+  const add=(id,name)=>{ const b=document.createElement('button');
+    b.className='chip'+(invG===id?' on':''); b.textContent=name;
+    b.onclick=()=>{ invG=id; paintInvGrp(); }; e.appendChild(b); };
+  GROUPS.forEach(g=>add(g.id,g.name));
+  add('','모임 없이');
+}
 function openInvite(m){
   invM=m||null;
+  invG = m ? (m.grp||'') : (VIEWG||(GROUPS[0]||{}).id||'');
+  paintInvGrp();
   $('#invName').value = m?m.name:'';
   $('#invDone').style.display = m?'block':'none';
   if(m){ $('#invFor').textContent=`'${m.name}' 에게 보낼 링크`;
@@ -3446,7 +3640,9 @@ $('#invClose').onclick=()=>$('#invSheet').classList.remove('on');
 $('#invMake').onclick=()=>{
   const nm=$('#invName').value.trim();
   if(!nm){ toast('이름을 적어주세요'); return; }
-  invM=addMate(nm); paintMates();
+  invM=addMate(nm,invG); paintMates();
+  if(invG) admin2('famjoin','&uid='+encodeURIComponent(invM.id)
+    +'&g='+encodeURIComponent(invG));
   $('#invFor').textContent=`'${nm}' 에게 보낼 링크`;
   $('#invLink').value=inviteLink(invM);
   $('#invDone').style.display='block';
@@ -3483,6 +3679,7 @@ $('#invCopy').onclick=()=>{
     if(o.u)setCfg('url',o.u); if(o.t)setCfg('tok',o.t); if(o.c)setCfg('cid',o.c);
     if(o.f)setCfg('fol',o.f);
     if(o.i){ ME.id=o.i; localStorage.setItem('ebl_meid',o.i); }
+    if(o.g)setMyGroup(o.g,o.gn||'');
     if(o.n) setMe(o.n);
     history.replaceState(null,'',location.pathname);   // 주소창에서 토큰을 지웁니다
     setTimeout(()=>{
