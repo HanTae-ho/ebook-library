@@ -171,6 +171,15 @@
   .box .btns{display:flex;gap:8px;margin-top:10px}
   .box .btns button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg)}
   .box .btns .pri{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+  /* 설정·관리·모임관리를 오가는 줄 — 세 장 아래에 똑같이 붙습니다 */
+  .navbar{display:flex;gap:6px;margin-top:18px;padding-top:12px;
+    border-top:1px solid var(--line);position:sticky;bottom:-18px;
+    background:var(--panel);padding-bottom:2px}
+  .navbar button{flex:1;padding:10px 4px;border-radius:9px;border:1px solid var(--line);
+    background:var(--bg);font-size:12px;white-space:nowrap}
+  .navbar button.here{background:var(--acc);border-color:var(--acc);
+    color:#0b1220;font-weight:600}
+  .navbar button.hide{display:none}
   #log{margin-top:12px;font-size:11px;color:var(--dim);white-space:pre-wrap;background:var(--bg);
     border:1px solid var(--line);border-radius:8px;padding:10px;max-height:200px;overflow:auto}
 
@@ -687,14 +696,11 @@
     <p class="note">고친 내용이 안 보일 때 누르세요. 저장해 둔 앱 파일을 버리고
       새로 받아옵니다. 책·읽은 기록은 그대로입니다.</p>
 
-    <div class="btns" style="margin-top:20px">
-      <button id="btnAdmin">🛠 관리</button>
-      <button id="setCancel" class="pri">닫기</button>
-    </div>
+    <div class="navbar" data-nav="set"></div>
   </div>
 </div>
 
-<!-- 🛠 관리 — 서재를 차린 사람만 -->
+<!-- 🛠 관리 — 서재를 서버에 잇는 일.  한 번 넣으면 다시 올 일이 드뭅니다 -->
 <div class="sheet" id="admSheet">
   <div class="box">
     <h3>관리</h3>
@@ -710,36 +716,55 @@
       placeholder="https://drive.google.com/drive/folders/...">
     <label>관리자 열쇠 <span style="color:var(--dim);font-weight:400">
       — 이걸 넣어야 모임·서가·차단이 열립니다</span></label><input id="sAdm"
-      placeholder="Apps Script 의 ADMIN_KEY 와 같게" autocomplete="off">
+      placeholder="Apps Script 에서 SHOW_KEYS() 로 확인" autocomplete="off">
     <div class="btns"><button id="setSave" class="pri">저장하고 새로고침</button></div>
+    <p class="note">주소와 토큰은 앱 파일에 들어 있지 않습니다.
+      이 기기에만 저장됩니다.</p>
+
+    <div class="sect">목록</div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
-
-    <div class="sect">모임</div>
-    <div id="grpList"></div>
-    <div class="btns"><button id="btnNewGrp" class="pri">＋ 모임 만들기</button></div>
-    <p class="note">우리집 · 형제자매처럼 나눕니다. 만들면 시트가 저절로 생기고,
-      맨 위 탭에 그 이름이 붙습니다.
-      <br>모임마다 서가·권하기·요청이 따로 돕니다. 서로 안 섞입니다.</p>
-
-    <div class="sect">모임원 초대</div>
-    <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
-    <div id="mateList"></div>
-    <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
-      받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
-      <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
+    <p class="note">Apps Script 에서 BUILD_INDEX() 를 돌리신 뒤 누르시면
+      새로 담긴 책이 들어옵니다.</p>
 
     <div class="sect">모임 칸<span id="famInfo"></span></div>
     <div class="btns"><button id="btnFam">모임 칸 확인</button></div>
     <p class="note">서가·권하기·책 요청이 오가는 공용 칸입니다.
       읽은 기록과 밑줄은 여기 올라오지 않습니다.
-      <br><b>모임은 위쪽 '모임' 칸에서 만듭니다.</b></p>
+      <br><b>모임을 만들고 사람을 넣는 일은 '모임관리' 에 있습니다.</b></p>
 
     <div class="sect">위험</div>
     <div class="btns"><button id="btnClearAll">전부 초기화</button></div>
 
     <div class="sect">기록</div>
     <div id="log"></div>
-    <div class="btns"><button id="admClose" class="pri">닫기</button></div>
+
+    <div class="navbar" data-nav="adm"></div>
+  </div>
+</div>
+
+<!-- 👪 모임관리 — 식구가 늘거나 바뀔 때 오는 자리 -->
+<div class="sheet" id="grpSheet">
+  <div class="box">
+    <h3>모임관리</h3>
+    <p class="note" style="margin-top:0">모임을 만들고, 사람을 넣고 빼는 자리입니다.</p>
+
+    <div class="sect">모임</div>
+    <div id="grpList"></div>
+    <div class="btns"><button id="btnNewGrp" class="pri">＋ 모임 만들기</button></div>
+    <p class="note">우리집 · 형제자매처럼 나눕니다. 만들면 시트가 저절로 생기고,
+      맨 위 탭에 그 이름이 붙습니다.
+      <br>모임마다 서가·권하기·요청이 따로 돕니다. 서로 안 섞입니다.
+      <br>지우실 때 사람이 남아 있으면 먼저 여쭙습니다.</p>
+
+    <div class="sect">모임원 초대</div>
+    <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
+    <div id="mateList"></div>
+    <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
+      받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
+      <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.
+      <br>잘못 보내셨다면 그 사람만 <b>차단</b>하시면 됩니다. 토큰은 그대로 둬도 됩니다.</p>
+
+    <div class="navbar" data-nav="grp"></div>
   </div>
 </div>
 
@@ -847,7 +872,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v27';
+const BUILD='v28';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1013,9 +1038,10 @@ async function boot(){
   if(!cfg('url')||!cfg('tok')){
     stat('아직 서재에 연결되지 않았습니다.\n\n'
         +'· 초대 링크를 받으셨다면 그 링크로 열어주세요\n'
-        +'· 서재를 차리신 분이라면 아래 🛠 관리 에\n'
+        +'· 서재를 차리신 분이라면 아래 [관리] 에\n'
         +'  주소와 토큰을 넣고 [저장하고 새로고침]');
-    setTimeout(()=>{ const e=$('#setSheet'); if(e)e.classList.add('on'); },700);
+    // 열쇠를 가진 분은 바로 넣는 자리로, 그 밖에는 기본설정으로
+    setTimeout(()=>{ try{ pgOpen(isOwner()?'adm':'set'); }catch(e){} },700);
     return;
   }
   try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
@@ -3220,19 +3246,46 @@ function paintGrps(){
     const w=document.createElement('span'); w.className='b';
     const r=document.createElement('button'); r.textContent='이름';
     r.onclick=()=>editGrp(g.id);
-    const x=document.createElement('button'); x.textContent='내리기'; x.className='warn';
-    x.onclick=()=>dropGrp(g.id);
+    const x=document.createElement('button'); x.textContent='지우기'; x.className='warn';
+    x.onclick=()=>delGrp(g.id);
     w.append(r,x); d.appendChild(w); f.appendChild(d);
   });
   el.appendChild(f);
 }
-function dropGrp(id){
+/* 모임 지우기
+   예전 '내리기' 는 이 기기 목록에서만 뺐습니다. 서버는 그대로였으니
+   새로고침 한 번에 되살아났습니다. 이제 서버에 제대로 알립니다.
+
+   사람은 지우지 않습니다. 명단에 남긴 채 '모임 없음' 으로 돌려보냅니다.
+   시트도 남깁니다. 이름만 '지운모임_' 으로 바뀝니다. */
+async function delGrp(id){
   const g=GROUPS.find(x=>x.id===id); if(!g)return;
-  if(!confirm(`'${g.name}' 을 목록에서 내립니다.\n`
-    +`시트와 그 안의 서가·권함은 그대로 남습니다.`))return;
+  if(!isOwner()){ toast('관리자 열쇠가 필요합니다'); return; }
+
+  let d=await admin2('famgroupdel','&g='+encodeURIComponent(id),true);
+  if(!d)return;
+
+  if(d.error==='has_members'){
+    const nm=(d.who||[]).map(u=>{
+      const m=MATES.find(x=>x.id===u); return '  · '+(m?m.name:u);
+    }).join('\n');
+    const go=confirm(
+      `'${g.name}' 에 아직 ${d.n}명이 있습니다.\n\n${nm}\n\n`
+      +`[취소] 그만두고 이분들을 먼저 다른 모임으로 옮깁니다  (권합니다)\n`
+      +`[확인] 이분들을 '모임 없음' 으로 빼고 지웁니다\n\n`
+      +`어느 쪽이든 사람이 명단에서 지워지지는 않습니다.`);
+    if(!go)return;
+    d=await admin2('famgroupdel','&g='+encodeURIComponent(id)+'&force=1',true);
+    if(!d||d.error){ if(d&&d.error)toast(d.error,5000); return; }
+  }else if(d.error){ toast(d.error,5000); return; }
+
   GROUPS=GROUPS.filter(x=>x.id!==id); saveGroups();
+  MATES.forEach(m=>{ if(m.grp===id)m.grp=''; }); saveMates();
   if(HSIDE===id){ HSIDE='me'; localStorage.setItem('ebl_hside','me'); }
-  paintGrps(); paintSeg(); setView();
+  if(VIEWG===id){ VIEWG=''; localStorage.setItem('ebl_viewg',''); }
+  paintGrps(); paintSeg(); paintMates(); paintInvGrp(); setView();
+  toast(d.n?`'${g.name}' 을 지웠습니다.\n${d.n}명은 명단에 남아 '모임 없음' 입니다`
+           :`'${g.name}' 을 지웠습니다.\n시트는 '지운모임_' 으로 남아 있습니다`,5000);
 }
 async function newGrp(){
   if(!isOwner()){ toast('관리자 열쇠가 필요합니다'); return; }
@@ -3249,7 +3302,7 @@ async function newGrp(){
   toast(`'${g.name}' 모임을 만들었습니다.\n맨 위 탭에 붙었습니다`,4500);
 }
 /* 팀장님 전용 통로 */
-async function admin2(mode,extra){
+async function admin2(mode,extra,raw){
   const adm=cfg('adm');
   if(!adm){ toast('먼저 ⚙ 에 관리자 열쇠를 넣어주세요',5000); return null; }
   let u=cfg('url')+(cfg('url').includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'))
@@ -3257,7 +3310,8 @@ async function admin2(mode,extra){
     +'&admin='+encodeURIComponent(adm)+(extra||'');
   try{
     const r=await fetch(u); const d=await r.json();
-    if(d.error){ toast(d.error==='admin_required'?'관리자 열쇠가 맞지 않습니다':d.error,5000); return null; }
+    // raw 를 주면 오류도 그대로 돌려줍니다 — 부른 쪽이 직접 다루려 할 때
+    if(d.error&&!raw){ toast(d.error==='admin_required'?'관리자 열쇠가 맞지 않습니다':d.error,5000); return null; }
     return d;
   }catch(e){ toast('서버에 닿지 못했습니다\n'+(e.message||e),5000); return null; }
 }
@@ -3504,23 +3558,85 @@ document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')
 window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
 /* ⚙ 설정 — 누구나 쓰는 것 */
-$('#btnSet').onclick=()=>{
-  $('#sMe').value=ME.name;
-  $('#setSheet').classList.add('on');
-  useInfo(); paintSync(); paintSyncAuto();
+/* ══════════ 설정 · 관리 · 모임관리 오가기 ══════════
+   전에는 장마다 닫기 하나뿐이라, 설정에서 관리로 갔다가 돌아오려면
+   닫고 처음부터 다시 들어와야 했습니다.
+   이제 세 장 아래에 같은 줄이 붙어 그 자리에서 건너뜁니다.
+
+   관리자 열쇠가 없는 분에게는 '관리'·'모임관리' 가 아예 안 보입니다.
+   그분들 줄은 [뒤로] [기본설정] [닫기] 뿐입니다. */
+const SPG={
+  set:{ id:'setSheet', name:'기본설정', own:false },
+  adm:{ id:'admSheet', name:'관리',     own:true  },
+  grp:{ id:'grpSheet', name:'모임관리', own:true  }
 };
-/* 🛠 관리 — 서재를 차린 사람만 */
-$('#btnAdmin').onclick=()=>{
-  $('#setSheet').classList.remove('on');
-  $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
-  $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm');
-  $('#log').textContent=LOG.join('\n');
-  $('#admSheet').classList.add('on');
-  paintGrps(); paintMates(); loadCut(); loadMembers(); paintFam();
-};
-$('#admClose').onclick=()=>$('#admSheet').classList.remove('on');
-$('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
-$('#setSave').onclick=()=>{ $('#admSheet').classList.remove('on'); setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
+let PGNOW='', PGBACK=[];
+
+/* 장을 열 때 그 장이 필요로 하는 것을 채웁니다 */
+function fillPage(k){
+  if(k==='set'){
+    $('#sMe').value=ME.name;
+    useInfo(); paintSync(); paintSyncAuto();
+  }
+  if(k==='adm'){
+    $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
+    $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm');
+    $('#log').textContent=LOG.join('\n');
+    paintFam();
+  }
+  if(k==='grp'){
+    paintGrps(); paintMates(); loadCut(); loadMembers();
+  }
+}
+
+function paintNav(){
+  document.querySelectorAll('.navbar').forEach(bar=>{
+    const here=bar.dataset.nav;
+    bar.innerHTML='';
+    const add=(txt,fn,cls)=>{
+      const b=document.createElement('button');
+      b.textContent=txt; if(cls)b.className=cls; b.onclick=fn; bar.appendChild(b);
+    };
+    add('뒤로',pgBack);
+    Object.keys(SPG).forEach(k=>{
+      if(SPG[k].own&&!isOwner())return;
+      add(SPG[k].name,()=>pgGo(k),k===here?'here':'');
+    });
+    add('닫기',pgClose,'pri');
+    // 갈 곳이 없으면 '뒤로' 는 흐리게 둡니다
+    bar.firstChild.disabled=!PGBACK.length;
+    bar.firstChild.style.opacity=PGBACK.length?'':'0.4';
+  });
+}
+
+function pgShow(k){
+  Object.keys(SPG).forEach(x=>{
+    const e=$('#'+SPG[x].id); if(e)e.classList.toggle('on',x===k);
+  });
+  PGNOW=k; fillPage(k); paintNav();
+}
+/* 새 장으로 — 지금 있던 곳을 기억해 둡니다 */
+function pgGo(k){
+  if(k===PGNOW)return;
+  if(SPG[k].own&&!isOwner()){ toast('관리자 열쇠가 필요합니다'); return; }
+  if(PGNOW)PGBACK.push(PGNOW);
+  if(PGBACK.length>12)PGBACK.shift();
+  pgShow(k);
+}
+function pgBack(){
+  const k=PGBACK.pop();
+  if(!k){ pgClose(); return; }
+  pgShow(k);
+}
+function pgClose(){
+  Object.keys(SPG).forEach(x=>{ const e=$('#'+SPG[x].id); if(e)e.classList.remove('on'); });
+  PGNOW=''; PGBACK=[];
+}
+/* 처음 여는 것은 언제나 기본설정입니다 */
+function pgOpen(k){ PGBACK=[]; PGNOW=''; pgShow(k||'set'); }
+
+$('#btnSet').onclick=()=>pgOpen('set');
+$('#setSave').onclick=()=>{ pgClose(); setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim()); setCfg('adm',$('#sAdm').value.trim()); location.reload(); };
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
@@ -3840,7 +3956,7 @@ function paintSyncAuto(){
 
 /* 서비스 워커가 옛 화면을 붙들고 있을 때 빠져나오는 길 */
 $('#btnAdd').onclick=()=>{
-  $('#setSheet').classList.remove('on');
+  pgClose();
   if(isInstalled()){ toast('이미 홈 화면에서 열고 계십니다'); return; }
   localStorage.removeItem('ebl_addno');
   setTimeout(()=>askAdd(false),260);
