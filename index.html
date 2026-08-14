@@ -243,6 +243,14 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  #grpList{margin-top:6px}
+  #grpList .it{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:11px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+  #grpList .it:last-child{border-bottom:none}
+  #grpList .b{display:flex;gap:4px}
+  #grpList .b button{font-size:11.5px;color:var(--acc);padding:3px 6px}
+  #grpList .b button.warn{color:var(--bad)}
+  #grpList .n{color:var(--dim);font-size:11px;margin-left:6px}
   #reqList{margin-top:14px;max-height:40vh;overflow-y:auto}
   #reqList .it{padding:10px 2px;border-bottom:1px solid var(--line);font-size:13px}
   #reqList .it:last-child{border-bottom:none}
@@ -416,9 +424,7 @@
       <button class="ib" id="btnView" title="보기 설정">☰</button>
       <button class="ib" id="btnSet" title="설정">⚙</button>
     </div>
-    <div class="seg" id="hseg">
-      <button data-v="me">나</button><button data-v="fam">가족</button>
-    </div>
+    <div class="seg" id="hseg"></div>
     <div id="tabs">
       <button data-v="home">홈</button>
       <button data-v="">전체</button>
@@ -456,8 +462,6 @@
   </div>
 
   <div id="famPane">
-      <div class="hrow" id="famGrp"></div>
-
       <div class="hs" id="hsShelf">
         <div class="hh"><b>가족 서가</b><button id="hShelfNew">＋ 새 칸</button></div>
         <div class="hrow" id="hShelf"></div>
@@ -649,40 +653,16 @@
   <button id="busyX">취소</button>
 </div>
 
+<!-- ⚙ 설정 — 누구나 쓰는 것 -->
 <div class="sheet" id="setSheet">
   <div class="box">
-    <h3>연결 설정</h3>
-    <label>Apps Script 웹앱 주소</label><input id="sUrl">
-    <label>토큰</label><input id="sTok">
-    <label>구글 클라이언트 ID</label><input id="sCid">
-    <label>관리자 열쇠 <span style="color:var(--dim);font-weight:400">
-      — 팀장님 기기에만. 초대 링크에는 안 들어갑니다</span></label><input id="sAdm"
-      placeholder="Apps Script 의 ADMIN_KEY 와 같게" autocomplete="off">
-    <label>도서 폴더 링크 <span style="color:var(--dim);font-weight:400">
-      — 막혔을 때 가족이 여기로 승인을 요청합니다</span></label><input id="sFol"
-      placeholder="https://drive.google.com/drive/folders/...">
-    <div class="btns"><button id="setCancel">닫기</button>
-      <button id="setSave" class="pri">저장하고 새로고침</button></div>
-    <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
+    <h3>설정</h3>
 
     <div class="sect">나</div>
     <label>이 기기를 쓰는 사람</label>
     <input id="sMe" placeholder="예) 아빠 · 아내 · 지수(딸) · 지우(아들)" autocomplete="off">
     <p class="note">가족 도서관에서 이 이름으로 보입니다.
       바꿔도 읽은 기록은 그대로 따라옵니다.</p>
-
-    <div class="sect">가족에게 나눠주기</div>
-    <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
-    <div id="mateList"></div>
-    <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
-      받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
-      각자 <b>🔑</b> 로 자기 구글 계정에 로그인한 뒤 홈 화면에 추가하면 앱처럼 씁니다.
-      <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
-
-    <div class="sect">가족 도서관<span id="famInfo"></span></div>
-    <div class="btns"><button id="btnFam">가족 칸 확인</button></div>
-    <p class="note">가족 서가·권하기·책 요청·한 줄 평이 오가는 공용 칸입니다.
-      읽은 기록과 밑줄은 여기 올라오지 않습니다.</p>
 
     <div class="sect">기기끼리 맞추기<span id="syncInfo"></span></div>
     <div class="btns"><button id="btnSync" class="pri">지금 맞추기</button></div>
@@ -701,13 +681,65 @@
     <div class="btns"><button id="btnClearRead">읽은 기록 모두 지우기</button></div>
     <p class="note">진도·다 읽음 표시가 사라집니다. 파일은 그대로 둡니다.</p>
 
-    <div class="sect">그 밖에</div>
+    <div class="sect">앱</div>
     <div class="btns"><button id="btnAdd">홈 화면에 추가</button></div>
     <div class="btns"><button id="btnFresh">앱 새로 고치기</button></div>
     <p class="note">고친 내용이 안 보일 때 누르세요. 저장해 둔 앱 파일을 버리고
       새로 받아옵니다. 책·읽은 기록은 그대로입니다.</p>
+
+    <div class="btns" style="margin-top:20px">
+      <button id="btnAdmin">🛠 관리</button>
+      <button id="setCancel" class="pri">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🛠 관리 — 서재를 차린 사람만 -->
+<div class="sheet" id="admSheet">
+  <div class="box">
+    <h3>관리</h3>
+    <p class="note" style="margin-top:0">서재를 차린 사람만 쓰는 자리입니다.
+      가족은 여기를 볼 일이 없습니다.</p>
+
+    <div class="sect">연결</div>
+    <label>Apps Script 웹앱 주소</label><input id="sUrl">
+    <label>토큰</label><input id="sTok">
+    <label>구글 클라이언트 ID</label><input id="sCid">
+    <label>도서 폴더 링크 <span style="color:var(--dim);font-weight:400">
+      — 막혔을 때 가족이 여기로 승인을 요청합니다</span></label><input id="sFol"
+      placeholder="https://drive.google.com/drive/folders/...">
+    <label>관리자 열쇠 <span style="color:var(--dim);font-weight:400">
+      — 이걸 넣어야 모임·서가·차단이 열립니다</span></label><input id="sAdm"
+      placeholder="Apps Script 의 ADMIN_KEY 와 같게" autocomplete="off">
+    <div class="btns"><button id="setSave" class="pri">저장하고 새로고침</button></div>
+    <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
+
+    <div class="sect">모임</div>
+    <div id="grpList"></div>
+    <div class="btns"><button id="btnNewGrp" class="pri">＋ 모임 만들기</button></div>
+    <p class="note">우리집 · 형제자매처럼 나눕니다. 만들면 시트가 저절로 생기고,
+      맨 위 탭에 그 이름이 붙습니다.
+      <br>모임마다 서가·권하기·요청이 따로 돕니다. 서로 안 섞입니다.</p>
+
+    <div class="sect">가족에게 나눠주기</div>
+    <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
+    <div id="mateList"></div>
+    <p class="note">이름을 정하면 <b>그 사람 전용 링크</b>가 만들어집니다.
+      받는 쪽은 링크를 누르는 것만으로 설정과 이름이 정해집니다.
+      <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
+
+    <div class="sect">가족 칸<span id="famInfo"></span></div>
+    <div class="btns"><button id="btnFam">가족 칸 확인</button></div>
+    <p class="note">가족 서가·권하기·책 요청이 오가는 공용 칸입니다.
+      읽은 기록과 밑줄은 여기 올라오지 않습니다.
+      <br><b>모임은 가족 화면 맨 위에서 만듭니다.</b></p>
+
+    <div class="sect">위험</div>
     <div class="btns"><button id="btnClearAll">전부 초기화</button></div>
+
+    <div class="sect">기록</div>
     <div id="log"></div>
+    <div class="btns"><button id="admClose" class="pri">닫기</button></div>
   </div>
 </div>
 
@@ -815,7 +847,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v23b';
+const BUILD='v25';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -1103,7 +1135,7 @@ function filter(){
   return out;
 }
 function render(reset){
-  if(HSIDE==='fam'){ setView(); buildFam(); return; }
+  if(HSIDE!=='me'){ setView(); buildFam(); return; }
   if(TAB==='home'){ setView(); buildHome(); return; }
   setView();
   const g=$('#grid');
@@ -1960,8 +1992,8 @@ async function famLoad(){
     if(d.error){ if(d.error==='blocked')showCut(); throw new Error(d.error); }
     FAM=d.rows||[]; FAMAT=Date.now(); saveFAM();
     if(d.groups){ GROUPS=Object.keys(d.groups).map(id=>({id:id,name:d.groups[id]}));
-      saveGroups(); }
-    if(d.me&&d.me!=='*') setMyGroup(d.me,d.gname||ME.grpN);
+      saveGroups(); paintSeg(); }
+    if(d.me&&d.me!=='*'){ setMyGroup(d.me,d.gname||ME.grpN); paintSeg(); }
     log('가족 칸 '+FAM.length+'줄'+(d.me&&d.me!=='*'?' ('+(d.gname||'')+')':''));
   }catch(e){ log('가족 칸 못 받음: '+(e.message||e)); }
   return FAM;
@@ -2022,7 +2054,7 @@ function unpackVal(v){
 }
 const grpOf = row => String(row['모임']||unpackVal(row['값']).g||'');
 /* 지금 보고 있는 모임 */
-function curGrp(){ return isOwner() ? VIEWG : ME.grp; }
+function curGrp(){ return HSIDE==='me' ? (isOwner()?VIEWG:ME.grp) : HSIDE; }
 function grpName(id){
   if(!id)return '모두';
   const g=GROUPS.find(x=>x.id===id); if(g)return g.name;
@@ -2922,7 +2954,7 @@ $$('#tabs button').forEach(x=>x.onclick=()=>goTab(x.dataset.v));
 function setView(){
   // 표지 크기는 앱 전체가 이 값 하나를 따릅니다.
   document.documentElement.style.setProperty('--cw',P.size+'px');
-  const fam  = HSIDE==='fam';
+  const fam  = HSIDE!=='me';
   const home = TAB==='home';
   $$('#hseg button').forEach(b=>b.classList.toggle('on',b.dataset.v===HSIDE));
   $('#famPane').style.display = fam?'block':'none';
@@ -2958,24 +2990,7 @@ function hcards(el,arr){
 }
 /* ── 가족 쪽 화면 ── */
 function buildFam(){
-  /* 모임 고르기 — 나눠져 있을 때만 보입니다 */
-  const ge=$('#famGrp'); ge.innerHTML='';
-  const gl=grpList();
-  const show = isOwner() ? (GROUPS.length>0) : (gl.length>1);
-  ge.style.display = show?'flex':'none';
-  if(show){
-    const add=(id,name,on)=>{ const b=document.createElement('button');
-      b.className='chip'+(on?' on':''); b.textContent=name;
-      b.onclick=()=>{ VIEWG=id; localStorage.setItem('ebl_viewg',id); buildFam(); };
-      if(isOwner()&&id)b.oncontextmenu=e=>{ e.preventDefault(); editGrp(id); };
-      ge.appendChild(b); };
-    if(isOwner())add('','모두',!VIEWG);
-    gl.forEach(g=>add(g.id,g.name,curGrp()===g.id));
-    if(isOwner()){ const b=document.createElement('button');
-      b.className='chip add'; b.textContent='＋ 모임';
-      b.onclick=newGrp; ge.appendChild(b); }
-  }
-
+  VIEWG = (HSIDE==='me') ? VIEWG : HSIDE;
   /* 가족 서가 */
   const sh=shelves();
   const se=$('#hShelf'); se.innerHTML='';
@@ -3139,13 +3154,57 @@ function buildHome(){
     + (UPDATED?`\n갱신 ${UPDATED} · ${BUILD}`:`\n${BUILD}`);
 
 }
-$$('#hseg button').forEach(b=>b.onclick=()=>{
-  HSIDE=b.dataset.v; localStorage.setItem('ebl_hside',HSIDE);
-  if(HSIDE==='fam'){ buildFam(); famLoad().then(buildFam); }
-  else render(true);
-  setView();
-  $('#home').scrollTop=0; $('#famPane').scrollTop=0;
-});
+/* 최상위 탭 — 나 · 모임들
+   가족은 자기 모임 하나만, 팀장님은 모든 모임이 보입니다. */
+function paintSeg(){
+  const el=$('#hseg'); el.innerHTML='';
+  const gl=grpList();
+  const add=(v,label)=>{ const b=document.createElement('button');
+    b.dataset.v=v; b.textContent=label;
+    b.classList.toggle('on',HSIDE===v);
+    b.onclick=()=>{
+      HSIDE=v; localStorage.setItem('ebl_hside',HSIDE);
+      if(HSIDE!=='me'){ VIEWG=(HSIDE==='all'?'':HSIDE);
+        localStorage.setItem('ebl_viewg',VIEWG);
+        buildFam(); famLoad().then(buildFam); }
+      else render(true);
+      paintSeg(); setView();
+      $('#home').scrollTop=0; $('#famPane').scrollTop=0;
+    };
+    el.appendChild(b); };
+  add('me','나');
+  gl.forEach(g=>add(g.id,g.name));
+  // 모임이 하나도 없으면 탭 줄 자체를 숨깁니다
+  el.style.display = gl.length ? 'flex' : 'none';
+  if(!gl.length && HSIDE!=='me'){ HSIDE='me'; localStorage.setItem('ebl_hside','me'); }
+}
+function paintGrps(){
+  const el=$('#grpList'); if(!el)return;
+  el.innerHTML='';
+  if(!GROUPS.length){ el.innerHTML='<div class="hnone" style="padding:6px 2px">'
+    +'아직 만든 모임이 없습니다.</div>'; return; }
+  const f=document.createDocumentFragment();
+  GROUPS.forEach(g=>{
+    const n=MATES.filter(m=>m.grp===g.id).length;
+    const d=document.createElement('div'); d.className='it';
+    d.innerHTML=`<span>${esc(g.name)}<i class="n">${n?n+'명':'아직 없음'}</i></span>`;
+    const w=document.createElement('span'); w.className='b';
+    const r=document.createElement('button'); r.textContent='이름';
+    r.onclick=()=>editGrp(g.id);
+    const x=document.createElement('button'); x.textContent='내리기'; x.className='warn';
+    x.onclick=()=>dropGrp(g.id);
+    w.append(r,x); d.appendChild(w); f.appendChild(d);
+  });
+  el.appendChild(f);
+}
+function dropGrp(id){
+  const g=GROUPS.find(x=>x.id===id); if(!g)return;
+  if(!confirm(`'${g.name}' 을 목록에서 내립니다.\n`
+    +`시트와 그 안의 서가·권함은 그대로 남습니다.`))return;
+  GROUPS=GROUPS.filter(x=>x.id!==id); saveGroups();
+  if(HSIDE===id){ HSIDE='me'; localStorage.setItem('ebl_hside','me'); }
+  paintGrps(); paintSeg(); setView();
+}
 async function newGrp(){
   if(!isOwner()){ toast('관리자 열쇠가 필요합니다'); return; }
   const nm=(await ask('새 모임 이름','예) 우리집 · 형제자매'))||'';
@@ -3157,8 +3216,8 @@ async function newGrp(){
   if(!d)return;
   GROUPS.push(g); saveGroups();
   VIEWG=g.id; localStorage.setItem('ebl_viewg',VIEWG);
-  buildFam();
-  toast(`'${g.name}' 모임을 만들었습니다.\n시트도 함께 생겼습니다`,4500);
+  paintGrps(); paintSeg(); paintInvGrp();
+  toast(`'${g.name}' 모임을 만들었습니다.\n맨 위 탭에 붙었습니다`,4500);
 }
 /* 팀장님 전용 통로 */
 async function admin2(mode,extra){
@@ -3176,23 +3235,15 @@ async function admin2(mode,extra){
 async function editGrp(id){
   const g=GROUPS.find(x=>x.id===id); if(!g)return;
   const nm=await ask('모임 이름 고치기','',g.name);
-  if(nm===null)return;
-  if(!nm.trim()){
-    if(confirm(`'${g.name}' 모임을 목록에서 내립니다.\n`
-      +`시트와 그 안의 서가·권함은 그대로 남습니다.\n`
-      +`(시트를 정말 없애려면 스프레드시트에서 탭을 지우세요)`)){
-      GROUPS=GROUPS.filter(x=>x.id!==id); saveGroups();
-      if(VIEWG===id){ VIEWG=''; localStorage.setItem('ebl_viewg',''); }
-      buildFam();
-    }
-    return;
-  }
+  if(nm===null||!nm.trim())return;
   const d=await admin2('famrename','&g='+encodeURIComponent(id)
     +'&gname='+encodeURIComponent(nm.trim()));
   if(!d)return;
-  g.name=nm.trim(); saveGroups(); buildFam(); paintMates();
+  g.name=nm.trim(); saveGroups();
+  paintGrps(); paintSeg(); paintMates(); paintInvGrp();
   toast('이름을 바꿨습니다. 시트 이름도 함께 바뀌었습니다',4000);
 }
+$('#btnNewGrp').onclick=newGrp;
 $('#hShelfNew').onclick=newShelf;
 /* 서가 칸 들어가기 */
 function goShelf(o){
@@ -3422,13 +3473,24 @@ document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')
   if(e.key==='Escape')closeReader(); });
 window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
-$('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
-  $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm'); $('#log').textContent=LOG.join('\n');
+/* ⚙ 설정 — 누구나 쓰는 것 */
+$('#btnSet').onclick=()=>{
   $('#sMe').value=ME.name;
   $('#setSheet').classList.add('on');
-  useInfo(); paintSync(); paintSyncAuto(); paintMates(); loadCut(); loadMembers(); paintFam(); };
+  useInfo(); paintSync(); paintSyncAuto();
+};
+/* 🛠 관리 — 서재를 차린 사람만 */
+$('#btnAdmin').onclick=()=>{
+  $('#setSheet').classList.remove('on');
+  $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
+  $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm');
+  $('#log').textContent=LOG.join('\n');
+  $('#admSheet').classList.add('on');
+  paintGrps(); paintMates(); loadCut(); loadMembers(); paintFam();
+};
+$('#admClose').onclick=()=>$('#admSheet').classList.remove('on');
 $('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
-$('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
+$('#setSave').onclick=()=>{ $('#admSheet').classList.remove('on'); setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim()); setCfg('adm',$('#sAdm').value.trim()); location.reload(); };
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
@@ -3590,7 +3652,7 @@ async function loadMembers(){
   if(!d)return;
   if(d.groups){ GROUPS=Object.keys(d.groups).map(id=>({id:id,name:d.groups[id]})); saveGroups(); }
   if(d.members){ MATES.forEach(m=>{ if(d.members[m.id])m.grp=d.members[m.id]; }); saveMates(); }
-  paintMates();
+  paintGrps(); paintMates(); paintSeg();
 }
 
 function paintMates(){
@@ -3707,7 +3769,7 @@ $('#invCopy').onclick=()=>{
     if(o.u)setCfg('url',o.u); if(o.t)setCfg('tok',o.t); if(o.c)setCfg('cid',o.c);
     if(o.f)setCfg('fol',o.f);
     if(o.i){ ME.id=o.i; localStorage.setItem('ebl_meid',o.i); }
-    if(o.g)setMyGroup(o.g,o.gn||'');
+    if(o.g){ setMyGroup(o.g,o.gn||''); setTimeout(paintSeg,300); }
     if(o.n) setMe(o.n);
     history.replaceState(null,'',location.pathname);   // 주소창에서 토큰을 지웁니다
     setTimeout(()=>{
@@ -3775,7 +3837,7 @@ window.addEventListener('unhandledrejection',e=>log('오류(비동기): '+(e.rea
 log('빌드 '+BUILD);
 applyRead();
 markLogin(false);
-(async()=>{ await boot(); paintTabs(); buildChips(); render(true);
+(async()=>{ await boot(); paintSeg(); paintTabs(); buildChips(); render(true);
   setTimeout(()=>syncSoon(),2500);   // 목록이 자리를 잡은 뒤 조용히 맞춥니다
   setTimeout(()=>{ famLoad(); },3200);
   setTimeout(()=>askAdd(false),4000);
