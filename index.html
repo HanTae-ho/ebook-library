@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#111418">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>서재</title>
 <style>
   :root{ --bg:#111418; --panel:#191d23; --line:#2a3038; --tx:#e6e9ee;
@@ -586,6 +589,13 @@
       <button id="setSave" class="pri">저장하고 새로고침</button></div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
 
+    <div class="sect">가족에게 나눠주기</div>
+    <div class="btns"><button id="btnInvite">초대 링크 만들기</button></div>
+    <p class="note">주소·토큰·클라이언트 ID 가 담긴 링크를 만듭니다.
+      가족이 그 링크를 누르면 <b>설정이 저절로 채워집니다.</b>
+      각자 <b>🔑</b> 로 자기 구글 계정에 로그인한 뒤 홈 화면에 추가하면 앱처럼 씁니다.
+      <br>링크에 토큰이 들어 있으니 아무 데나 올리지 마세요.</p>
+
     <div class="sect">기기끼리 맞추기<span id="syncInfo"></span></div>
     <div class="btns"><button id="btnSync" class="pri">지금 맞추기</button></div>
     <div class="btns"><button id="btnSyncAuto">자동으로 맞추기: 켬</button></div>
@@ -634,7 +644,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v16';
+const BUILD='v16a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
@@ -2771,6 +2781,34 @@ $('#btnClearRead').onclick=()=>{
   TAB=''; localStorage.setItem('ebl_tab','');
   toast('읽은 기록을 지웠습니다'); paintTabs(); render(true);
 };
+/* ── 가족 초대 링크 ──
+   설정 세 칸을 주소 뒤에 실어 보냅니다. 받는 쪽은 누르기만 하면 됩니다. */
+const b64=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))))
+  .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64=t=>JSON.parse(decodeURIComponent(escape(
+  atob(t.replace(/-/g,'+').replace(/_/g,'/'))))); 
+function inviteLink(){
+  const o={u:cfg('url'),t:cfg('tok'),c:cfg('cid')};
+  return location.origin+location.pathname+'#s='+b64(o);
+}
+$('#btnInvite').onclick=async()=>{
+  const L=inviteLink();
+  try{ await navigator.clipboard.writeText(L);
+    toast('초대 링크를 복사했습니다.\n가족에게 보내세요',5000); }
+  catch(e){ prompt('이 링크를 가족에게 보내세요', L); }
+  log('초대 링크: '+L);
+};
+/* 링크를 타고 들어왔으면 설정을 채워 넣습니다 */
+(function(){
+  const m=location.hash.match(/^#s=(.+)$/); if(!m)return;
+  try{
+    const o=unb64(m[1]);
+    if(o.u)setCfg('url',o.u); if(o.t)setCfg('tok',o.t); if(o.c)setCfg('cid',o.c);
+    history.replaceState(null,'',location.pathname);   // 주소창에서 토큰을 지웁니다
+    setTimeout(()=>toast('설정을 받았습니다.\n🔑 를 눌러 구글에 로그인해 주세요',6000),900);
+  }catch(e){}
+})();
+
 $('#btnSync').onclick=()=>syncNow(true);
 $('#btnSyncAuto').onclick=()=>{
   P.sync = P.sync===false; savePref(); paintSyncAuto();
