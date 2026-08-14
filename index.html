@@ -593,6 +593,9 @@
     <label>Apps Script 웹앱 주소</label><input id="sUrl">
     <label>토큰</label><input id="sTok">
     <label>구글 클라이언트 ID</label><input id="sCid">
+    <label>도서 폴더 링크 <span style="color:var(--dim);font-weight:400">
+      — 막혔을 때 가족이 여기로 승인을 요청합니다</span></label><input id="sFol"
+      placeholder="https://drive.google.com/drive/folders/...">
     <div class="btns"><button id="setCancel">닫기</button>
       <button id="setSave" class="pri">저장하고 새로고침</button></div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
@@ -637,6 +640,16 @@
   </div>
 </div>
 
+<div class="sheet" id="blkSheet">
+  <div class="box">
+    <h3 id="blkT">로그인이 막혔습니다</h3>
+    <p class="note" id="blkM"></p>
+    <div class="btns"><button id="blkAsk" class="pri">액세스 요청 하러 가기</button></div>
+    <div class="btns"><button id="blkSend">내 계정 주소 알리기</button></div>
+    <div class="btns"><button id="blkClose">닫기</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="pinSheet">
   <div class="box">
     <h3>내 서가 고르기</h3>
@@ -659,12 +672,13 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v17';
+const BUILD='v17a';
 
 const DEF={
   url:'https://script.google.com/macros/s/AKfycbz3IrNmHMSEUK2OZPiaPxn-JZ0hsdLqrBtNwwmj_HkfuLGcT-g_BOOzHnbvMmc6z57n/exec',
   tok:'maumpro-library-2026',
-  cid:'552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com'
+  cid:'552041627002-sd7fu1457pgd3bd2k2biicpoqqf12tlm.apps.googleusercontent.com',
+  fol:''      // 도서 폴더 링크 — 승인 요청을 보낼 자리
 };
 /* drive.appdata — 구글이 앱마다 하나씩 내주는, 눈에 안 보이는 칸입니다.
    기기끼리 기록을 맞추는 데만 씁니다. 사용자의 다른 파일은 못 봅니다. */
@@ -1042,7 +1056,8 @@ async function getBook(b){
   const url=`https://www.googleapis.com/drive/v3/files/${b.i}?alt=media&supportsAllDrives=true`;
   const res=await fetch(url,{headers:{Authorization:'Bearer '+at},signal:abort.signal});
   if(res.status===401||res.status===403){ TOKEN=''; sessionStorage.removeItem('ebl_at');
-    markLogin(false); throw new Error('드라이브 접근 거부 ('+res.status+')\n🔑 로 다시 로그인해 주세요.'); }
+    markLogin(false); setTimeout(()=>showBlocked('drive'),400);
+    throw new Error('아직 이 책을 볼 권한이 없습니다'); }
   if(!res.ok)throw new Error('드라이브 응답 '+res.status);
   const total=Number(res.headers.get('content-length')||0)||(b.z?b.z*1048576:0);
   let buf;
@@ -2743,8 +2758,41 @@ $('#q').addEventListener('change',()=>{ pushRQ($('#q').value); });
 $('#q').addEventListener('blur',()=>{ pushRQ($('#q').value); });
 $('#grid').addEventListener('scroll',()=>{const g=$('#grid');
   if(shown<rows.length&&g.scrollTop+g.clientHeight>g.scrollHeight-400)render(false);});
-$('#btnLogin').onclick=async()=>{ try{ await needToken(true); toast('로그인됐습니다'); }
-  catch(e){ toast(e.message,5000); } };
+/* ── 막혔을 때 ──
+   구글은 명단에 없는 계정을 자기 화면에서 막습니다. 팀장님께 알림도 안 갑니다.
+   그래서 앱이 대신 길을 알려줍니다 — 도서 폴더에서 '액세스 요청' 을 누르면
+   팀장님 메일에 승인 버튼과 그 사람의 주소가 함께 도착합니다. */
+function showBlocked(why){
+  const fol=cfg('fol');
+  $('#blkT').textContent = why==='drive' ? '책을 열 수 없습니다' : '로그인이 막혔습니다';
+  $('#blkM').innerHTML = why==='drive'
+    ? '로그인은 됐지만 <b>도서 폴더를 볼 권한이 아직 없습니다.</b><br>'
+      + '아래에서 액세스를 요청하시면 승인 요청이 갑니다.'
+    : '아직 <b>명단에 없는 계정</b>입니다.<br>'
+      + '아래에서 액세스를 요청하시면, 승인과 함께 명단에도 올라갑니다.';
+  $('#blkAsk').style.display = fol ? '' : 'none';
+  $('#blkSheet').classList.add('on');
+}
+$('#blkClose').onclick=()=>$('#blkSheet').classList.remove('on');
+$('#blkAsk').onclick=()=>{
+  const fol=cfg('fol'); if(!fol)return;
+  window.open(fol,'_blank','noopener');
+  toast('[액세스 요청] 을 누르시면 승인 요청이 갑니다',6000);
+};
+$('#blkSend').onclick=async()=>{
+  const msg=`${ME.name||'저'} 입니다. 서재에 로그인이 안 돼요.\n`
+    + `제가 쓰는 구글 계정 주소는 아래와 같습니다.\n\n`
+    + `(여기에 본인 지메일 주소를 적어 보내세요)`;
+  if(navigator.share){ try{ await navigator.share({title:'서재 로그인',text:msg}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; } }
+  try{ await navigator.clipboard.writeText(msg); toast('문구를 복사했습니다.\n주소를 적어 보내주세요',5000); }
+  catch(e){ prompt('이 내용을 보내주세요', msg); }
+};
+$('#btnLogin').onclick=async()=>{
+  try{ await needToken(true); toast('로그인됐습니다'); }
+  catch(e){ const m=e.message||String(e); log('로그인 실패: '+m);
+    if(/모듈/.test(m)) toast(m,5000); else showBlocked('login'); }
+};
 $('#btnClose').onclick=closeReader;
 /* 좌우 넘기기 — EPUB 이든 '한 쪽씩 보는' PDF 든 같은 손놀림 */
 function pageBack(){ if(!readerOn()||penDrag||Date.now()-penAt<500)return;
@@ -2763,13 +2811,13 @@ document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')
 window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
 $('#btnSet').onclick=()=>{ $('#sUrl').value=cfg('url'); $('#sTok').value=cfg('tok');
-  $('#sCid').value=cfg('cid'); $('#log').textContent=LOG.join('\n');
+  $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#log').textContent=LOG.join('\n');
   $('#sMe').value=ME.name;
   $('#setSheet').classList.add('on');
   useInfo(); paintSync(); paintSyncAuto(); paintMates(); };
 $('#setCancel').onclick=()=>$('#setSheet').classList.remove('on');
 $('#setSave').onclick=()=>{ setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
-  setCfg('cid',$('#sCid').value.trim()); location.reload(); };
+  setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim()); location.reload(); };
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
 /* ── 저장 공간 ──
@@ -2838,6 +2886,7 @@ const unb64=t=>JSON.parse(decodeURIComponent(escape(
   atob(t.replace(/-/g,'+').replace(/_/g,'/')))));
 function inviteLink(m){
   const o={u:cfg('url'),t:cfg('tok'),c:cfg('cid')};
+  if(cfg('fol'))o.f=cfg('fol');
   if(m){ o.n=m.name; o.i=m.id; }
   return location.origin+location.pathname+'#s='+b64(o);
 }
@@ -2885,6 +2934,7 @@ $('#btnInvite').onclick=async()=>{
   try{
     const o=unb64(m[1]);
     if(o.u)setCfg('url',o.u); if(o.t)setCfg('tok',o.t); if(o.c)setCfg('cid',o.c);
+    if(o.f)setCfg('fol',o.f);
     if(o.i){ ME.id=o.i; localStorage.setItem('ebl_meid',o.i); }
     if(o.n) setMe(o.n);
     history.replaceState(null,'',location.pathname);   // 주소창에서 토큰을 지웁니다
