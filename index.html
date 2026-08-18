@@ -727,7 +727,7 @@
       — 이걸 넣어야 모임·서가·차단이 열립니다</span></label><input id="sAdm"
       placeholder="Apps Script 에서 SHOW_KEYS() 로 확인" autocomplete="off">
     <div class="btns"><button id="setSave" class="pri">저장하고 새로고침</button></div>
-    <p class="note">주소와 토큰은 앱 파일에 들어 있지 않습니다.
+    <p class="note" id="admHint">주소와 토큰은 앱 파일에 들어 있지 않습니다.
       이 기기에만 저장됩니다.</p>
 
     <div class="sect">목록</div>
@@ -881,7 +881,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v28b';
+const BUILD='v28c';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -3663,9 +3663,15 @@ window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
    관리자 열쇠가 없는 분에게는 '관리'·'모임관리' 가 아예 안 보입니다.
    그분들 줄은 [뒤로] [기본설정] [닫기] 뿐입니다. */
+/* own:true 는 관리자 열쇠가 있어야 보이는 자리입니다.
+
+   ★ '관리' 를 막으면 안 됩니다.
+     열쇠를 넣는 칸이 바로 그 안에 있어서,
+     막는 순간 열쇠 없는 기기는 열쇠를 넣으러 갈 수가 없습니다.
+     v28 에서 이걸로 PC 가 잠겼습니다. */
 const SPG={
   set:{ id:'setSheet', name:'기본설정', own:false },
-  adm:{ id:'admSheet', name:'관리',     own:true  },
+  adm:{ id:'admSheet', name:'관리',     own:false },
   grp:{ id:'grpSheet', name:'모임관리', own:true  }
 };
 let PGNOW='', PGBACK=[];
@@ -3681,6 +3687,14 @@ function fillPage(k){
     $('#sCid').value=cfg('cid'); $('#sFol').value=cfg('fol'); $('#sAdm').value=cfg('adm');
     $('#log').textContent=LOG.join('\n');
     paintFam();
+    // 열쇠가 없으면 왜 '모임관리' 가 안 보이는지 알려줍니다
+    const hint=$('#admHint');
+    if(hint)hint.innerHTML = isOwner()
+      ? '주소와 토큰은 앱 파일에 들어 있지 않습니다. 이 기기에만 저장됩니다.'
+      : '주소와 토큰은 앱 파일에 들어 있지 않습니다. 이 기기에만 저장됩니다.'
+        +'<br><b>관리자 열쇠가 비어 있어 [모임관리] 가 안 보입니다.</b>'
+        +' 넣고 저장하시면 아래 줄에 나타납니다.'
+        +'<br>열쇠를 잊으셨으면 Apps Script 에서 <b>SHOW_KEYS()</b> 를 실행해 보세요.';
   }
   if(k==='grp'){
     paintGrps(); paintMates(); loadCut(); loadMembers();
@@ -3734,8 +3748,16 @@ function pgClose(){
 function pgOpen(k){ PGBACK=[]; PGNOW=''; pgShow(k||'set'); }
 
 $('#btnSet').onclick=()=>pgOpen('set');
-$('#setSave').onclick=()=>{ pgClose(); setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
-  setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim()); setCfg('adm',$('#sAdm').value.trim()); location.reload(); };
+$('#setSave').onclick=()=>{
+  const adm=$('#sAdm').value.trim();
+  // 열쇠가 들어 있었는데 칸이 비었다면, 지우려는 것인지 한 번 여쭙습니다
+  if(cfg('adm')&&!adm&&!confirm('관리자 열쇠 칸이 비어 있습니다.\n'
+    +'이대로 저장하면 이 기기에서 [모임관리] 가 사라집니다.\n\n'
+    +'그래도 저장할까요?'))return;
+  pgClose();
+  setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
+  setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim());
+  setCfg('adm',adm); location.reload(); };
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
 /* ── 저장 공간 ──
