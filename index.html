@@ -727,6 +727,7 @@
       — 이걸 넣어야 모임·서가·차단이 열립니다</span></label><input id="sAdm"
       placeholder="Apps Script 에서 SHOW_KEYS() 로 확인" autocomplete="off">
     <div class="btns"><button id="setSave" class="pri">저장하고 새로고침</button></div>
+    <div class="btns"><button id="btnPullCfg">구글 계정에서 설정 가져오기</button></div>
     <p class="note" id="admHint">주소와 토큰은 앱 파일에 들어 있지 않습니다.
       이 기기에만 저장됩니다.</p>
 
@@ -881,7 +882,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v28c';
+const BUILD='v29';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -903,6 +904,31 @@ const PAGE=60;
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const cfg=k=>localStorage.getItem('ebl_'+k)||DEF[k];
 const setCfg=(k,v)=>localStorage.setItem('ebl_'+k,v);
+
+/* ══════════ 설정을 구글 계정에 함께 담기 ══════════
+   기기를 바꿀 때마다 주소·토큰을 손으로 넣는 것은 번거롭고,
+   오늘처럼 하나를 빠뜨리면 알아보기 힘든 오류가 납니다.
+
+   읽은 기록을 담는 그 숨은 칸에 설정도 같이 넣습니다.
+   새 기기에서는 구글 로그인만 하면 설정이 내려옵니다.
+
+   숨은 칸은 구글 계정마다 따로입니다.
+   모임원이 로그인해도 그분 칸에는 팀장님 열쇠가 없습니다. */
+const CFGK=['url','tok','cid','fol','adm'];
+const cfgBundle=()=>{ const o={}; CFGK.forEach(k=>{ const v=cfg(k); if(v)o[k]=v; }); return o; };
+const cfgAt=()=>Number(localStorage.getItem('ebl_cfgat')||0);
+const stampCfg=()=>localStorage.setItem('ebl_cfgat',String(Date.now()));
+let CFGNEW=false;                       // 이번 맞추기에 설정이 바뀌었나
+
+/* 내려온 설정을 기기에 적습니다. 주소와 토큰이 다 있을 때만 받습니다. */
+function takeCfg(c,at){
+  if(!c||!c.url||!c.tok)return false;
+  if((at||0)<=cfgAt())return false;     // 이 기기 것이 더 새것이면 그대로 둡니다
+  let changed=false;
+  CFGK.forEach(k=>{ const v=c[k]||''; if(v&&v!==cfg(k)){ setCfg(k,v); changed=true; } });
+  localStorage.setItem('ebl_cfgat',String(at));
+  return changed;
+}
 
 /* 사용자 설정 (기기에 저장) */
 const P = Object.assign({
@@ -1128,32 +1154,81 @@ function needToken(inter){ return new Promise((ok,ng)=>{
   tokenClient.requestAccessToken(req); }); }
 
 /* ── 색인 ── */
+/* 아직 아무것도 없는 기기에서, 구글 계정만으로 설정을 가져옵니다.
+   목록도 모임도 필요 없습니다. 숨은 칸 파일 하나만 읽으면 됩니다. */
+async function pullCfg(inter){
+  try{
+    const at=await needToken(!!inter);
+    const f=await findState(at);
+    if(!f)return '이 계정에 저장된 설정이 없습니다';
+    const r=await dv(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,at);
+    const d=await r.json();
+    if(!d||!d.cfg||!d.cfg.url||!d.cfg.tok)return '저장된 설정에 주소나 토큰이 없습니다';
+    CFGK.forEach(k=>{ if(d.cfg[k])setCfg(k,d.cfg[k]); });
+    localStorage.setItem('ebl_cfgat',String(d.cfgAt||Date.now()));
+    return true;
+  }catch(e){ return e.message||String(e); }
+}
+
 async function boot(){
   /* 주소와 토큰은 소스에 두지 않습니다.
      초대 링크가 실어다 주거나, 서재를 차린 사람이 🛠 관리 에 한 번 넣습니다.
      저장소를 열기 전에 먼저 봅니다 — 저장소가 말썽이어도 안내는 떠야 하니까요. */
   if(!cfg('url')||!cfg('tok')){
+    /* 전에 이 기기에서 구글에 들어온 적이 있으면, 조용히 설정을 찾아봅니다.
+       구글 계정의 숨은 칸에 담아두었기 때문입니다. */
+    if(AUTH.get().h||AUTH.get().t){
+      stat('구글 계정에서 설정을 찾는 중…');
+      const r=await pullCfg(false);
+      if(r===true){ log('설정을 받았습니다. 새로 시작합니다'); location.reload(); return; }
+      log('설정 가져오기: '+r);
+    }
     stat('아직 서재에 연결되지 않았습니다.\n\n'
+        +'· 전에 쓰시던 기기가 있으면 [구글 계정에서 설정 가져오기]\n'
         +'· 초대 링크를 받으셨다면 그 링크로 열어주세요\n'
-        +'· 서재를 차리신 분이라면 아래 [관리] 에\n'
-        +'  주소와 토큰을 넣고 [저장하고 새로고침]');
-    // 열쇠를 가진 분은 바로 넣는 자리로, 그 밖에는 기본설정으로
-    setTimeout(()=>{ try{ pgOpen(isOwner()?'adm':'set'); }catch(e){} },700);
+        +'· 처음 차리시는 것이라면 [관리] 에 주소와 토큰을');
+    setTimeout(()=>{ try{ pgOpen('adm'); }catch(e){} },700);
     return;
   }
   try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
-  let c=null; try{ c=await DB.get('kv','index'); }catch(e){}
+  let c=null; try{ c=await DB.get('kv','index'); }catch(e){ log('저장소를 열지 못했습니다: '+(e.message||e)); }
   if(c){ apply(c); render(true); log('저장된 색인 ('+BOOKS.length+'권)'); }
   else{ stat('처음이라 서재를 받아옵니다. 30초쯤 걸립니다…');
     try{ await fetchIndex(); render(true); }
-    catch(e){ stat('목록을 못 받았습니다.\n'+e.message,true); } }
+    catch(e){
+      // 화면 글은 창에 가려 안 보일 때가 있어, 기록에도 반드시 남깁니다
+      log('★ 목록을 못 받았습니다: '+(e.message||e));
+      log('   주소 '+(cfg('url')?'있음':'비어 있음')
+         +' · 토큰 '+(cfg('tok')?cfg('tok').slice(0,8)+'…':'비어 있음'));
+      stat('목록을 못 받았습니다.\n'+e.message
+        +'\n\n관리 → 주소와 토큰을 확인해 주세요.',true);
+    } }
+}
+/* 주소가 비어 있으면 fetch 가 '나 자신'을 부릅니다.
+   그러면 JSON 대신 이 페이지의 HTML 이 돌아와
+   "Unexpected token '<'" 라는 알아먹기 힘든 말이 나옵니다.
+   부르기 전에 막고 사람 말로 알려줍니다. */
+function checkUrl(){
+  const u=cfg('url');
+  if(!u) throw new Error('Apps Script 웹앱 주소가 비어 있습니다.\n관리 → 맨 위 칸에 넣어주세요.');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(u))
+    throw new Error('웹앱 주소 모양이 아닙니다.\n'
+      +'.../macros/s/AKfycb.../exec 이어야 합니다.\n'
+      +'지금: '+u.slice(0,60));
+  if(!cfg('tok')) throw new Error('토큰이 비어 있습니다.\n관리에서 넣어주세요.');
+  return u;
 }
 async function fetchIndex(){
   // 자기 번호를 같이 보냅니다 — 끊긴 사람은 여기서 걸러집니다
-  const u=cfg('url')+(cfg('url').includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'))
+  const base=checkUrl();
+  const u=base+(base.includes('?')?'&':'?')+'token='+encodeURIComponent(cfg('tok'))
     +'&uid='+encodeURIComponent(ME.id);
   const r=await fetch(u); if(!r.ok)throw new Error('서버 응답 '+r.status);
-  const d=await r.json();
+  const t=await r.text();
+  let d; try{ d=JSON.parse(t); }
+  catch(e){ throw new Error(/^\s*</.test(t)
+    ? '서버가 JSON 이 아니라 웹페이지를 보냈습니다.\n주소가 맞는지 확인해 주세요.'
+    : '서버 응답을 읽지 못했습니다: '+t.slice(0,60)); }
   if(d.error==='blocked'){ showCut(); throw new Error('이 기기는 더 이상 쓸 수 없습니다'); }
   if(d.error)throw new Error(d.error);
   await DB.put('kv','index',d); apply(d); log('색인 '+d.count+'권');
@@ -2320,6 +2395,7 @@ let SYNCAT=Number(localStorage.getItem('ebl_syncat')||0);
 function localState(){
   return { v:1, at:Date.now(), me:{id:ME.id,name:ME.name,
            at:Number(localStorage.getItem('ebl_menameat')||0)},
+           cfg:cfgBundle(), cfgAt:cfgAt(),
            rd:RD, hl:HL, del:DEL, rdel:RDEL,
            pins:P.pins||[], rq:RQ,
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
@@ -2333,6 +2409,9 @@ function mergeState(a,b){
   // 이름은 나중에 고친 쪽
   const ma=(a.me||{}), mb=(b.me||{});
   out.me = (ma.at||0)>=(mb.at||0) ? ma : mb;
+  // 설정도 나중에 고친 쪽 통째로 (섞으면 주소와 토큰이 엇갈립니다)
+  out.cfgAt = Math.max(a.cfgAt||0, b.cfgAt||0);
+  out.cfg   = (a.cfgAt||0)>=(b.cfgAt||0) ? (a.cfg||b.cfg) : (b.cfg||a.cfg);
   const maxMap=(x,y)=>{ const m=Object.assign({},x||{});
     Object.entries(y||{}).forEach(([k,v])=>{ if(!(k in m)||v>m[k])m[k]=v; }); return m; };
   out.del =maxMap(a.del ,b.del);
@@ -2376,6 +2455,7 @@ function applyState(s){
     localStorage.setItem('ebl_menameat',String(s.me.at));
     const el=$('#sMe'); if(el)el.value=ME.name;
   }
+  if(takeCfg(s.cfg,s.cfgAt)){ CFGNEW=true; log('설정을 구글 계정에서 받았습니다'); }
   RD=s.rd||{}; HL=s.hl||{}; DEL=s.del||{}; RDEL=s.rdel||{};
   P.pins=s.pins||[]; RQ=s.rq||[];
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
@@ -2433,6 +2513,9 @@ async function syncNow(inter){
     if(readerOn()){ paintHlBadge(); if(KIND==='epub')paintEpubHl();
       else if(KIND==='pdf')paintPdfHl(); else paintTxtHl(); }
     else { paintTabs(); render(true); }
+    if(CFGNEW){ CFGNEW=false;
+      toast('다른 기기의 설정을 받았습니다.\n새로 시작합니다…',3000);
+      setTimeout(()=>location.reload(),1400); return; }
     if(inter)toast('기기끼리 맞췄습니다');
     log('맞추기 완료 — 책 '+Object.keys(merged.rd||{}).length+'권, 형광펜 '
       +Object.values(merged.hl||{}).reduce((a,x)=>a+x.length,0)+'개');
@@ -3248,7 +3331,8 @@ function buildHome(){
   const byRead = a => a.sort((x,y)=>((RD[y.i]&&RD[y.i].t)||0)-((RD[x.i]&&RD[x.i].t)||0));
   hsec($('#hRow1'), '이어 읽기', 'reading',
     byRead(vis.filter(b=>stOf(b)==='reading')), n.reading,
-    '아직 읽는 중인 책이 없습니다. 아래에서 한 권 골라 보세요.');
+    BOOKS.length ? '아직 읽는 중인 책이 없습니다. 아래에서 한 권 골라 보세요.'
+      : '책 목록이 이 기기에 없습니다. ⚙ → 관리 → [목록 새로 받기] 를 눌러주세요.');
 
   /* 내 서가 */
   const pe=$('#hPin'); pe.innerHTML='';
@@ -3690,7 +3774,8 @@ function fillPage(k){
     // 열쇠가 없으면 왜 '모임관리' 가 안 보이는지 알려줍니다
     const hint=$('#admHint');
     if(hint)hint.innerHTML = isOwner()
-      ? '주소와 토큰은 앱 파일에 들어 있지 않습니다. 이 기기에만 저장됩니다.'
+      ? '이 설정은 구글 계정의 숨은 칸에도 함께 담깁니다.'
+        +'<br>다른 기기에서는 로그인만 하면 저절로 내려옵니다. 옮겨 적으실 것 없습니다.'
       : '주소와 토큰은 앱 파일에 들어 있지 않습니다. 이 기기에만 저장됩니다.'
         +'<br><b>관리자 열쇠가 비어 있어 [모임관리] 가 안 보입니다.</b>'
         +' 넣고 저장하시면 아래 줄에 나타납니다.'
@@ -3754,10 +3839,14 @@ $('#setSave').onclick=()=>{
   if(cfg('adm')&&!adm&&!confirm('관리자 열쇠 칸이 비어 있습니다.\n'
     +'이대로 저장하면 이 기기에서 [모임관리] 가 사라집니다.\n\n'
     +'그래도 저장할까요?'))return;
+  const url=$('#sUrl').value.trim();
+  if(url&&!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)
+     &&!confirm('웹앱 주소 모양이 아닙니다.\n'
+       +'.../macros/s/AKfycb.../exec 이어야 합니다.\n\n그래도 저장할까요?'))return;
   pgClose();
-  setCfg('url',$('#sUrl').value.trim()); setCfg('tok',$('#sTok').value.trim());
+  setCfg('url',url); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim());
-  setCfg('adm',adm); location.reload(); };
+  setCfg('adm',adm); stampCfg(); location.reload(); };
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
 /* ── 저장 공간 ──
@@ -4075,6 +4164,15 @@ function paintSyncAuto(){
 }
 
 /* 서비스 워커가 옛 화면을 붙들고 있을 때 빠져나오는 길 */
+/* 기기를 바꿨을 때 — 손으로 옮겨 적지 않아도 됩니다 */
+$('#btnPullCfg').onclick=async()=>{
+  if(!gisReady)onGis();
+  toast('구글 계정에서 찾는 중…');
+  const r=await pullCfg(true);
+  if(r===true){ toast('설정을 받았습니다.\n새로 시작합니다…',2500);
+    setTimeout(()=>location.reload(),1200); return; }
+  toast('가져오지 못했습니다\n'+r,6000);
+};
 $('#btnLogin2').onclick=async()=>{
   if(!gisReady)onGis();
   try{ await needToken(false).catch(()=>needToken(true)); toast('로그인됐습니다'); }
