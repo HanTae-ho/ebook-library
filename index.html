@@ -19,6 +19,14 @@
     --cw:104px; --tap:30%; --pv:16px; --ph:6%; }
   body.sepia{ --paper:#f6efe2; --ink:#3b3228; --barbg:#f6efe2ee; --barfg:#6b5f4e; }
   body.night{ --paper:#15181c; --ink:#c7ccd4; --barbg:#15181cee; --barfg:#8b95a3; }
+  /* E-Ink — 흑백 고대비, 움직임 없음. 전자잉크 기기와 눈이 피곤할 때 */
+  body.eink{ --paper:#fff; --ink:#000; --barbg:#fff; --barfg:#000; }
+  body.eink *{transition:none !important;animation:none !important}
+  body.eink #rbar,body.eink #rfoot{box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+  body.eink #rbar{border-bottom:1px solid #000} body.eink #rfoot{border-top:1px solid #000}
+  body.eink #rbar .ib{background:#fff;border-color:#000;color:#000}
+  body.eink #pdf canvas{filter:grayscale(1) contrast(1.15)}
+  body.nofoot #rfoot{display:none !important}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;overflow:hidden}
   body{background:var(--bg);color:var(--tx);
@@ -249,6 +257,30 @@
   .hnone{padding:0 12px;color:var(--dim);font-size:12.5px;line-height:1.65}
 
   /* 서가 고르기 */
+  .calhd{display:flex;align-items:center;justify-content:space-between}
+  .calhd h3{margin:0;font-size:16px}
+  .calhd button{padding:6px 14px;font-size:18px;color:var(--acc)}
+  #calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+  #calGrid .wd{font-size:11px;color:var(--dim);text-align:center;padding:2px 0}
+  #calGrid .dc{position:relative;aspect-ratio:3/4;border-radius:6px;background:var(--bg);
+    border:1px solid var(--line);overflow:hidden;font-size:10.5px;padding:0}
+  #calGrid .dc.x{visibility:hidden}
+  #calGrid .dc.today{border-color:var(--acc)}
+  #calGrid .dc.sel{outline:2px solid var(--acc)}
+  #calGrid .dc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.85}
+  #calGrid .dc .ph2{position:absolute;inset:0;background:var(--acc);opacity:.28}
+  #calGrid .dc b{position:absolute;left:3px;top:2px;font-weight:600;color:var(--tx);text-shadow:0 0 3px var(--bg)}
+  #calGrid .dc i{position:absolute;right:3px;bottom:2px;font-style:normal;color:var(--tx);
+    background:#000a;border-radius:4px;padding:0 3px}
+  #calDay{margin-top:10px}
+  #calDay .dh{font-size:12.5px;color:var(--acc);font-weight:600;margin:6px 0}
+  #calDay button{display:flex;justify-content:space-between;width:100%;padding:9px 4px;
+    border-bottom:1px solid var(--line);font-size:13px;text-align:left;gap:8px}
+  #calDay button span:last-child{color:var(--dim);font-size:12px;flex:0 0 auto}
+  #smartList button{display:flex;width:100%;justify-content:space-between;align-items:center;
+    padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;text-align:left;gap:8px}
+  #smartList .sm{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+  #smartList .del{color:var(--bad);font-size:12px;flex:0 0 auto}
   #pinList{max-height:46vh;overflow-y:auto;margin-top:10px;
     border:1px solid var(--line);border-radius:10px}
   #pinList button{display:flex;width:100%;justify-content:space-between;align-items:center;
@@ -418,6 +450,13 @@
   :is(#hlList,#hlAll) .more{display:block;width:100%;padding:10px;color:var(--acc);font-size:12.5px}
   #hlCol .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:0}
   #rbar #btnBm.good{background:var(--acc);border-color:var(--acc);color:#0b1220}
+  #tocList{max-height:62vh;overflow-y:auto;margin-top:4px}
+  #tocList button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;
+    padding:10px 4px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--tx)}
+  #tocList button.d1{padding-left:18px;font-size:13px} #tocList button.d2{padding-left:32px;font-size:12.5px}
+  #tocList button.on{color:var(--acc);font-weight:600}
+  #tocList .p{color:var(--dim);font-size:11px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+  #tocNone{color:var(--dim);font-size:12.5px;line-height:1.7;padding:6px 2px;white-space:pre-wrap}
   #hlNone{color:var(--dim);font-size:12.5px;line-height:1.7;padding:6px 2px}
   #memoTx{width:100%;min-height:110px;padding:11px;border-radius:10px;
     border:1px solid var(--line);background:var(--bg);color:var(--tx);
@@ -489,6 +528,7 @@
     <div class="hlinks">
       <button data-go="">전체 둘러보기 <span id="lkAll"></span></button>
       <button id="lkHl">모은 형광펜 · 책갈피 <span id="lkHlN"></span></button>
+      <button id="lkCal">독서 달력 <span id="lkCalN"></span></button>
     </div>
 
     <div id="hstat"></div>
@@ -527,6 +567,7 @@
     <div id="rtitle"></div>
     <button class="ib" id="btnPen" title="펜슬 필기">펜</button>
     <button class="ib" id="btnDraw" title="긋기 모드">긋기</button>
+    <button class="ib" id="btnToc" title="목차">목차</button>
     <button class="ib" id="btnBm" title="책갈피 꽂기·빼기">🔖</button>
     <button class="ib" id="btnHl" title="형광펜·메모·책갈피 목록">메모</button>
     <button class="ib" id="btnAa">Aa</button>
@@ -578,6 +619,7 @@
   <div class="grp"><div class="lb">종이색</div>
     <div class="seg" id="segTheme">
       <button data-v="light">밝게</button><button data-v="sepia">세피아</button><button data-v="night">어둡게</button>
+      <button data-v="eink">E-Ink</button>
     </div></div>
   <!-- PDF 는 종이가 고정이라 글자 설정이 듣지 않습니다. 배율만 둡니다. -->
   <div class="grp k-pdf"><div class="lb">보는 방법</div>
@@ -605,12 +647,24 @@
     <div class="seg" id="segFont">
       <button data-v="">책 기본</button><button data-v="sans">고딕</button><button data-v="serif">명조</button>
     </div></div>
+  <div class="grp k-text"><div class="lb">글자 굵기</div>
+    <div class="seg" id="segFw">
+      <button data-v="">보통</button><button data-v="500">조금 굵게</button><button data-v="600">굵게</button>
+    </div></div>
+  <div class="grp k-txt"><div class="lb">TXT 줄바꿈 <span style="opacity:.7">· 원본 파일은 그대로 둡니다</span></div>
+    <div class="seg" id="segClean">
+      <button data-v="0">원문 그대로</button><button data-v="1">끊긴 줄 잇기</button>
+    </div></div>
   <div class="grp k-epub"><div class="lb">넘기는 방법</div>
     <div class="seg" id="segNav">
       <button data-v="tap">좌우 탭</button><button data-v="swipe">밀어서</button><button data-v="both">둘 다</button>
     </div></div>
   <div class="grp k-epub"><div class="lb"><span>탭 영역 폭</span><span id="vTap"></span></div>
     <input type="range" id="rgTap" min="15" max="45" step="1"></div>
+  <div class="grp"><div class="lb">아래 줄 (쪽 · 진도 · 제목)</div>
+    <div class="seg" id="segFoot">
+      <button data-v="0">보이기</button><button data-v="1">숨기기</button>
+    </div></div>
   <div class="grp"><div class="lb">이 책 상태</div>
     <div class="seg">
       <button id="mkReading">읽는 중으로</button>
@@ -619,6 +673,13 @@
     <div class="seg" style="margin-top:6px">
       <button id="mkClear">읽은 기록 지우기</button>
     </div></div>
+</div>
+
+<!-- 목차 — EPUB 은 책에 든 것, PDF 는 책갈피(개요), TXT 는 제목 줄을 찾아 만듭니다 -->
+<div class="pan" id="panToc">
+  <h4><span id="tocTitle">목차</span> <button id="tocClose">닫기</button></h4>
+  <div id="tocNone"></div>
+  <div id="tocList"></div>
 </div>
 
 <!-- 이 책의 형광펜·메모 -->
@@ -675,8 +736,12 @@
     <div class="seg" id="segSort">
       <button data-v="t">제목</button><button data-v="a">저자</button>
       <button data-v="d">출간일</button><button data-v="r">최근 읽음</button>
-      <button data-v="z">크기</button>
-    </div></div>
+      <button data-v="z">크기</button><button data-v="g">담긴 날짜</button>
+    </div>
+    <div class="seg" id="segRev" style="margin-top:6px">
+      <button data-v="0">기본 방향</button><button data-v="1">거꾸로</button>
+    </div>
+    <div class="seg" style="margin-top:6px"><button id="smartSave">⚡ 지금 목록을 서가로 저장</button></div></div>
   <div class="grp"><div class="lb">분류 기준</div>
     <div class="seg" id="segCat">
       <button data-v="tree">계층</button><button data-v="b">대분류</button>
@@ -919,9 +984,26 @@
   </div>
 </div>
 
+<!-- 독서 달력 -->
+<div class="sheet" id="calSheet">
+  <div class="box" style="max-width:560px">
+    <div class="calhd"><button id="calPrev">‹</button><h3 id="calT"></h3><button id="calNext">›</button></div>
+    <div class="note" id="calSum"></div>
+    <div id="calGrid"></div>
+    <div id="calDay"></div>
+    <div class="note">책을 펼쳐 두고 손을 댄 시간만 셉니다. 5분 넘게 아무것도 안 하면 멈춥니다.
+      '기록 안 함' 으로 연 책은 세지 않습니다. 각자의 기록만 보입니다.</div>
+    <div class="btns"><button id="calClose" class="pri">닫기</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="pinSheet">
   <div class="box">
     <h3>내 서가 고르기</h3>
+    <div id="smartWrap">
+      <label>⚡ 조건 서가 — 검색어·상태·분류·정렬을 저장해 둔 것</label>
+      <div id="smartList"></div>
+    </div>
     <label>자주 여는 분류를 골라 두면 홈에서 한 번에 들어갑니다</label>
     <input id="pinQ" placeholder="분류 이름으로 찾기" autocomplete="off">
     <div id="pinList"></div>
@@ -941,7 +1023,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v31';
+const BUILD='v33';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1294,6 +1376,10 @@ async function fetchIndex(){
 }
 function apply(d){
   BOOKS=d.books||[]; UPDATED=d.updated||'';
+  /* ★ 목록이 바뀌면 만들어 둔 정렬 순서를 버립니다.
+     (v31 까지는 안 버려서, 기기에 둔 목록 → 새 목록으로 바뀔 때
+      옛 순서표가 새 목록에 덮여 엉뚱한 순서로 보이고 새 책이 빠지기도 했습니다) */
+  Object.keys(ORD).forEach(k=>delete ORD[k]);
   BOOKS.forEach(b=>{ if(b.a)b.a=b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
   HAY=BOOKS.map(b=>norm([b.t,b.o,b.a,b.p,b.c].filter(Boolean).join('|')));
 }
@@ -1399,7 +1485,7 @@ function match(b){
   if(!SEL)return true;
   return (P.cat==='f'? folderOf(b) : (b[P.cat]||'')) === SEL;
 }
-function filter(){
+function filter0(){
   const k=norm($('#q').value), out=[];
   // 최근·읽는 중·다 읽음 칸은 최근 읽은 순, 새로 담긴 책은 담긴 순
   const s = TAB==='new' ? 'g'
@@ -1421,6 +1507,8 @@ function filter(){
     out.push(b); }
   return out;
 }
+/* 거꾸로 — 어느 정렬이든 뒤집습니다 (v33) */
+function filter(){ const o=filter0(); return P.rev?o.reverse():o; }
 function render(reset){
   if(HSIDE!=='me'){ setView(); buildFam(); return; }
   if(TAB==='home'){ setView(); buildHome(); return; }
@@ -1588,7 +1676,9 @@ let KIND='epub';    // 지금 열린 것이 epub / pdf / txt 중 무엇인지
 function paperCss(){
   const c={light:{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'},
            sepia:{bg:'#f6efe2',fg:'#3b3228',a:'#8a5a1f'},
-           night:{bg:'#15181c',fg:'#c7ccd4',a:'#7fb3ff'}}[P.theme];
+           night:{bg:'#15181c',fg:'#c7ccd4',a:'#7fb3ff'},
+           eink:{bg:'#ffffff',fg:'#000000',a:'#000000'}}[P.theme]
+         ||{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'};
   const fam = P.font==='sans' ? '-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
             : P.font==='serif'? '"Apple SD Gothic Neo","Nanum Myeongjo",serif' : '';
   // 좌우 여백은 바깥 틀(#page)에서 줍니다. 여기서 padding 을 주면 단 나누기가 어긋납니다.
@@ -1599,6 +1689,7 @@ function paperCss(){
   if(fam) body['font-family']=fam+' !important';
   const txt={ color:c.fg+' !important', 'line-height':(P.lh/100)+' !important' };
   if(fam) txt['font-family']=fam+' !important';
+  if(P.fw){ body['font-weight']=P.fw+' !important'; txt['font-weight']=P.fw+' !important'; }
   return { 'html, body':{background:c.bg+' !important'}, body,
     'p, div, span, li, td, th, dd, dt, blockquote':txt,
     '::selection':{background:'rgba(110,168,254,0.32)'},
@@ -1606,8 +1697,9 @@ function paperCss(){
     'a':{color:c.a+' !important'} };
 }
 function applyRead(){
-  document.body.classList.remove('sepia','night');
+  document.body.classList.remove('sepia','night','eink');
   if(P.theme!=='light')document.body.classList.add(P.theme);
+  document.body.classList.toggle('nofoot',!!P.nofoot);
   document.documentElement.style.setProperty('--tap',P.tap+'%');
   document.documentElement.style.setProperty('--pv',P.pv+'px');
   document.documentElement.style.setProperty('--ph',P.pd+'%');
@@ -1619,7 +1711,8 @@ function applyRead(){
     tb.style.lineHeight=(P.lh/100);
     tb.style.fontFamily=P.font==='sans'
       ? '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
-      : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : ''; }
+      : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : '';
+    tb.style.fontWeight=P.fw?String(P.fw):''; }
   $('#vZoom').textContent=P.zoom+'%'; $('#rgZoom').value=P.zoom;
   segSet('#segPnav',P.pnav);
   if(rend){ rend.themes.register('paper',paperCss()); rend.themes.select('paper');
@@ -1634,6 +1727,7 @@ function applyRead(){
   $('#vFs').textContent=P.fs+'%'; $('#vLh').textContent=(P.lh/100).toFixed(2);
   $('#vPd').textContent=P.pd+'%'; $('#vPv').textContent=P.pv+'px'; $('#vTap').textContent=P.tap+'%';
   segSet('#segTheme',P.theme); segSet('#segFont',P.font); segSet('#segNav',P.nav);
+  segSet('#segFw',P.fw||''); segSet('#segFoot',P.nofoot||0); segSet('#segClean',P.tclean||0);
   $('#rgFs').value=P.fs; $('#rgLh').value=P.lh; $('#rgPd').value=P.pd;
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
 }
@@ -1691,6 +1785,7 @@ function hlAdd(o){
   const a=HL[curB.i]||(HL[curB.i]=[]);
   o.i=Date.now()+'-'+Math.random().toString(36).slice(2,7);
   o.at=Date.now();
+  if(typeof o.t==='string')o.t=o.t.replace(/\u200B/g,'');
   if(curB.t)o.bt=curB.t;          // 모아보기에서 목록에 없는 책도 이름이 나오도록
   a.push(o); saveHL(); return o;
 }
@@ -2245,22 +2340,46 @@ function txtOffset(node,off,root){
   let c; while(c=w.nextNode()){ if(c===node)return n+off; n+=c.nodeValue.length; }
   return n;
 }
-let TXTRAW='';
+let TXTRAW='', TXTC='';
+/* TXT 줄바꿈 정리 — 화면에서만 합니다. 원본 파일은 건드리지 않습니다.
+   ★ 글자 수를 한 자도 바꾸지 않습니다. 줄바꿈은 빈칸으로, 남는 빈 줄은
+     보이지 않는 글자(U+200B)로 바꿉니다. 그래서 형광펜의 글자 위치(c.s~c.e)가
+     원문으로 보든 정리본으로 보든 그대로 맞습니다. */
+const TXT_END=/[.?!…"'”’」』)\]>〉》~:;。！？]$/;
+const TXT_START=/^[\s"“'‘「『\-*=#\[(<〈《【…—―·•※0-9０-９]/;
+function txtClean(s){
+  s=s.replace(/\r(?=\n)/g,'\u200B');
+  // 문장 중간에 끊긴 줄 → 빈칸
+  s=s.replace(/([^\n])\n(?=[^\n])/g,(m,ch,off,str)=>{
+    const st=str.lastIndexOf('\n',off)+1;
+    const line=str.slice(st,off+1).replace(/[\u200B\s]+$/,'');
+    if(line.length<15)return m;                         // 제목 같은 짧은 줄은 그대로
+    if(TXT_END.test(line))return m;                     // 문장이 끝난 줄
+    if(TXT_START.test(str.charAt(off+2)))return m;      // 다음 줄이 대사·들여쓰기·기호로 시작
+    return ch+' ';
+  });
+  // 빈 줄이 셋 이상 이어지면 둘만 남깁니다
+  s=s.replace(/\n(?:[ \t\u3000\u200B]*\n){2,}/g,m=>{ let k=0;
+    return m.replace(/[\s\S]/g,c=>(c==='\n'&&k++<2)?'\n':'\u200B'); });
+  return s;
+}
+function txtShown(){ return P.tclean ? (TXTC||(TXTC=txtClean(TXTRAW))) : TXTRAW; }
 function paintTxtHl(){
   const el=$('#txt .body'); if(!el||!curB)return;
+  const T=txtShown();
   const hs=hlOf(curB.i).filter(o=>o.k==='txt')
     .slice().sort((a,b)=>a.c.s-b.c.s);
-  if(!hs.length){ el.textContent=TXTRAW; return; }
+  if(!hs.length){ el.textContent=T; return; }
   let html='',last=0;
   hs.forEach(o=>{
-    const s=Math.max(last,o.c.s), e=Math.max(s,Math.min(TXTRAW.length,o.c.e));
+    const s=Math.max(last,o.c.s), e=Math.max(s,Math.min(T.length,o.c.e));
     if(e<=s)return;
-    html+=esc(TXTRAW.slice(last,s))
+    html+=esc(T.slice(last,s))
       +`<mark data-id="${o.i}" style="background:${COLS[o.col]||COLS.y};color:inherit;`
-      +`border-radius:2px">${esc(TXTRAW.slice(s,e))}</mark>`;
+      +`border-radius:2px">${esc(T.slice(s,e))}</mark>`;
     last=e;
   });
-  html+=esc(TXTRAW.slice(last));
+  html+=esc(T.slice(last));
   el.innerHTML=html;
   el.querySelectorAll('mark').forEach(m=>m.onclick=e=>{ e.stopPropagation(); openMemo(m.dataset.id); });
 }
@@ -2492,6 +2611,7 @@ function localState(){
            at:Number(localStorage.getItem('ebl_menameat')||0)},
            cfg:cfgBundle(), cfgAt:cfgAt(),
            rd:RD, hl:HL, del:DEL, rdel:RDEL,
+           days:DAYS, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
            pins:P.pins||[], rq:RQ,
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
            rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
@@ -2500,7 +2620,13 @@ function localState(){
 function mergeState(a,b){
   if(!a)return b; if(!b)return a;
   const out={ v:1, at:Date.now(), rd:{}, hl:{}, del:{}, rdel:{},
-              pins:[], rq:[], pinsAt:0, rqAt:0 };
+              pins:[], rq:[], pinsAt:0, rqAt:0, days:{}, smart:[], smartAt:0 };
+  /* 읽은 시간 — 날짜마다 '책|기기' 칸. 기기마다 따로 세므로 큰 쪽을 고르면 됩니다 */
+  [a.days,b.days].forEach(D=>Object.entries(D||{}).forEach(([d,m])=>{
+    const o=out.days[d]||(out.days[d]={});
+    Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
+  if((a.smartAt||0)>=(b.smartAt||0)){ out.smart=a.smart||b.smart||[]; out.smartAt=a.smartAt||0; }
+  else                              { out.smart=b.smart||[]; out.smartAt=b.smartAt||0; }
   // 이름은 나중에 고친 쪽
   const ma=(a.me||{}), mb=(b.me||{});
   out.me = (ma.at||0)>=(mb.at||0) ? ma : mb;
@@ -2552,6 +2678,9 @@ function applyState(s){
   }
   if(takeCfg(s.cfg,s.cfgAt)){ CFGNEW=true; log('설정을 구글 계정에서 받았습니다'); }
   RD=s.rd||{}; HL=s.hl||{}; DEL=s.del||{}; RDEL=s.rdel||{};
+  if(s.days){ DAYS=s.days; saveDAYS.now(); }
+  if(Array.isArray(s.smart)){ P.smart=s.smart;
+    try{ localStorage.setItem('ebl_smartat',String(s.smartAt||0)); }catch(e){} }
   P.pins=s.pins||[]; RQ=s.rq||[];
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
   try{ localStorage.setItem('ebl_rq',JSON.stringify(RQ));
@@ -3061,7 +3190,7 @@ async function showTxt(b,buf){
   curB=b; noMark=false; KIND='txt';
   openShell(b);
   const host=$('#txt');
-  TXTRAW=decodeText(buf);
+  TXTRAW=decodeText(buf); TXTC='';
   const d=document.createElement('div'); d.className='body';
   host.innerHTML=''; host.appendChild(d);
   paintTxtHl(); paintHlBadge();
@@ -3096,6 +3225,8 @@ function openShell(b){
   $$('#panRead .k-pdf').forEach(x=>x.style.display=KIND==='pdf'?'':'none');
   $$('#panRead .k-text').forEach(x=>x.style.display=KIND==='pdf'?'none':'');
   $$('#panRead .k-epub').forEach(x=>x.style.display=KIND==='epub'?'':'none');
+  $$('#panRead .k-txt').forEach(x=>x.style.display=KIND==='txt'?'':'none');
+  TOCS=null;
   $('#btnDraw').classList.toggle('good',drawMode);
   document.body.classList.toggle('drawing',drawMode);
   $('#drawPager').classList.toggle('on',drawMode);
@@ -3156,10 +3287,10 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); setPen(false); syncSoon();
+function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
-  TXTRAW=''; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
+  TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
   $('#reader').style.display='none'; $('#library').style.display='flex';
   try{ book&&book.destroy&&book.destroy(); }catch(e){}
   try{ pdfIO&&pdfIO.disconnect(); }catch(e){}
@@ -3478,7 +3609,7 @@ function buildHome(){
     vis.filter(b=>b.g).sort((x,y)=>String(y.g).localeCompare(String(x.g))), n.new, '');
 
   $('#lkAll').textContent = n[''].toLocaleString()+'권 ›';
-  paintLkHl();
+  paintLkHl(); paintLkCal(); paintSmartHome();
 
 
   /* 올해 */
@@ -3721,6 +3852,293 @@ $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
+/* ══════════ v33 — 읽은 시간 · 독서 달력 ══════════
+   DAYS['2026-11-06'] = { '책ID|기기': 초 }
+   기기마다 따로 세어 두고, 볼 때 더합니다. 그래야 기기끼리 맞출 때 겹쳐 세지 않습니다.
+   각자 자기 드라이브 숨은 칸에만 갑니다 — 식구 것은 안 보입니다. */
+var DAYS={}; try{ DAYS=JSON.parse(localStorage.getItem('ebl_days')||'{}')||{}; }catch(e){ DAYS={}; }   // var: 시작 순서와 상관없이 쓰이도록
+const DEV=(()=>{ let d=localStorage.getItem('ebl_dev');
+  if(!d){ d=Math.random().toString(36).slice(2,8); try{ localStorage.setItem('ebl_dev',d); }catch(e){} } return d; })();
+const saveDAYS=(()=>{ let t=null;
+  const flush=()=>{ t=null;
+    const keys=Object.keys(DAYS).sort(); while(keys.length>800)delete DAYS[keys.shift()];   // 2년 남짓만
+    try{ localStorage.setItem('ebl_days',JSON.stringify(DAYS)); }catch(e){} };
+  const f=()=>{ if(!t)t=setTimeout(flush,5000); }; f.now=()=>{ if(t)clearTimeout(t); flush(); };
+  return f; })();
+addEventListener('pagehide',()=>saveDAYS.now());
+const dkey=t=>{ const d=new Date(t||Date.now());
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+let ACT=0;
+['pointerdown','keydown','wheel','touchstart'].forEach(k=>addEventListener(k,()=>{ ACT=Date.now(); },{passive:true,capture:true}));
+const TICK=15, IDLE=5*60*1000;
+setInterval(()=>{
+  if(!curB||!readerOn()||document.hidden||noMark)return;
+  const r=RD[curB.i], last=Math.max(ACT,(r&&r.t)||0);     // 쪽을 넘기거나 굴리면 RD 시각이 바뀝니다
+  if(Date.now()-last>IDLE)return;                          // 자리를 뜬 것으로 봅니다
+  const m=DAYS[dkey()]||(DAYS[dkey()]={}), k=curB.i+'|'+DEV;
+  m[k]=(m[k]||0)+TICK; saveDAYS();
+},TICK*1000);
+/* 그날 책마다 몇 초 */
+function dayBooks(d){ const o={};
+  Object.entries(DAYS[d]||{}).forEach(([k,v])=>{ const id=k.split('|')[0]; o[id]=(o[id]||0)+v; });
+  return o; }
+const fmtDur=sec=>{ const m=Math.round(sec/60); if(m<1)return '1분 안';
+  return m<60?m+'분':Math.floor(m/60)+'시간'+(m%60?' '+(m%60)+'분':''); };
+let CALY=0, CALM=0, CALSEL='';
+function paintCal(){
+  $('#calT').textContent=`${CALY}년 ${CALM+1}월`;
+  const g=$('#calGrid'); g.innerHTML='';
+  ['일','월','화','수','목','금','토'].forEach(x=>g.insertAdjacentHTML('beforeend',`<div class="wd">${x}</div>`));
+  const first=new Date(CALY,CALM,1).getDay(), days=new Date(CALY,CALM+1,0).getDate();
+  const today=dkey(), map=byId();
+  let tot=0, nd=0; const books=new Set();
+  for(let i=0;i<first;i++)g.insertAdjacentHTML('beforeend','<div class="dc x"></div>');
+  for(let d=1;d<=days;d++){
+    const key=`${CALY}-${String(CALM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const bk=dayBooks(key), ids=Object.keys(bk).sort((x,y)=>bk[y]-bk[x]);
+    const sec=ids.reduce((a,i)=>a+bk[i],0);
+    const c=document.createElement('button'); c.className='dc'+(key===today?' today':'')+(key===CALSEL?' sel':'');
+    if(sec>=60){ tot+=sec; nd++; ids.forEach(i=>books.add(i));
+      const b=map.get(ids[0]);
+      c.innerHTML=(b&&b.v?`<img loading="lazy" src="${esc(b.v)}" onerror="this.remove()">`:'<div class="ph2"></div>')
+        +`<b>${d}</b><i>${esc(fmtDur(sec))}</i>`;
+      c.onclick=()=>{ CALSEL=key; paintCal(); };
+    } else c.innerHTML=`<b style="color:var(--dim)">${d}</b>`;
+    g.appendChild(c);
+  }
+  const mm=`${CALY}-${String(CALM+1).padStart(2,'0')}`;
+  let done=0; Object.values(RD).forEach(r=>{ if(r&&r.f&&r.t&&dkey(r.t).startsWith(mm))done++; });
+  $('#calSum').textContent = nd
+    ? `${nd}일 · ${fmtDur(tot)} · 책 ${books.size}권`+(done?` · 다 읽은 책 ${done}권`:'')
+    : '이달에는 아직 기록이 없습니다.'+(done?` 다 읽은 책 ${done}권`:'');
+  // 고른 날
+  const el=$('#calDay'); el.innerHTML='';
+  if(CALSEL&&CALSEL.startsWith(mm)){
+    const bk=dayBooks(CALSEL), ids=Object.keys(bk).filter(i=>bk[i]>=60).sort((x,y)=>bk[y]-bk[x]);
+    const [y,m,d]=CALSEL.split('-').map(Number);
+    el.insertAdjacentHTML('beforeend',`<div class="dh">${m}월 ${d}일 (${'일월화수목금토'[new Date(y,m-1,d).getDay()]})</div>`);
+    ids.forEach(i=>{ const b=map.get(i);
+      const x=document.createElement('button');
+      x.innerHTML=`<span>${esc((b&&b.t)||'(목록에 없는 책)')}</span><span>${esc(fmtDur(bk[i]))}</span>`;
+      x.onclick=()=>{ if(!b){ toast('지금 목록에 없는 책입니다'); return; }
+        $('#calSheet').classList.remove('on'); openBook(b); };
+      el.appendChild(x); });
+  }
+}
+function openCal(){ const d=new Date(); CALY=d.getFullYear(); CALM=d.getMonth(); CALSEL=dkey();
+  saveDAYS.now(); paintCal(); $('#calSheet').classList.add('on'); }
+function paintLkCal(){
+  const el=$('#lkCalN'); if(!el||!DAYS)return;
+  const mm=dkey().slice(0,7); let tot=0, nd=0;
+  Object.keys(DAYS).forEach(d=>{ if(!d.startsWith(mm))return;
+    const s=Object.values(DAYS[d]).reduce((a,v)=>a+v,0); if(s>=60){ tot+=s; nd++; } });
+  el.textContent = nd?`이달 ${nd}일 · ${fmtDur(tot)} ›`:'›';
+}
+$('#lkCal').onclick=openCal;
+$('#calClose').onclick=()=>$('#calSheet').classList.remove('on');
+$('#calSheet').addEventListener('click',e=>{ if(e.target.id==='calSheet')$('#calSheet').classList.remove('on'); });
+$('#calPrev').onclick=()=>{ if(--CALM<0){ CALM=11; CALY--; } paintCal(); };
+$('#calNext').onclick=()=>{ if(++CALM>11){ CALM=0; CALY++; } paintCal(); };
+
+/* ══════════ v33 — 조건 서가 (스마트 서가) ══════════
+   지금 보고 있는 목록의 조건을 통째로 저장해 둡니다.
+     q 검색어 · tab 상태 칸 · pin/sel/path/cat 분류 · sort/rev 정렬
+   홈의 '내 서가' 줄에 ⚡ 로 뜨고, 누르면 그 조건 그대로 목록이 열립니다.
+   기기끼리 맞춥니다. 8개까지. */
+if(!Array.isArray(P.smart))P.smart=[];
+var SORTN={t:'제목',a:'저자',d:'출간일',r:'최근 읽음',z:'크기',g:'담긴 날짜'};
+var TABN={'':'전체',recent:'최근 본 책',reading:'읽는 중',done:'다 읽음',saved:'받아둔 책',new:'새로 담긴 책'};
+function smartSum(o){
+  return [o.q?`"${o.q}"`:'', TABN[o.tab]||'', o.pin||o.sel||(o.path||[]).join(' › '),
+          (SORTN[o.sort]||'')+(o.rev?' 거꾸로':'')].filter(Boolean).join(' · ');
+}
+const stampSmart=()=>{ savePref(); try{ localStorage.setItem('ebl_smartat',String(Date.now())); }catch(e){} syncSoon(); };
+$('#smartSave').onclick=async()=>{
+  if(TAB==='home'||TAB==='folder'){ toast('전체·읽는 중 같은 목록 칸에서 저장할 수 있습니다'); return; }
+  const o={ q:$('#q').value.trim(), tab:TAB, pin:PIN, sel:SEL, path:PATH.slice(), cat:P.cat,
+            sort:P.sort, rev:P.rev?1:0 };
+  if(!o.q&&!o.tab&&!o.pin&&!o.sel&&!o.path.length){ toast('검색어를 넣거나 분류·상태를 먼저 골라 주세요'); return; }
+  if(P.smart.length>=8){ toast('조건 서가는 8개까지입니다.\n홈 → 내 서가 [고치기] 에서 지우고 다시 해 주세요',4000); return; }
+  panOff();
+  const nm=await ask('조건 서가 이름',smartSum(o),o.q||o.pin||o.sel||TABN[o.tab]||'');
+  if(nm==null||!nm.trim())return;
+  o.i=Date.now().toString(36); o.n=nm.trim().slice(0,20);
+  P.smart.push(o); stampSmart(); toast(`'${o.n}' 을 홈의 내 서가에 담았습니다`);
+};
+function openSmart(o){
+  $('#q').value=o.q||''; backTab=null;
+  if(o.cat)P.cat=o.cat; if(o.sort)P.sort=o.sort; P.rev=o.rev?1:0; savePref();
+  TAB=o.tab||''; try{ localStorage.setItem('ebl_tab',TAB); }catch(e){}
+  PIN=o.pin||''; SEL=o.sel||''; PATH=(o.path||[]).slice();
+  paintTabs(); buildChips(); render(true);
+}
+/* 서가에 맞는 권수 — 잠깐 그 조건으로 바꿔 세고 되돌립니다 */
+function smartCount(o){
+  const keep={q:$('#q').value,TAB,PIN,SEL,PATH,cat:P.cat,sort:P.sort,rev:P.rev};
+  $('#q').value=o.q||''; TAB=o.tab||''; PIN=o.pin||''; SEL=o.sel||''; PATH=o.path||[]; P.cat=o.cat||P.cat;
+  let n=0; try{ n=filter0().length; }catch(e){}
+  $('#q').value=keep.q; TAB=keep.TAB; PIN=keep.PIN; SEL=keep.SEL; PATH=keep.PATH; P.cat=keep.cat;
+  return n;
+}
+function paintSmartHome(){
+  const pe=$('#hPin'); if(!pe)return;
+  const add=pe.querySelector('.chip.add');
+  (P.smart||[]).forEach(o=>{ const b=document.createElement('button');
+    b.className='chip mine'; b.textContent='⚡ '+o.n+' '+smartCount(o).toLocaleString();
+    b.title=smartSum(o); b.onclick=()=>openSmart(o);
+    pe.insertBefore(b,add); });
+  if(add&&P.smart.length&&!P.pins.length)add.textContent='＋';
+}
+function paintSmartMgr(){
+  const el=$('#smartList'); el.innerHTML='';
+  $('#smartWrap').style.display=P.smart.length?'':'none';
+  P.smart.forEach((o,k)=>{ const b=document.createElement('button');
+    b.innerHTML=`<span>⚡ ${esc(o.n)}<span class="sm">${esc(smartSum(o))}</span></span><span class="del">지우기</span>`;
+    b.onclick=()=>{ if(!confirm(`'${o.n}' 조건 서가를 지웁니다.`))return;
+      P.smart.splice(k,1); stampSmart(); paintSmartMgr(); };
+    el.appendChild(b); });
+}
+{ const op=$('#hPinEdit').onclick; $('#hPinEdit').onclick=()=>{ op(); paintSmartMgr(); }; }
+seg('#segRev','rev',()=>render(true));
+{ const ov=$('#btnView').onclick; $('#btnView').onclick=()=>{ ov(); segSet('#segRev',P.rev||0); }; }
+
+/* ══════════ v32 — 보기 설정 더하기 · 목차 ══════════ */
+seg('#segFw','fw',applyRead);
+seg('#segFoot','nofoot',applyRead);
+seg('#segClean','tclean',()=>{
+  if(KIND!=='txt')return;
+  const h=$('#txt'), m0=h.scrollHeight-h.clientHeight, p=m0>0?h.scrollTop/m0:0;
+  paintTxtHl(); TOCS=null;
+  const m1=h.scrollHeight-h.clientHeight; h.scrollTop=p*m1;
+  toast(P.tclean?'끊긴 줄을 이어서 보여 드립니다\n(원본 파일은 그대로입니다)':'원문 그대로 보여 드립니다');
+});
+
+/* ── 목차 ──
+   TOCS = [{t:제목, d:깊이, go:어디로, at:진도(0~1, 아는 경우)}]
+     EPUB  책에 든 목차.  go = href
+     PDF   PDF 책갈피(개요). go = 쪽
+     TXT   '제1장 · 1화 · 프롤로그 · Chapter 1 · [3화]' 같은 짧은 줄. go = 글자 위치 */
+let TOCS=null;
+const TOC_RE=new RegExp('^[ \\t\\u3000]*(?:'
+  +'(?:제\\s*)?[0-9０-９一二三四五六七八九十百]+\\s*(?:장|화|부|권|편|절|막|話|章)(?:\\s|$|[.:)\\]-])'
+  +'|(?:chapter|part|episode|ep\\.?)\\s*[0-9ivx]+'
+  +'|(?:프롤로그|에필로그|외전|후기|작가의\\s*말|작가\\s*후기|서문|서장|종장|prologue|epilogue)'
+  +'|#{1,3}\\s+\\S'
+  +'|[<\\[【〈《][^\\]>】〉》\\n]{0,20}(?:[0-9]|화|장|외전|프롤로그|에필로그)[^\\]>】〉》\\n]{0,20}[>\\]】〉》]\\s*$'
+  +'|[-=]{1,5}\\s*[0-9]+\\s*[-=]{1,5}\\s*$'
+  +')','i');
+function txtToc(){
+  const T=TXTRAW, out=[]; let off=0;
+  const lines=T.split('\n');
+  for(const ln of lines){
+    const t=ln.replace(/[\r\u200B]/g,'').trim();
+    if(t&&t.length<=50&&TOC_RE.test(t)){
+      out.push({t, d:0, go:off+ln.indexOf(t.charAt(0)), at:T.length?off/T.length:0});
+      if(out.length>=3000)break;
+    }
+    off+=ln.length+1;
+  }
+  return out;
+}
+async function epubToc(){
+  try{
+    const nav=await book.loaded.navigation;
+    const out=[];
+    const walk=(arr,d)=>(arr||[]).forEach(it=>{
+      out.push({t:String(it.label||'').trim()||'(제목 없음)', d:Math.min(d,2), go:it.href});
+      if(it.subitems&&it.subitems.length)walk(it.subitems,d+1); });
+    walk(nav&&nav.toc,0);
+    return out;
+  }catch(e){ return []; }
+}
+async function pdfToc(){
+  try{
+    const ol=await pdfDoc.getOutline(); if(!ol)return [];
+    const out=[];
+    const walk=async(arr,d)=>{ for(const it of arr||[]){
+      let p=0;
+      try{ let dest=it.dest; if(typeof dest==='string')dest=await pdfDoc.getDestination(dest);
+           if(dest&&dest[0])p=(await pdfDoc.getPageIndex(dest[0]))+1; }catch(e){}
+      out.push({t:String(it.title||'').trim()||'(제목 없음)', d:Math.min(d,2), go:p,
+                at:p&&pdfDoc.numPages?p/pdfDoc.numPages:null});
+      if(it.items&&it.items.length)await walk(it.items,d+1);
+      if(out.length>=3000)return; } };
+    await walk(ol,0);
+    return out;
+  }catch(e){ return []; }
+}
+async function getToc(){
+  if(TOCS)return TOCS;
+  TOCS = KIND==='txt' ? txtToc() : KIND==='pdf' ? await pdfToc() : await epubToc();
+  return TOCS;
+}
+/* 지금 읽는 자리에 해당하는 목차 줄 */
+function tocNow(a){
+  if(!a.length)return -1;
+  let k=-1;
+  if(KIND==='txt'){
+    const h=$('#txt'), m=h.scrollHeight-h.clientHeight, p=m>0?h.scrollTop/m:0, off=p*TXTRAW.length;
+    a.forEach((x,i)=>{ if(x.go<=off+40)k=i; });
+  } else if(KIND==='pdf'){
+    a.forEach((x,i)=>{ if(x.go&&x.go<=pdfPg)k=i; });
+  } else if(EPLOC&&EPLOC.start){
+    const here=String(EPLOC.start.href||'').split('#')[0];
+    a.forEach((x,i)=>{ if(String(x.go||'').split('#')[0]===here&&k<0)k=i; });
+  }
+  return k;
+}
+/* TXT 에서 글자 위치로 가기 — 그 글자가 화면 위쪽에 오도록 */
+function txtScrollTo(off){
+  const host=$('#txt'), body=$('#txt .body'); if(!host||!body)return;
+  const w=document.createTreeWalker(body,NodeFilter.SHOW_TEXT); let n=0, c;
+  while(c=w.nextNode()){
+    const L=c.nodeValue.length;
+    if(n+L>off){
+      try{ const r=document.createRange(); r.setStart(c,off-n); r.setEnd(c,Math.min(L,off-n+1));
+           const rc=r.getBoundingClientRect(), hb=host.getBoundingClientRect();
+           if(rc&&(rc.top||rc.height)){ host.scrollTop+=rc.top-hb.top-14; return; } }catch(e){}
+      break;
+    }
+    n+=L;
+  }
+  const m=host.scrollHeight-host.clientHeight;
+  host.scrollTop=(TXTRAW.length?off/TXTRAW.length:0)*m;
+}
+function tocGo(x){
+  panOff();
+  if(KIND==='txt') txtScrollTo(x.go);
+  else if(KIND==='pdf'){ if(x.go)goPdfPage(x.go); else toast('이 목차는 쪽을 알 수 없습니다'); }
+  else if(rend&&x.go){ try{ rend.display(x.go); }catch(e){ toast('그 자리를 찾지 못했습니다'); } }
+}
+async function paintToc(){
+  const list=$('#tocList'), none=$('#tocNone');
+  list.innerHTML=''; none.style.display='block'; none.textContent='목차를 찾는 중…';
+  const a=await getToc();
+  $('#tocTitle').textContent=a.length?`목차 (${a.length})`:'목차';
+  if(!a.length){
+    none.textContent = KIND==='txt'
+      ? '목차로 삼을 줄을 찾지 못했습니다.\n「제1장 · 1화 · 프롤로그 · Chapter 1 · [3화]」 같은 짧은 줄이 있으면 목차가 됩니다.'
+      : KIND==='pdf' ? '이 PDF 에는 목차(책갈피)가 들어 있지 않습니다.\n위 막대의 🔖 로 직접 표시해 두실 수 있습니다.'
+      : '이 책에는 목차가 들어 있지 않습니다.';
+    return;
+  }
+  none.style.display='none';
+  const now=tocNow(a), f=document.createDocumentFragment();
+  a.forEach((x,i)=>{
+    const b=document.createElement('button');
+    b.className=(x.d?'d'+x.d:'')+(i===now?' on':'');
+    const w = KIND==='pdf' ? (x.go?x.go+'쪽':'') : (x.at!=null?Math.round(x.at*100)+'%':'');
+    b.innerHTML=`<span>${esc(x.t)}</span><span class="p">${esc(w)}</span>`;
+    b.onclick=()=>tocGo(x);
+    f.appendChild(b);
+  });
+  list.appendChild(f);
+  const on=list.querySelector('.on'); if(on&&on.scrollIntoView)setTimeout(()=>on.scrollIntoView({block:'center'}),30);
+}
+PANS.push('#panToc');
+$('#btnToc').onclick=()=>{ pan('#panToc',true); paintToc(); };
+$('#tocClose').onclick=panOff;
+
 /* ══════════ 탐색기 (폴더 보기) ══════════
    드라이브에 정리해 둔 폴더를 그대로 둘러봅니다.
    보기와 열기만 합니다 — 옮기거나 이름을 바꾸거나 지우지 않습니다.
@@ -3791,7 +4209,7 @@ const DIRSRC={
       const fo=[], fi=[]; let pt='';
       do{
         const q=encodeURIComponent(`'${id}' in parents and trashed=false`);
-        const fl=encodeURIComponent('nextPageToken,files(id,name,mimeType,size,shortcutDetails)');
+        const fl=encodeURIComponent('nextPageToken,files(id,name,mimeType,size,createdTime,shortcutDetails)');
         const u=`https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fl}&pageSize=1000`
           +`&supportsAllDrives=true&includeItemsFromAllDrives=true`+(pt?`&pageToken=${encodeURIComponent(pt)}`:'');
         const r=await fetch(u,{headers:{Authorization:'Bearer '+at}});
@@ -3805,7 +4223,7 @@ const DIRSRC={
           if(mt==='application/vnd.google-apps.shortcut'&&f.shortcutDetails){
             fid=f.shortcutDetails.targetId; mt=f.shortcutDetails.targetMimeType; }
           if(mt==='application/vnd.google-apps.folder')fo.push([fid,f.name]);
-          else if(!/^application\/vnd\.google-apps\./.test(mt||''))fi.push([fid,f.name,Number(f.size||0)]);
+          else if(!/^application\/vnd\.google-apps\./.test(mt||''))fi.push([fid,f.name,Number(f.size||0),f.createdTime||'']);
         });
       }while(pt);
       return {f:fo,b:fi};
@@ -3826,7 +4244,7 @@ function liveBook(id,name,size){
 function fromDir(d){
   return { mode:'live', root:localStorage.getItem('ebl_rootname')||'도서 폴더', at:d.at,
     folders:d.f.map(([i,n])=>({n,i,sub:(DIRS[i]?(DIRS[i].f.length+DIRS[i].b.length)+'칸':'')})),
-    books:d.b.map(([i,n,z])=>Object.assign(liveBook(i,n,z),{_fn:n})) };
+    books:d.b.map(([i,n,z,ct])=>Object.assign(liveBook(i,n,z),{_fn:n,_ct:ct||''})) };
 }
 /* 이름만 아는 길(색인에서 넘어왔을 때)을 폴더ID 로 바꿉니다. 못 찾으면 거기까지만. */
 async function liveResolve(at,seq){
@@ -3909,6 +4327,20 @@ function paintCrumbs(){
 function exGo(depth){ if(depth===EXPATH.length&&LASTEX&&LASTEX.key===exKey())return;
   EXPATH=EXPATH.slice(0,depth); saveExPath(); $('#q').value=''; paintCrumbs(); buildExp(true); }
 function exInto(f){ EXPATH.push({n:f.n,i:f.i||''}); saveExPath(); $('#q').value=''; paintCrumbs(); buildExp(true); }
+/* 폴더 안 책 정렬 — ☰ 의 정렬을 따릅니다.
+   '제목' 은 폴더에서는 파일 이름순입니다 (1권 · 2권 · 10권이 숫자대로).
+   '담긴 날짜' 는 실시간이면 드라이브에 넣은 날, 색인이면 색인에 담긴 날. */
+function exSort(a){
+  const nm=(x,y)=>EXCOLL.compare(x._fn||x.t||'',y._fn||y.t||'');
+  const s=P.sort; let f=nm;
+  if(s==='a') f=(x,y)=>EXCOLL.compare(x.a||'\uffff',y.a||'\uffff')||nm(x,y);
+  else if(s==='d') f=(x,y)=>String(y.d||'').localeCompare(String(x.d||''))||nm(x,y);
+  else if(s==='r') f=(x,y)=>(((RD[y.i]&&RD[y.i].t)||0)-((RD[x.i]&&RD[x.i].t)||0))||nm(x,y);
+  else if(s==='z') f=(x,y)=>((y.z||0)-(x.z||0))||nm(x,y);
+  else if(s==='g') f=(x,y)=>String(y._ct||y.g||'').localeCompare(String(x._ct||x.g||''))||nm(x,y);
+  a.sort(f); if(P.rev)a.reverse(); return a;
+}
+const exSortName=()=>(P.sort==='t'?'이름순':((SORTN||{})[P.sort]||'')+'순')+(P.rev?' 거꾸로':'');
 function folderCard(f){
   const d=document.createElement('div'); d.className='card fold';
   const w=document.createElement('div'); w.className='cvw'; w.innerHTML='<div class="fd">📁</div>';
@@ -3924,8 +4356,7 @@ function drawExp(data){
   paintCrumbs();
   const k=norm($('#q').value||'');
   const fs=data.folders.filter(f=>!k||norm(f.n).includes(k)).sort((x,y)=>EXCOLL.compare(x.n,y.n));
-  const bs=data.books.filter(b=>!k||norm([b.t,b.a,b._fn].filter(Boolean).join('|')).includes(k))
-    .sort((x,y)=>EXCOLL.compare(x._fn||x.t||'',y._fn||y.t||''));
+  const bs=exSort(data.books.filter(b=>!k||norm([b.t,b.a,b._fn].filter(Boolean).join('|')).includes(k)));
   data.view=bs;
   const g=$('#grid'); g.className=P.mode; g.innerHTML='';
   const f=document.createDocumentFragment();
@@ -3942,7 +4373,7 @@ function drawExp(data){
   $('#exGet').textContent=can?`받아두기 ${can}`:'받아두기';
   $('#exGet').disabled=!can; $('#exGet').style.opacity=can?'':'0.45';
   stat(`폴더 ${fs.length}  ·  책 ${bs.length}`
-    +`  ·  ${data.mode==='live'?'실시간':'색인'}${when}  ·  ${BUILD}`
+    +`  ·  ${data.mode==='live'?'실시간':'색인'}${when}  ·  ${exSortName()}  ·  ${BUILD}`
     +(data.note?'\n'+data.note:''), false);
 }
 $$('#exMode button').forEach(x=>x.onclick=()=>{
