@@ -464,6 +464,31 @@
   #ttsov i{position:absolute;border-bottom:2px solid var(--acc);background:rgba(110,168,254,.16);border-radius:2px}
   body.eink #ttsov i{background:none;border-bottom:2px solid #000}
   #rbar #btnTts.good{background:var(--acc);border-color:var(--acc);color:#0b1220}
+  #comic{position:absolute;inset:0;display:none;overflow:hidden;background:#141414;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y pinch-zoom}
+  body.eink #comic{background:#fff}
+  #comic .spread{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:calc(var(--st) + 4px) 0 calc(var(--sb) + 4px)}
+  #comic.rtl .spread{flex-direction:row-reverse}
+  #comic .spread img{max-width:100%;max-height:100%;object-fit:contain;display:block;filter:var(--cflt)}
+  #comic .spread.two img{max-width:50%}
+  #comic .wait{color:#888;font-size:13px;text-align:center}
+  #comic.zoom{overflow:auto;-webkit-overflow-scrolling:touch;touch-action:auto}
+  #comic.zoom .spread{position:relative;inset:auto;display:flex;width:max-content;min-width:100%;padding:0}
+  #comic.zoom .spread img{max-width:none;max-height:none;height:200vh}
+  #comic.v{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom}
+  #comic.v .vp{display:block;width:100%;max-width:900px;margin:0 auto;min-height:40vh;filter:var(--cflt)}
+  #comic.v .vp.ok{min-height:0}
+  #comic.orig img,#comic.orig .vp{filter:none !important}
+  #comic .end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;color:#ddd;background:#141414f2;text-align:center;padding:24px;z-index:3}
+  #comic .end button{padding:12px 18px;border-radius:12px;border:1px solid #555;color:#fff;font-size:15px;max-width:90%}
+  #comic .end button.pri{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+  #zipList{max-height:56vh;overflow-y:auto;margin-top:8px}
+  #zipList button{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;
+    padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px}
+  #zipList button span:last-child{color:var(--dim);font-size:11.5px;flex:0 0 auto}
+  #zipList button.all{color:var(--acc);font-weight:600}
   #tocList{max-height:62vh;overflow-y:auto;margin-top:4px}
   #tocList button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;
     padding:10px 4px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--tx)}
@@ -573,7 +598,7 @@
 
 <div id="reader">
   <div id="view">
-    <div id="page"></div><div id="epubov"></div><div id="pdf"></div><div id="txt"></div>
+    <div id="page"></div><div id="epubov"></div><div id="pdf"></div><div id="txt"></div><div id="comic"></div>
     <div id="tapL"></div><div id="tapR"></div>
   </div>
   <div id="rbar">
@@ -700,6 +725,45 @@
     <div class="seg" style="margin-top:6px">
       <button id="mkClear">읽은 기록 지우기</button>
     </div></div>
+</div>
+
+<!-- 만화 보기 설정 -->
+<div class="pan" id="panComic">
+  <h4>만화 보기 <button id="cmClose">닫기</button></h4>
+  <div class="grp"><div class="lb">보는 방법</div>
+    <div class="seg" id="segCmode">
+      <button data-v="single">한 장</button><button data-v="double">두 장 펼침</button><button data-v="vert">세로 (웹툰)</button>
+    </div></div>
+  <div class="grp"><div class="lb">넘기는 방향</div>
+    <div class="seg" id="segCdir">
+      <button data-v="ltr">왼쪽 → 오른쪽</button><button data-v="rtl">오른쪽 → 왼쪽 (일본 만화)</button>
+    </div></div>
+  <div class="grp k-dbl"><div class="lb">두 장일 때 첫 장</div>
+    <div class="seg" id="segCcover">
+      <button data-v="1">표지는 따로</button><button data-v="0">처음부터 둘씩</button>
+    </div></div>
+  <div class="grp"><div class="lb"><span>밝기</span><span id="vCbr"></span></div>
+    <input type="range" id="rgCbr" min="50" max="150" step="5"></div>
+  <div class="grp"><div class="lb"><span>대비</span><span id="vCct"></span></div>
+    <input type="range" id="rgCct" min="50" max="180" step="5"></div>
+  <div class="grp"><div class="seg">
+      <button id="cmGray">흑백</button><button id="cmOrig">누르는 동안 원본</button><button id="cmReset">필터 끄기</button>
+    </div></div>
+  <div class="grp"><div class="lb"><span>쪽 옮기기</span><span id="vCpg"></span></div>
+    <input type="range" id="rgCpg" min="1" max="1" step="1"></div>
+  <div class="note" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:8px">
+    가장자리를 누르면 넘기고, 가운데를 누르면 막대가 숨습니다. 가운데를 두 번 누르면 확대합니다.<br>
+    큰 ZIP 도 통째로 받지 않고 보는 장만 받습니다.</div>
+</div>
+
+<!-- ZIP 안의 책 고르기 -->
+<div class="sheet" id="zipSheet">
+  <div class="box">
+    <h3 id="zipT">ZIP 안의 책</h3>
+    <div class="note" id="zipN"></div>
+    <div id="zipList"></div>
+    <div class="btns"><button id="zipClose" class="pri">닫기</button></div>
+  </div>
 </div>
 
 <!-- 읽어주기 설정 -->
@@ -1070,7 +1134,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v34.2';
+const BUILD='v35';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1705,6 +1769,7 @@ function kindOf(b){
   if(x==='epub')return 'epub';
   if(x==='pdf') return 'pdf';
   if(TXT_EXT.indexOf(x)>=0) return 'txt';
+  if(x==='cbz'||x==='zip') return 'comic';   // v35 — 만화·스캔본 (안에 TXT·EPUB 가 든 ZIP 도 여기서 갈라집니다)
   return '';
 }
 async function openBook(b){
@@ -1712,6 +1777,10 @@ async function openBook(b){
   if(!k){ if(b.u)window.open(b.u,'_blank');
           else toast(b.x?`${String(b.x).toUpperCase()} 파일은 아직 앱에서 열 수 없습니다`:'링크가 없습니다');
           return; }
+  if(k==='comic'){   // 통째로 받지 않습니다 — 보는 장만
+    try{ await showComic(b); }
+    catch(e){ busy(false); log('만화 열기 실패: '+(e.message||e)); toast('열지 못했습니다\n'+(e.message||e),6000); }
+    return; }
   try{ busy(true,'책을 준비하는 중…','',0);
     const buf=await getBook(b);
     busy(true,'화면을 구성하는 중…','',1);
@@ -3318,6 +3387,10 @@ function openShell(b){
   $('#page').style.display = KIND==='epub'?'block':'none';
   $('#pdf').style.display  = KIND==='pdf' ?'block':'none';
   $('#txt').style.display  = KIND==='txt' ?'block':'none';
+  if(typeof comicFree==='function')comicFree();
+  $('#comic').style.display= KIND==='comic'?'block':'none';
+  if(KIND!=='comic')$('#comic').innerHTML='';
+  ['#btnDraw','#btnTts','#btnToc'].forEach(x=>{ const e=$(x); if(e)e.style.display=KIND==='comic'?'none':''; });
   const tap = KIND==='epub' && P.nav!=='swipe';
   $('#tapL').style.display=$('#tapR').style.display=tap?'block':'none';
   $$('#panRead .k-pdf').forEach(x=>x.style.display=KIND==='pdf'?'':'none');
@@ -3386,7 +3459,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ ttsStop(); saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
+function closeReader(){ ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
@@ -3444,7 +3517,8 @@ function openPanBook(b){
 
   pan('#panBook',true);
 }
-$('#btnAa').onclick=()=>{ applyRead(); pan('#panRead',true); };
+$('#btnAa').onclick=()=>{ if(KIND==='comic'){ paintComicPan(); pan('#panComic',true); return; }
+  applyRead(); pan('#panRead',true); };
 function segFmtPaint(){ $$('#segFmt button').forEach(b=>b.classList.toggle('on',!!P.fmt[b.dataset.v])); }
 $$('#segFmt button').forEach(b=>b.onclick=()=>{
   const k=b.dataset.v;
@@ -3950,6 +4024,355 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v35 — 만화 뷰어 (CBZ · ZIP) ══════════
+   ★ ZIP 을 통째로 받지 않습니다.
+     ZIP 은 맨 끝에 '목차'(중앙 디렉터리)가 있습니다. 그것만 먼저 받고,
+     장을 넘길 때마다 그 그림 하나만 드라이브에 '여기서 여기까지' 로 청해 받습니다(Range).
+     그래서 수백 MB 짜리도 바로 열리고, 본 만큼만 받습니다.
+   ★ 압축: 그림 ZIP 은 대개 '압축 안 함(stored)' 이라 그대로 씁니다.
+     눌러 담은 것(deflate)은 브라우저의 DecompressionStream 으로 풉니다. 없으면 JSZip 으로.
+   ★ 한글 파일 이름: 옛 압축 프로그램은 CP949(EUC-KR)로 이름을 씁니다. UTF-8 표시가 없으면 그쪽으로 읽습니다.
+   ★ 그림이 없고 TXT·EPUB·PDF 가 든 ZIP 은 '안의 책' 목록을 띄웁니다.  */
+const CM={ z:null, b:null, pages:[], n:0, i:0, span:1, urls:new Map(), seq:0, zoom:false, io:null, end:false };
+if(!P.cmode)P.cmode='single'; if(!P.cdir)P.cdir='ltr'; if(P.ccover==null)P.ccover=1;
+if(!P.cbr)P.cbr=100; if(!P.cct)P.cct=100; if(P.cgs==null)P.cgs=0;
+const CIMG=/\.(jpe?g|png|gif|webp|avif|bmp)$/i;
+const CMIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',avif:'image/avif',bmp:'image/bmp'};
+
+/* ── ZIP 읽기 ── */
+const u16=(d,o)=>d.getUint16(o,true), u32=(d,o)=>d.getUint32(o,true);
+const u64=(d,o)=>u32(d,o)+u32(d,o+4)*4294967296;
+function zipName(bytes,utf){
+  if(utf)return new TextDecoder('utf-8').decode(bytes);
+  try{ return new TextDecoder('utf-8',{fatal:true}).decode(bytes); }
+  catch(e){ try{ return new TextDecoder('euc-kr').decode(bytes); }catch(e2){ return new TextDecoder('utf-8').decode(bytes); } }
+}
+async function zipOpen(src){
+  const size=src.size, tl=Math.min(size,65557+22);
+  const tail=await src.read(size-tl,size);
+  const td=new DataView(tail.buffer,tail.byteOffset,tail.byteLength);
+  let e=-1; for(let i=tail.length-22;i>=0;i--){ if(u32(td,i)===0x06054b50){ e=i; break; } }
+  if(e<0)throw new Error('ZIP 파일이 아니거나 끝부분이 깨졌습니다');
+  let cnt=u16(td,e+10), csz=u32(td,e+12), cof=u32(td,e+16);
+  if(cof===0xFFFFFFFF||csz===0xFFFFFFFF||cnt===0xFFFF){          // ZIP64
+    const L=e-20; if(L<0||u32(td,L)!==0x07064b50)throw new Error('ZIP64 정보를 찾지 못했습니다');
+    const z64=u64(td,L+8); const h=await src.read(z64,z64+56); const hd=new DataView(h.buffer,h.byteOffset,h.byteLength);
+    cnt=u64(hd,32); csz=u64(hd,40); cof=u64(hd,48);
+  }
+  const cd=await src.read(cof,cof+csz), cv=new DataView(cd.buffer,cd.byteOffset,cd.byteLength);
+  const ents=[]; let p=0;
+  for(let k=0;k<cnt&&p+46<=cd.length;k++){
+    if(u32(cv,p)!==0x02014b50)break;
+    const fl=u16(cv,p+8), me=u16(cv,p+10), nl=u16(cv,p+28), xl=u16(cv,p+30), cl=u16(cv,p+32);
+    let cs=u32(cv,p+20), us=u32(cv,p+24), lh=u32(cv,p+42);
+    const name=zipName(cd.subarray(p+46,p+46+nl),fl&0x800);
+    if(cs===0xFFFFFFFF||us===0xFFFFFFFF||lh===0xFFFFFFFF){         // ZIP64 덧붙임
+      let x=p+46+nl; const xe=x+xl;
+      while(x+4<=xe){ const id=u16(cv,x), ln=u16(cv,x+2); if(id===1){ let q=x+4;
+          if(us===0xFFFFFFFF){ us=u64(cv,q); q+=8; } if(cs===0xFFFFFFFF){ cs=u64(cv,q); q+=8; } if(lh===0xFFFFFFFF){ lh=u64(cv,q); } }
+        x+=4+ln; }
+    }
+    ents.push({name, m:me, cs, us, lh, enc:!!(fl&1), dir:/\/$/.test(name)});
+    p+=46+nl+xl+cl;
+  }
+  return {src, ents};
+}
+async function zipData(z,en){
+  if(en.enc)throw new Error('암호가 걸린 ZIP 은 아직 열 수 없습니다');
+  const h=await z.src.read(en.lh,en.lh+30), hd=new DataView(h.buffer,h.byteOffset,h.byteLength);
+  if(u32(hd,0)!==0x04034b50)throw new Error('ZIP 안쪽이 깨졌습니다');
+  const st=en.lh+30+u16(hd,26)+u16(hd,28);
+  const raw=await z.src.read(st,st+en.cs);
+  if(en.m===0)return raw;
+  if(en.m===8)return inflateRaw(raw,en);
+  throw new Error('이 압축 방식('+en.m+')은 아직 열 수 없습니다');
+}
+async function inflateRaw(u8,en){
+  if(typeof DecompressionStream!=='undefined'){
+    try{ const out=await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+         return new Uint8Array(out); }catch(e){}
+  }
+  // 오래된 브라우저 — 이 한 조각만 담은 작은 ZIP 을 지어 JSZip 에 맡깁니다
+  if(typeof JSZip==='undefined')throw new Error('이 브라우저는 압축을 풀 수 없습니다');
+  const nm=new TextEncoder().encode('a'), L=30+nm.length, C=46+nm.length;
+  const buf=new Uint8Array(L+u8.length+C+22), d=new DataView(buf.buffer);
+  d.setUint32(0,0x04034b50,true); d.setUint16(8,8,true); d.setUint32(18,u8.length,true); d.setUint32(22,en.us,true); d.setUint16(26,nm.length,true);
+  buf.set(nm,30); buf.set(u8,L);
+  const c=L+u8.length; d.setUint32(c,0x02014b50,true); d.setUint16(c+10,8,true); d.setUint32(c+20,u8.length,true);
+  d.setUint32(c+24,en.us,true); d.setUint16(c+28,nm.length,true); buf.set(nm,c+46);
+  const e=c+C; d.setUint32(e,0x06054b50,true); d.setUint16(e+8,1,true); d.setUint16(e+10,1,true); d.setUint32(e+12,C,true); d.setUint32(e+16,c,true);
+  const zz=await JSZip.loadAsync(buf); return await zz.file('a').async('uint8array');
+}
+/* 읽을 곳 — 기기에 담긴 파일이면 그대로, 아니면 드라이브에서 조각으로 */
+function memSrc(ab){ const u=new Uint8Array(ab); return { size:u.length, read:async(a,b)=>u.subarray(a,b) }; }
+async function driveSrc(b){
+  let at=await needToken(false).catch(()=>needToken(true));
+  const base=`https://www.googleapis.com/drive/v3/files/${b.i}`;
+  const m=await fetch(base+'?fields=size&supportsAllDrives=true',{headers:{Authorization:'Bearer '+at}});
+  if(m.status===401||m.status===403){ throw new Error('이 파일을 볼 권한이 없습니다'); }
+  if(!m.ok)throw new Error('드라이브 응답 '+m.status);
+  const size=Number((await m.json()).size||0); if(!size)throw new Error('파일 크기를 알 수 없습니다');
+  const read=async(a,z,again)=>{
+    if(z<=a)return new Uint8Array(0);
+    const ac=new AbortController();
+    const r=await fetch(base+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+at,Range:`bytes=${a}-${z-1}`},signal:ac.signal});
+    if(r.status===401&&!again){ TOKEN=''; at=await needToken(false).catch(()=>needToken(true)); return read(a,z,true); }
+    if(r.status===206)return new Uint8Array(await r.arrayBuffer());
+    if(r.status===200){                      // 부분 받기를 거절하고 통째로 보내려 함
+      if(size>40*1048576){ ac.abort(); throw new Error('드라이브가 부분 받기를 거절했습니다'); }
+      const all=new Uint8Array(await r.arrayBuffer()); return all.subarray(a,z); }
+    throw new Error('드라이브 응답 '+r.status);
+  };
+  return { size, read };
+}
+
+/* ── 열기 ── */
+async function showComic(b){
+  busy(true,'만화를 여는 중…',b.z?b.z+'MB · 보는 장만 받습니다':'',0);
+  let src=null;
+  try{ const hit=await DB.get('books',b.i); if(hit)src=memSrc(hit); }catch(e){}
+  if(!src)src=await driveSrc(b);
+  const z=await zipOpen(src);
+  const imgs=z.ents.filter(e=>!e.dir&&CIMG.test(e.name)&&!/(^|\/)(__MACOSX|\.)/.test(e.name))
+    .sort((x,y)=>EXCOLL.compare(x.name,y.name));
+  busy(false);
+  if(!imgs.length)return zipInner(b,z);
+  curB=b; noMark=false; KIND='comic';
+  openShell(b);
+  Object.assign(CM,{z,b,pages:imgs,n:imgs.length,end:false,zoom:false});
+  let i=Number(localStorage.getItem('ebl_cpg_'+b.i));
+  if(isNaN(i)||i<0||i>=CM.n){ const p=pctOf(b); i=p>0&&p<0.99?Math.max(0,Math.round(p*CM.n)-1):0; }
+  CM.i=i;
+  markRead(b.i,null);
+  applyComicLook(); paintHlBadge();
+  comicDraw();
+}
+function comicFree(){
+  CM.seq++; CM.urls.forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} }); CM.urls.clear();
+  try{ CM.io&&CM.io.disconnect(); }catch(e){} CM.io=null;
+  CM.z=null; CM.pages=[]; CM.n=0; CM.end=false; CM.zoom=false;
+  const el=document.getElementById('comic'); if(el)el.onscroll=null;
+}
+/* 한 장 받아 그림 주소로 — 최근 24장만 들고 있습니다 */
+async function pageUrl(k){
+  if(CM.urls.has(k)){ const u=CM.urls.get(k); CM.urls.delete(k); CM.urls.set(k,u); return u; }
+  const z=CM.z, en=CM.pages[k]; if(!z||!en)return '';
+  const data=await zipData(z,en);
+  if(z!==CM.z)return '';
+  const ext=(en.name.match(/\.(\w+)$/)||[])[1]||'jpg';
+  const u=URL.createObjectURL(new Blob([data],{type:CMIME[ext.toLowerCase()]||'image/jpeg'}));
+  CM.urls.set(k,u);
+  while(CM.urls.size>24){ const [k0,u0]=CM.urls.entries().next().value;
+    if(Math.abs(k0-CM.i)<4)break; CM.urls.delete(k0); try{ URL.revokeObjectURL(u0); }catch(e){} }
+  return u;
+}
+let cmPre=Promise.resolve();
+function prefetch(list){ list.forEach(k=>{ if(k>=0&&k<CM.n&&!CM.urls.has(k))cmPre=cmPre.then(()=>pageUrl(k)).catch(()=>{}); }); }
+
+/* 두 장 펼침에서 k 쪽이 들어가는 펼침의 첫 쪽 */
+function spreadStart(k){
+  if(P.cmode!=='double')return k;
+  if(P.ccover){ if(k<=0)return 0; return k-((k-1)%2); }
+  return k-(k%2);
+}
+function spreadLen(st){
+  if(P.cmode!=='double')return 1;
+  if(P.ccover&&st===0)return 1;
+  return Math.min(2,CM.n-st);
+}
+function applyComicLook(){
+  const el=$('#comic');
+  el.style.setProperty('--cflt',`brightness(${P.cbr/100}) contrast(${P.cct/100}) grayscale(${P.cgs?1:0})`);
+  el.classList.toggle('rtl',P.cdir==='rtl');
+}
+async function comicDraw(){
+  const el=$('#comic'), my=++CM.seq;
+  el.classList.toggle('v',P.cmode==='vert'); el.classList.toggle('zoom',CM.zoom&&P.cmode!=='vert');
+  try{ CM.io&&CM.io.disconnect(); }catch(e){} CM.io=null; el.onscroll=null;
+  if(P.cmode==='vert'){ CM.span=1; return comicVert(my); }
+  CM.i=spreadStart(CM.i); CM.span=spreadLen(CM.i);
+  const ks=[]; for(let j=0;j<CM.span;j++)ks.push(CM.i+j);
+  const sp=document.createElement('div'); sp.className='spread'+(CM.span>1?' two':'');
+  sp.innerHTML='<div class="wait">불러오는 중…</div>';
+  el.innerHTML=''; el.appendChild(sp);
+  comicFoot();
+  try{
+    const us=await Promise.all(ks.map(pageUrl));
+    if(my!==CM.seq)return;
+    sp.innerHTML='';
+    us.forEach(u=>{ const im=document.createElement('img'); im.src=u; im.draggable=false; sp.appendChild(im); });
+    if(CM.zoom)requestAnimationFrame(()=>{ el.scrollLeft=(el.scrollWidth-el.clientWidth)/2; el.scrollTop=0; });
+  }catch(e){ if(my!==CM.seq)return; sp.innerHTML=`<div class="wait">이 장을 열지 못했습니다<br>${esc(e.message||e)}</div>`; log('만화 장 실패: '+(e.message||e)); }
+  const st=CM.i+CM.span; prefetch([st,st+1,st+2,CM.i-1]);
+}
+/* 세로(웹툰) — 모든 장을 자리만 깔고, 화면 가까이 온 것부터 받습니다 */
+function comicVert(my){
+  const el=$('#comic'); el.innerHTML='';
+  const f=document.createDocumentFragment();
+  for(let k=0;k<CM.n;k++){ const im=document.createElement('img'); im.className='vp'; im.dataset.k=k; im.alt=''; im.draggable=false; f.appendChild(im); }
+  el.appendChild(f);
+  const load=async im=>{ if(!im||im.src||im._busy)return; im._busy=true;
+    try{ const u=await pageUrl(Number(im.dataset.k)); if(my===CM.seq&&u){ im.src=u; im.onload=()=>im.classList.add('ok'); } }catch(e){} };
+  if('IntersectionObserver' in window){
+    CM.io=new IntersectionObserver(es=>es.forEach(x=>{ if(x.isIntersecting)load(x.target); }),{root:el,rootMargin:'150% 0px'});
+    el.querySelectorAll('.vp').forEach(im=>CM.io.observe(im));
+  } else el.querySelectorAll('.vp').forEach((im,k)=>{ if(Math.abs(k-CM.i)<6)load(im); });
+  const tgt=el.querySelector(`.vp[data-k="${CM.i}"]`);
+  load(tgt); setTimeout(()=>{ if(tgt&&my===CM.seq)el.scrollTop=tgt.offsetTop; },60);
+  el.onscroll=()=>{ if(P.cmode!=='vert'||KIND!=='comic')return;
+    const y=el.scrollTop+el.clientHeight*0.3; let k=0;
+    const ims=el.querySelectorAll('.vp'); for(let j=0;j<ims.length;j++){ if(ims[j].offsetTop<=y)k=j; else break; }
+    if(k!==CM.i){ CM.i=k; comicFoot(); }
+    if(el.scrollTop+el.clientHeight>=el.scrollHeight-6&&!CM.end&&el.scrollHeight>el.clientHeight*1.5){ comicEnd(); } };
+  comicFoot();
+}
+function comicFoot(){
+  if(!CM.b)return;
+  const last=Math.min(CM.n,CM.i+CM.span);
+  try{ localStorage.setItem('ebl_cpg_'+CM.b.i,String(CM.i)); }catch(e){}
+  if(!noMark)markRead(CM.b.i, last/CM.n, last>=CM.n);
+  $('#rfoot').textContent=`${CM.i+1}${CM.span>1?'-'+(CM.i+CM.span):''} / ${CM.n}`
+    +(noMark?'  ·  기록 안 함':(stOf(CM.b)==='done'?'  ·  다 읽음':''))+'  ·  '+(CM.b.t||'');
+  paintBmBtn();
+}
+function comicGo(k){
+  if(!CM.n)return;
+  CM.end=false; CM.i=Math.max(0,Math.min(CM.n-1,k));
+  if(P.cmode==='vert'){ const t=$('#comic').querySelector(`.vp[data-k="${CM.i}"]`); if(t)$('#comic').scrollTop=t.offsetTop; comicFoot(); }
+  else comicDraw();
+}
+function comicNext(){
+  if(CM.end)return;
+  const nx=CM.i+CM.span;
+  if(nx>=CM.n){ comicEnd(); return; }
+  CM.i=nx; CM.zoom=false; comicDraw();
+}
+function comicPrev(){
+  if(CM.end){ CM.end=false; comicDraw(); return; }
+  if(CM.i<=0){ toast('첫 장입니다'); return; }
+  CM.i=spreadStart(CM.i-1); CM.zoom=false; comicDraw();
+}
+/* 화면 왼쪽·오른쪽 → 앞·뒤 (방향에 따라) */
+function comicSide(s){ const fwd = P.cdir==='rtl' ? s==='L' : s==='R'; fwd?comicNext():comicPrev(); }
+/* 같은 폴더의 다음 권 */
+function nextVol(b){
+  let list=null;
+  if(LASTEX&&LASTEX.data&&LASTEX.data.view&&LASTEX.data.view.some(x=>x.i===b.i))list=LASTEX.data.view;
+  else list=BOOKS.filter(x=>x.f&&x.f===b.f).slice().sort((x,y)=>EXCOLL.compare(x._fn||x.o||x.t||'',y._fn||y.o||y.t||''));
+  const k=list.findIndex(x=>x.i===b.i);
+  if(k<0)return null;
+  for(let j=k+1;j<list.length;j++){ if(kindOf(list[j]))return list[j]; }
+  return null;
+}
+function comicEnd(){
+  if(CM.end)return;
+  CM.end=true;
+  if(!noMark)markRead(CM.b.i,1,true);
+  const nx=nextVol(CM.b), el=$('#comic');
+  const d=document.createElement('div'); d.className='end';
+  d.innerHTML=`<div style="font-size:15px">끝까지 보셨습니다</div>`
+    +(nx?`<div style="font-size:12.5px;color:#aaa">같은 폴더의 다음 권</div>`:'');
+  if(nx){ const b=document.createElement('button'); b.className='pri'; b.textContent='▶ '+(nx._fn||nx.t||'다음 권');
+    b.onclick=e=>{ e.stopPropagation(); openBook(nx); }; d.appendChild(b); }
+  const back=document.createElement('button'); back.textContent='‹ 마지막 장으로';
+  back.onclick=e=>{ e.stopPropagation(); CM.end=false; d.remove(); }; d.appendChild(back);
+  const cls=document.createElement('button'); cls.textContent='서재로';
+  cls.onclick=e=>{ e.stopPropagation(); closeReader(); }; d.appendChild(cls);
+  if(P.cmode==='vert'){ d.style.position='sticky'; d.style.bottom='0'; d.style.top='auto'; d.style.minHeight='60vh'; }
+  el.appendChild(d);
+}
+/* 누르기 · 두 번 누르기 · 밀기 */
+{ const el=$('#comic'); let lastTap=0, sx=0, sy=0, st=0;
+  el.addEventListener('click',e=>{
+    if(KIND!=='comic'||(e.target.closest&&e.target.closest('.end')))return;
+    const w=el.clientWidth, x=e.clientX-el.getBoundingClientRect().left, now=Date.now();
+    const mid = x>w*0.3 && x<w*0.7;
+    if(mid){ if(now-lastTap<320){ lastTap=0;                  // 두 번 → 확대
+        if(P.cmode==='vert'){ toast('세로 보기에서는 두 손가락으로 벌려 확대하세요'); return; }
+        CM.zoom=!CM.zoom; toggleBars(); comicDraw();
+        if(CM.zoom)toast('확대했습니다 · 밀어서 둘러보세요\n가운데를 두 번 누르면 돌아옵니다',3000); return; }
+      lastTap=now; toggleBars(); return; }
+    if(CM.zoom||P.cmode==='vert')return;
+    comicSide(x<w/2?'L':'R');
+  });
+  el.addEventListener('touchstart',e=>{ const t=e.changedTouches[0]; sx=t.clientX; sy=t.clientY; st=Date.now(); },{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(KIND!=='comic'||CM.zoom||P.cmode==='vert'||e.touches.length)return;
+    const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Date.now()-st<600&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.6)comicSide(dx<0?'R':'L');
+  },{passive:true});
+}
+
+/* ── 설정 창 ── */
+function paintComicPan(){
+  segSet('#segCmode',P.cmode); segSet('#segCdir',P.cdir); segSet('#segCcover',P.ccover?1:0);
+  $$('#panComic .k-dbl').forEach(x=>x.style.display=P.cmode==='double'?'':'none');
+  $('#rgCbr').value=P.cbr; $('#vCbr').textContent=P.cbr+'%';
+  $('#rgCct').value=P.cct; $('#vCct').textContent=P.cct+'%';
+  $('#cmGray').classList.toggle('on',!!P.cgs);
+  $('#rgCpg').max=Math.max(1,CM.n); $('#rgCpg').value=CM.i+1; $('#vCpg').textContent=`${CM.i+1} / ${CM.n}`;
+}
+seg('#segCmode','cmode',()=>{ CM.zoom=false; CM.end=false; paintComicPan(); comicDraw(); });
+seg('#segCdir','cdir',()=>{ applyComicLook(); paintComicPan(); });
+seg('#segCcover','ccover',()=>{ comicDraw(); });
+$('#rgCbr').oninput=()=>{ P.cbr=Number($('#rgCbr').value); savePref(); applyComicLook(); $('#vCbr').textContent=P.cbr+'%'; };
+$('#rgCct').oninput=()=>{ P.cct=Number($('#rgCct').value); savePref(); applyComicLook(); $('#vCct').textContent=P.cct+'%'; };
+$('#cmGray').onclick=()=>{ P.cgs=P.cgs?0:1; savePref(); applyComicLook(); paintComicPan(); };
+$('#cmReset').onclick=()=>{ P.cbr=100; P.cct=100; P.cgs=0; savePref(); applyComicLook(); paintComicPan(); };
+['pointerdown','touchstart'].forEach(k=>$('#cmOrig').addEventListener(k,()=>$('#comic').classList.add('orig'),{passive:true}));
+['pointerup','pointerleave','touchend','touchcancel'].forEach(k=>$('#cmOrig').addEventListener(k,()=>$('#comic').classList.remove('orig'),{passive:true}));
+$('#rgCpg').oninput=()=>{ $('#vCpg').textContent=`${$('#rgCpg').value} / ${CM.n}`; };
+$('#rgCpg').onchange=()=>{ comicGo(Number($('#rgCpg').value)-1); };
+$('#cmClose').onclick=panOff;
+PANS.push('#panComic');
+
+/* ── 그림 없는 ZIP — 안의 책 ── */
+const ZIN_EXT=/\.(txt|epub|pdf|md)$/i;
+function zipInner(b,z){
+  const list=z.ents.filter(e=>!e.dir&&ZIN_EXT.test(e.name)&&!/(^|\/)(__MACOSX|\.)/.test(e.name))
+    .sort((x,y)=>EXCOLL.compare(x.name,y.name));
+  if(!list.length){ toast('이 ZIP 안에는 열 수 있는 그림이나 책이 없습니다',4500); return; }
+  $('#zipT').textContent=b._fn||b.t||'ZIP 안의 책';
+  const el=$('#zipList'); el.innerHTML='';
+  const txts=list.filter(e=>/\.(txt|md)$/i.test(e.name)), tot=txts.reduce((a,e)=>a+e.us,0);
+  $('#zipN').textContent=`${list.length}개가 들어 있습니다.`;
+  if(txts.length>1&&txts.length===list.length&&tot<40*1048576){
+    const a=document.createElement('button'); a.className='all';
+    a.innerHTML=`<span>📚 모두 이어서 한 권으로 열기</span><span>${txts.length}개 · ${(tot/1048576).toFixed(1)}MB</span>`;
+    a.onclick=()=>zipOpenAll(b,z,txts); el.appendChild(a);
+  }
+  list.forEach(en=>{ const x=document.createElement('button');
+    x.innerHTML=`<span>${esc(en.name.split('/').pop())}</span><span>${(en.us/1048576).toFixed(1)}MB</span>`;
+    x.onclick=()=>zipOpenOne(b,z,en); el.appendChild(x); });
+  $('#zipSheet').classList.add('on');
+}
+async function zipOpenOne(b,z,en){
+  $('#zipSheet').classList.remove('on');
+  try{ busy(true,'꺼내는 중…',en.name.split('/').pop(),0);
+    const d=await zipData(z,en), buf=d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength);
+    const ext=((en.name.match(/\.(\w+)$/)||[])[1]||'txt').toLowerCase();
+    const b2={ i:b.i+'#'+en.name, t:en.name.split('/').pop().replace(/\.\w+$/,''), x:ext, f:b.f, z:Math.round(en.us/104857.6)/10 };
+    busy(true,'화면을 구성하는 중…','',1);
+    if(ext==='epub')await showReader(b2,buf); else if(ext==='pdf')await showPdf(b2,buf); else await showTxt(b2,buf);
+    busy(false);
+  }catch(e){ busy(false); toast('열지 못했습니다\n'+(e.message||e),5000); }
+}
+async function zipOpenAll(b,z,txts){
+  $('#zipSheet').classList.remove('on');
+  try{ const parts=[];
+    for(let k=0;k<txts.length;k++){ busy(true,'이어 붙이는 중…',`${k+1} / ${txts.length}`,(k+1)/txts.length);
+      const d=await zipData(z,txts[k]);
+      parts.push('# '+txts[k].name.split('/').pop().replace(/\.\w+$/,'')+'\n\n'+decodeText(d.buffer.slice(d.byteOffset,d.byteOffset+d.byteLength)).replace(/^﻿/,'')); }
+    const all=new TextEncoder().encode(parts.join('\n\n\n'));
+    const b2={ i:b.i+'#all', t:(b._fn||b.t||'').replace(/\.\w+$/,''), x:'txt', f:b.f };
+    busy(true,'화면을 구성하는 중…','',1);
+    await showTxt(b2,all.buffer); busy(false);
+    toast('목차에서 각 편으로 바로 갈 수 있습니다',3500);
+  }catch(e){ busy(false); toast('열지 못했습니다\n'+(e.message||e),5000); }
+}
+$('#zipClose').onclick=()=>$('#zipSheet').classList.remove('on');
+
 
 /* ── v34.2 책 정보 단추 ── */
 function paintMetaNote(){
@@ -4825,7 +5248,9 @@ $('#exRe').onclick=async()=>{
 };
 $('#exGet').onclick=async()=>{
   if(!LASTEX)return;
-  const list=(LASTEX.data.view||LASTEX.data.books).filter(b=>kindOf(b)&&!saved.has(b.i));
+  // 큰 만화 ZIP 은 기기에 담지 않습니다 (보는 장만 받는 방식이라 그럴 필요도 없습니다)
+  const list=(LASTEX.data.view||LASTEX.data.books).filter(b=>kindOf(b)&&!saved.has(b.i)
+    &&!(kindOf(b)==='comic'&&(Number(b.z)||0)>150));
   if(!list.length){ toast('이 폴더의 책은 모두 받아두었습니다'); return; }
   const mb=list.reduce((s,b)=>s+(Number(b.z)||0),0);
   if(!confirm(`이 폴더의 책 ${list.length}권을 기기에 받아둡니다`
@@ -4849,6 +5274,7 @@ $('#exGet').onclick=async()=>{
      txt   c = {p:0~1}     (스크롤 비율)                                        */
 async function hereNow(){
   if(!curB)return null;
+  if(KIND==='comic'&&CM.n)return {w:'comic', c:{p:CM.i}, pos:(CM.i+1)/CM.n, t:(CM.i+1)+'쪽'};
   if(KIND==='epub'&&rend){
     const cfi=EPLOC&&EPLOC.start&&EPLOC.start.cfi; if(!cfi)return null;
     let t='';
@@ -4870,6 +5296,7 @@ async function hereNow(){
 }
 function bmIsHere(o){
   if(!o||!o.c)return false;
+  if(KIND==='comic') return o.w==='comic'&&o.c.p>=CM.i&&o.c.p<CM.i+(CM.span||1);
   if(KIND==='pdf') return o.w==='pdf'&&o.c.p===pdfPg;
   if(KIND==='txt'){
     if(o.w!=='txt')return false;
@@ -4904,6 +5331,7 @@ function gotoBm(o){
   if(o.w==='epub'&&rend){ try{ rend.display(o.c); }catch(e){ toast('그 자리를 찾지 못했습니다'); } }
   else if(o.w==='pdf'){ goPdfPage(o.c.p); }
   else if(o.w==='txt'){ const h=$('#txt'); h.scrollTop=o.c.p*(h.scrollHeight-h.clientHeight); }
+  else if(o.w==='comic'){ comicGo(o.c.p); }
 }
 const whereOf=o=> isBm(o)
   ? (o.w==='pdf'?`${o.c.p}쪽`:(o.pos!=null?Math.round(o.pos*100)+'%':''))
@@ -5146,7 +5574,8 @@ function pageFwd(){ if(!readerOn()||penDrag||Date.now()-penAt<500)return;
 $('#tapL').onclick=pageBack;
 $('#tapR').onclick=pageFwd;
 document.addEventListener('keydown',e=>{ if($('#reader').style.display!=='flex')return;
-  if(e.key==='ArrowLeft')rend&&rend.prev(); if(e.key==='ArrowRight')rend&&rend.next();
+  if(KIND==='comic'){ if(e.key==='ArrowLeft')comicSide('L'); if(e.key==='ArrowRight')comicSide('R'); }
+  else { if(e.key==='ArrowLeft')rend&&rend.prev(); if(e.key==='ArrowRight')rend&&rend.next(); }
   if(e.key==='Escape')closeReader(); });
 window.addEventListener('resize',()=>{ if(rend)try{rend.resize()}catch(e){} });
 
