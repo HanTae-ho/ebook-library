@@ -836,7 +836,7 @@
   <div class="grp"><div class="lb">보여줄 형식</div>
     <div class="seg" id="segFmt">
       <button data-v="epub">EPUB</button><button data-v="pdf">PDF</button>
-      <button data-v="etc">그 외</button>
+      <button data-v="comic">만화·ZIP</button><button data-v="etc">그 외</button>
     </div></div>
   <div class="grp"><div class="lb">정렬 <span style="opacity:.7">· 읽는 중·다 읽음 칸은 최근 읽은 순</span></div>
     <div class="seg" id="segSort">
@@ -1134,7 +1134,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v35.1';
+const BUILD='v36';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1190,6 +1190,7 @@ const P = Object.assign({
   pins:[]                                    // 홈에 고정한 분류 (내 서가)
 }, JSON.parse(localStorage.getItem('ebl_pref')||'{}'));
 if(!P.fmt) P.fmt={ epub:true, pdf:true, etc:false };
+if(P.fmt.comic===undefined) P.fmt.comic=true;   // v36 — 만화·ZIP 은 처음부터 보입니다
 if(!Array.isArray(P.pins)) P.pins=[];
 const savePref=()=>localStorage.setItem('ebl_pref',JSON.stringify(P));
 
@@ -1508,7 +1509,12 @@ function apply(d){
    ★ Apps Script v15 색인(BUILD_INDEX 교체본)은 이미 이 기준으로 정리돼 옵니다.
      그 경우 r='1' 이 '알라딘 결과를 안 쓴 책' 이고, h 가 검색용 알라딘 제목입니다.
    원래 값은 b._0 에 한 번만 담아 두고, 고를 때마다 거기서 다시 만듭니다. */
+/* 책 속 진짜 표지 — COVERS[ID]=작은 JPEG(data:). 이 기기에만 (v36) */
+var COVERS={};
 const META_KEYS=['t','a','v','p','d','c','b','m','s'];
+/* 사람이 '정보가 틀림' 으로 표시한 책 — WRONG[ID]={v:1|0,t:시각}. 기기끼리 맞춥니다 (v36) */
+var WRONG={}; try{ WRONG=JSON.parse(localStorage.getItem('ebl_wrong')||'{}')||{}; }catch(e){ WRONG={}; }
+const isWrong=id=>!!(WRONG&&WRONG[id]&&WRONG[id].v);
 function metaTrust(b){
   if(b.r)return false;                         // v15 색인: 이미 정리된 책
   const n=String(b.n||'');
@@ -1522,7 +1528,8 @@ function metaApply(){
     if(!b._0){ const o={}; META_KEYS.forEach(k=>{ if(b[k]!=null)o[k]=b[k]; }); b._0=o; }
     const o=b._0;
     META_KEYS.forEach(k=>{ if(k in o)b[k]=o[k]; else delete b[k]; });   // 원래대로 되돌린 뒤
-    const ok=metaTrust(b);
+    const ok=metaTrust(b)&&!isWrong(b.i);
+    if(isWrong(b.i)){ if(b.o)b.t=b.o; ['a','v','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; return; }
     if(P.meta==='file'){
       if(b.o)b.t=b.o; delete b.v;
       if(!ok&&!b.r){ ['a','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; }
@@ -1589,8 +1596,9 @@ const pctOf = b => { const r=RD[b.i]; return r&&r.p ? r.p : 0; };
 /* ── 분류 · 형식 ── */
 const folderOf=b=>String(b.f||'').split('/')[1]||'';
 // 형식을 세 갈래로 묶습니다: EPUB / PDF / 그 외(txt·mobi·cbz…)
+const COMIC_EXT=['zip','cbz','cbr','rar','7z','cb7'];
 function fmtKey(b){ const x=(b.x||'').toLowerCase();
-  return x==='epub'?'epub' : x==='pdf'?'pdf' : 'etc'; }
+  return x==='epub'?'epub' : x==='pdf'?'pdf' : COMIC_EXT.indexOf(x)>=0?'comic' : 'etc'; }
 function chipSource(){
   // 현재 기준으로 [값 → 권수] 집계
   const c={};
@@ -1711,7 +1719,8 @@ function phHtml(b){
 function card(b){
   const d=document.createElement('div'); d.className='card';
   const w=document.createElement('div'); w.className='cvw';
-  if(b.v){ const im=document.createElement('img'); im.loading='lazy'; im.decoding='async'; im.src=b.v;
+  const cvu=(COVERS&&COVERS[b.i])||b.v;            // v36 — 책 속 진짜 표지를 먼저
+  if(cvu){ const im=document.createElement('img'); im.loading='lazy'; im.decoding='async'; im.src=cvu;
     im.onerror=()=>{im.remove(); w.insertAdjacentHTML('afterbegin',phHtml(b));};
     w.appendChild(im); }
   else w.innerHTML=phHtml(b);
@@ -1769,7 +1778,7 @@ function kindOf(b){
   if(x==='epub')return 'epub';
   if(x==='pdf') return 'pdf';
   if(TXT_EXT.indexOf(x)>=0) return 'txt';
-  if(x==='cbz'||x==='zip') return 'comic';   // v35 — 만화·스캔본 (안에 TXT·EPUB 가 든 ZIP 도 여기서 갈라집니다)
+  if(x==='cbz'||x==='zip'||x==='cbr'||x==='rar'||x==='7z'||x==='cb7') return 'comic';   // v35 — 만화·스캔본 (안에 TXT·EPUB 가 든 ZIP 도 여기서 갈라집니다)
   return '';
 }
 async function openBook(b){
@@ -1903,6 +1912,7 @@ async function showReader(b,buf){
   openShell(b);
   book=ePub(buf);
   rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
+  try{ book.coverUrl().then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{}); }catch(e){}
   applyRead();
   const cfi=localStorage.getItem('ebl_pos_'+b.i);
   try{ await rend.display(cfi||undefined); }catch(e){ await rend.display(); }
@@ -2778,7 +2788,7 @@ function localState(){
            at:Number(localStorage.getItem('ebl_menameat')||0)},
            cfg:cfgBundle(), cfgAt:cfgAt(),
            rd:RD, hl:HL, del:DEL, rdel:RDEL,
-           days:DAYS, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
+           days:DAYS, wrong:WRONG, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
            pins:P.pins||[], rq:RQ,
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
            rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
@@ -2792,6 +2802,8 @@ function mergeState(a,b){
   [a.days,b.days].forEach(D=>Object.entries(D||{}).forEach(([d,m])=>{
     const o=out.days[d]||(out.days[d]={});
     Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
+  out.wrong={};
+  [a.wrong,b.wrong].forEach(W=>Object.entries(W||{}).forEach(([k,v])=>{ if(!out.wrong[k]||(v.t||0)>(out.wrong[k].t||0))out.wrong[k]=v; }));
   if((a.smartAt||0)>=(b.smartAt||0)){ out.smart=a.smart||b.smart||[]; out.smartAt=a.smartAt||0; }
   else                              { out.smart=b.smart||[]; out.smartAt=b.smartAt||0; }
   // 이름은 나중에 고친 쪽
@@ -2846,6 +2858,8 @@ function applyState(s){
   if(takeCfg(s.cfg,s.cfgAt)){ CFGNEW=true; log('설정을 구글 계정에서 받았습니다'); }
   RD=s.rd||{}; HL=s.hl||{}; DEL=s.del||{}; RDEL=s.rdel||{};
   if(s.days){ DAYS=s.days; saveDAYS.now(); }
+  if(s.wrong){ const ch=JSON.stringify(s.wrong)!==JSON.stringify(WRONG); WRONG=s.wrong;
+    try{ localStorage.setItem('ebl_wrong',JSON.stringify(WRONG)); }catch(e){} if(ch&&BOOKS.length)metaApply(); }
   if(Array.isArray(s.smart)){ P.smart=s.smart;
     try{ localStorage.setItem('ebl_smartat',String(s.smartAt||0)); }catch(e){} }
   P.pins=s.pins||[]; RQ=s.rq||[];
@@ -3514,6 +3528,8 @@ function openPanBook(b){
     async()=>{ try{ await DB.del('books',b.i); saved.delete(b.i); }catch(e){}
       toast('파일을 지웠습니다'); paintTabs(); render(true); },'warn');
   if(b.u) add('드라이브에서 열기','',()=>window.open(b.u,'_blank','noopener'));
+  if(isWrong(b.i)) add('책 정보 되돌리기','알라딘 제목·표지를 다시 보입니다',()=>setWrong(b,0));
+  else if(b._0&&(b._0.v||b._0.a||b._0.b)) add('책 정보가 틀림','이 책만 파일 이름으로 보이고, 엉뚱한 표지·저자·분류를 감춥니다',()=>setWrong(b,1),'warn');
 
   pan('#panBook',true);
 }
@@ -4025,6 +4041,124 @@ $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
+/* ══════════ v36 — RAR · 7z (CBR · CB7) ══════════
+   ZIP 과 달리 RAR·7z 는 '필요한 장만 받기' 가 안 됩니다 (목차가 앞에 있고, 대개 통째로 눌러 담김).
+   그래서 통째로 받아 한 번에 풉니다. 아이패드 메모리를 생각해 300MB 까지만 엽니다.
+   해제 도구는 libarchive (wasm) 입니다. 처음 RAR·7z 를 열 때만 받아 오고(약 0.7MB), 그 뒤로는 기기에 남습니다.
+     libarchive-web.js  — npm libarchive-wasm 1.2.0 (MIT) 을 esbuild 로 한 파일로 묶은 것
+     libarchive.wasm    — libarchive (BSD)
+   ★ 7z 안의 한글 파일 이름은 깨져 보일 수 있습니다 (숫자 순서는 지켜집니다).
+   ★ CBR 인데 속은 ZIP 이거나, CBZ 인데 속은 RAR 인 파일이 흔해서, 이름이 아니라 첫 몇 바이트로 가릅니다. */
+const ARC_MAX=300*1048576;
+let ARCMOD=null;
+function loadArc(){
+  if(ARCMOD)return ARCMOD;
+  ARCMOD=new Promise((ok,ng)=>{
+    if(window.LibArchive)return ok();
+    const s=document.createElement('script'); s.src='./libarchive-web.js';
+    s.onload=()=>ok(); s.onerror=()=>ng(new Error('해제 도구(libarchive-web.js)를 불러오지 못했습니다'));
+    document.head.appendChild(s);
+  }).then(()=>window.LibArchive.libarchiveWasm({locateFile:p=>new URL(p,location.href).href}));
+  ARCMOD.catch(()=>{ ARCMOD=null; });
+  return ARCMOD;
+}
+/* 첫 바이트로 종류 가르기 */
+async function sniffArc(src){
+  const h=await src.read(0,Math.min(8,src.size));
+  if(h[0]===0x50&&h[1]===0x4b)return 'zip';
+  if(h[0]===0x52&&h[1]===0x61&&h[2]===0x72&&h[3]===0x21)return 'rar';
+  if(h[0]===0x37&&h[1]===0x7a&&h[2]===0xbc&&h[3]===0xaf)return '7z';
+  return '';
+}
+/* 통째로 — 8MB 씩 나눠 받으며 진행을 보여 드립니다 */
+async function readAll(src,label){
+  if(src.mem)return src.mem;
+  const out=new Uint8Array(src.size), CH=8*1048576;
+  abort=new AbortController();
+  for(let a=0;a<src.size;a+=CH){
+    if(abort.signal.aborted)throw new Error('그만두었습니다');
+    const z=Math.min(src.size,a+CH);
+    out.set(await src.read(a,z),a);
+    busy(true,label||'받는 중…',`${(z/1048576).toFixed(0)} / ${(src.size/1048576).toFixed(0)}MB`,z/src.size);
+  }
+  return out;
+}
+async function showArc(b,src,kind,parent){
+  if(src.size>ARC_MAX)throw new Error(`${kind==='7z'?'7z':'RAR'} 는 통째로 받아 풀어야 해서 ${Math.round(src.size/1048576)}MB 는 너무 큽니다 (300MB 까지)`);
+  busy(true,'해제 도구를 준비하는 중…','처음 한 번만 받습니다 (약 0.7MB)',0);
+  const mod=await loadArc();
+  const data=await readAll(src,(kind==='7z'?'7z':'RAR')+' 를 받는 중…');
+  busy(true,'푸는 중…','',0); await new Promise(r=>setTimeout(r,30));
+  const rd=new window.LibArchive.ArchiveReader(mod,new Int8Array(data.buffer,data.byteOffset,data.byteLength));
+  const pages=[], books=[]; let k=0, enc=false, all=0;
+  try{
+    for(const e of rd.entries()){
+      all++;
+      const nm=e.getPathname()||'';
+      if(e.getFiletype()!=='File')continue;
+      if(/(^|\/)(__MACOSX|\.)/.test(nm))continue;
+      if(e.isEncrypted()){ enc=true; continue; }
+      const ext=((nm.match(/\.(\w+)$/)||[])[1]||'').toLowerCase();
+      if(CIMG.test(nm)){ const d=e.readData(); if(d)pages.push({name:nm, blob:new Blob([d],{type:CMIME[ext]||'image/jpeg'})}); }
+      else if(/^(txt|md|epub|pdf|zip|cbz)$/.test(ext)&&e.getSize()<200*1048576){
+        const d=e.readData(); if(d)books.push({name:nm, us:e.getSize(), blob:new Blob([d])}); }
+      if(++k%15===0){ busy(true,'푸는 중…',k+'개',0); await new Promise(r=>setTimeout(r,0)); }
+    }
+  } finally { try{ rd.free(); }catch(e){} }
+  busy(false);
+  log((kind||'압축')+' 열기: '+(b._fn||b.t)+' — '+all+'개, 그림 '+pages.length+', 책 '+books.length);
+  if(!pages.length&&!books.length)throw new Error(enc?'암호가 걸린 압축은 아직 열 수 없습니다':'이 압축 안에는 열 수 있는 그림이나 책이 없습니다');
+  if(!pages.length)return arcInner(b,books);
+  pages.sort((x,y)=>EXCOLL.compare(x.name,y.name));
+  return startComic(b,{arc:true},pages,parent);
+}
+/* RAR·7z 안의 책 고르기 */
+function arcInner(b,books){
+  books.sort((x,y)=>EXCOLL.compare(x.name,y.name));
+  $('#zipT').textContent=b._fn||b.t||'압축 안의 책';
+  $('#zipN').textContent=`${books.length}개가 들어 있습니다.`;
+  const el=$('#zipList'); el.innerHTML='';
+  books.forEach(en=>{ const x=document.createElement('button');
+    x.innerHTML=`<span>${esc(en.name.split('/').pop())}</span><span>${(en.us/1048576).toFixed(1)}MB</span>`;
+    x.onclick=async()=>{ $('#zipSheet').classList.remove('on');
+      try{ busy(true,'꺼내는 중…',en.name.split('/').pop(),0);
+        const buf=await en.blob.arrayBuffer(), ext=((en.name.match(/\.(\w+)$/)||[])[1]||'txt').toLowerCase();
+        const nm=en.name.split('/').pop();
+        const b2={ i:b.i+'#'+en.name, t:nm.replace(/\.\w+$/,''), _fn:nm, x:ext, f:b.f, z:Math.round(en.us/104857.6)/10 };
+        if(ext==='zip'||ext==='cbz'){ busy(false); return showComic(b2,memSrc(buf)); }
+        busy(true,'화면을 구성하는 중…','',1);
+        if(ext==='epub')await showReader(b2,buf); else if(ext==='pdf')await showPdf(b2,buf); else await showTxt(b2,buf);
+        busy(false);
+      }catch(e){ busy(false); toast('열지 못했습니다\n'+(e.message||e),5000); } };
+    el.appendChild(x); });
+  $('#zipSheet').classList.add('on');
+}
+
+
+/* ══════════ v36 — 정보 틀림 · 진짜 표지 ══════════ */
+function setWrong(b,v){
+  WRONG[b.i]={v:v?1:0,t:Date.now()};
+  try{ localStorage.setItem('ebl_wrong',JSON.stringify(WRONG)); }catch(e){}
+  metaApply(); LASTEX=null; paintTabs(); render(true); syncSoon();
+  toast(v?'이 책은 파일 이름으로 보여 드립니다.\n다른 기기에도 맞춰집니다':'알라딘 정보로 되돌렸습니다');
+}
+/* 책 속 표지를 작게 줄여 기기에 담습니다 — 알라딘 표지가 엉뚱하거나 없을 때 진짜 얼굴이 보입니다 */
+let coverSaveT=null;
+function saveCover(id,url){
+  if(!id||COVERS[id])return;
+  const im=new Image();
+  im.onload=()=>{ try{
+      const w=240, h=Math.round(w*(im.naturalHeight||360)/(im.naturalWidth||240));
+      const c=document.createElement('canvas'); c.width=w; c.height=Math.min(h,480);
+      c.getContext('2d').drawImage(im,0,0,w,c.height);
+      COVERS[id]=c.toDataURL('image/jpeg',0.78);
+      clearTimeout(coverSaveT); coverSaveT=setTimeout(()=>{ DB.put('kv','covers',COVERS).catch(()=>{}); },1500);
+    }catch(e){} };
+  im.src=url;
+}
+DB.get('kv','covers').then(c=>{ if(c&&typeof c==='object'){ COVERS=Object.assign(c,COVERS);
+  if(BOOKS.length&&$('#reader').style.display!=='flex'){ try{ render(true); }catch(e){} } } }).catch(()=>{});
+
 /* ══════════ v35 — 만화 뷰어 (CBZ · ZIP) ══════════
    ★ ZIP 을 통째로 받지 않습니다.
      ZIP 은 맨 끝에 '목차'(중앙 디렉터리)가 있습니다. 그것만 먼저 받고,
@@ -4123,7 +4257,7 @@ async function innerSrc(z,en){
   const st=en.lh+30+hd.getUint16(26,true)+hd.getUint16(28,true);
   return { size:en.cs, read:(a,b)=>z.src.read(st+a,st+b) };
 }
-function memSrc(ab){ const u=new Uint8Array(ab); return { size:u.length, read:async(a,b)=>u.subarray(a,b) }; }
+function memSrc(ab){ const u=ab instanceof Uint8Array?ab:new Uint8Array(ab); return { size:u.length, mem:u, read:async(a,b)=>u.subarray(a,b) }; }
 async function driveSrc(b){
   let at=await needToken(false).catch(()=>needToken(true));
   const base=`https://www.googleapis.com/drive/v3/files/${b.i}`;
@@ -4151,12 +4285,19 @@ async function showComic(b,srcIn,parent){
   let src=srcIn||null;
   if(!src){ try{ const hit=await DB.get('books',b.i); if(hit)src=memSrc(hit); }catch(e){} }
   if(!src)src=await driveSrc(b);
+  const kind=await sniffArc(src);                       // 이름이 아니라 첫 바이트로
+  if(kind==='rar'||kind==='7z')return showArc(b,src,kind,parent);
   const z=await zipOpen(src);
   log('ZIP 열기: '+(b._fn||b.t)+' — '+z.ents.length+'개 ('+zipSummary(z)+')');
   const imgs=z.ents.filter(e=>!e.dir&&CIMG.test(e.name)&&!/(^|\/)(__MACOSX|\.)/.test(e.name))
     .sort((x,y)=>EXCOLL.compare(x.name,y.name));
   busy(false);
   if(!imgs.length)return zipInner(b,z);
+  return startComic(b,z,imgs,parent);
+}
+/* ZIP 이든 RAR·7z 든 장 목록이 나오면 여기서 엽니다 */
+function startComic(b,z,imgs,parent){
+  busy(false);
   curB=b; noMark=false; KIND='comic';
   openShell(b);
   Object.assign(CM,{z,b,pages:imgs,n:imgs.length,end:false,zoom:false,parent:parent||null});
@@ -4164,6 +4305,7 @@ async function showComic(b,srcIn,parent){
   if(isNaN(i)||i<0||i>=CM.n){ const p=pctOf(b); i=p>0&&p<0.99?Math.max(0,Math.round(p*CM.n)-1):0; }
   CM.i=i;
   markRead(b.i,null);
+  if(!COVERS[b.i])pageUrl(0).then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{});
   applyComicLook(); paintHlBadge();
   comicDraw();
 }
@@ -4177,7 +4319,7 @@ function comicFree(){
 async function pageUrl(k){
   if(CM.urls.has(k)){ const u=CM.urls.get(k); CM.urls.delete(k); CM.urls.set(k,u); return u; }
   const z=CM.z, en=CM.pages[k]; if(!z||!en)return '';
-  const data=await zipData(z,en);
+  const data=en.blob?en.blob:await zipData(z,en);     // RAR·7z 는 이미 풀어 둔 것
   if(z!==CM.z)return '';
   const ext=(en.name.match(/\.(\w+)$/)||[])[1]||'jpg';
   const u=URL.createObjectURL(new Blob([data],{type:CMIME[ext.toLowerCase()]||'image/jpeg'}));

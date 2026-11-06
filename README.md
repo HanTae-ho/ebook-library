@@ -23,6 +23,8 @@
 ebook-web/               ← 이 저장소. 앱 전부
   index.html             앱 하나. 전부 이 안에 있다 (약 4,000줄)
   sw.js                  서비스 워커. 고칠 때마다 V 를 올려야 한다
+  libarchive-web.js      RAR·7z 해제 도구 (v36). 손으로 고치지 않는다
+  libarchive.wasm        그 엔진. 처음 RAR·7z 를 열 때만 받아 온다
   manifest.json          홈 화면에 추가될 때 쓰는 정보
   icon-*.png             아이콘
 
@@ -149,8 +151,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v35.1';   // ← 이것
-const BUILD = 'v35.1';   // ← index.html 의 이것도 같이
+const V = 'ebl-v36';   // ← 이것
+const BUILD = 'v36';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
@@ -183,6 +185,27 @@ v30 부터 책갈피도 `HL[책ID]` 안에 들어 있다. `hlOf()` 는 둘 다 �
 `getBook()` 은 `SRC[b.s||'drive'].open()` 만 부른다. NAS(WebDAV) 를 붙일 때는
 `SRC.dav` 를 더하고 그 책들에 `s:'dav'` 와 `dav:/…` 이름표를 주면 된다.
 `s` 가 없는 책은 모두 드라이브다 — 지금까지의 기록이 그래서 이어진다.
+
+**★ RAR·7z 는 통째로 받아 푼다 (v36).**
+
+ZIP 과 달리 필요한 장만 받을 수 없다. 300MB 까지만 연다 (아이패드 메모리).
+종류는 이름이 아니라 첫 바이트로 가른다 (`sniffArc`) — CBR 인데 속이 ZIP 인 파일이 흔하다.
+해제 도구 두 파일(libarchive-web.js · libarchive.wasm)만은 앱 본체 밖에 있다. 필요할 때만 불러온다.
+다시 만들기:
+```
+npm i libarchive-wasm@1.2.0 esbuild
+echo "module.exports=require('libarchive-wasm')" > entry.js
+npx esbuild entry.js --bundle --format=iife --global-name=LibArchive --platform=browser \
+    --external:fs --external:path --external:crypto --minify --outfile=libarchive-web.js
+cp node_modules/libarchive-wasm/dist/libarchive.wasm .
+```
+7z 안의 한글 이름은 깨져 보인다 (wasm 쪽 로캘 문제). 숫자 순서는 지켜진다.
+
+**★ 형식 갈래에 '만화·ZIP' 이 있다 (v36).** zip·cbz·cbr·rar·7z·cb7. 처음부터 켜져 있다.
+Apps Script v16(`ZIP색인_v16_교체용.gs`)은 이 형식들을 색인에 넣되 알라딘에 묻지 않는다.
+
+**★ '책 정보가 틀림' 은 책마다 (`WRONG`, 기기끼리 맞춤).** 진짜 표지(`COVERS`)는 EPUB 속 표지·만화 첫 장을
+240px JPEG 로 줄여 IndexedDB kv 'covers' 에 둔다 — 이 기기에만. 카드는 진짜 표지를 알라딘 표지보다 먼저 쓴다.
 
 **★ 만화 ZIP 은 통째로 받지 않는다 (v35).**
 
