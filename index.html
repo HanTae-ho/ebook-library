@@ -450,6 +450,20 @@
   :is(#hlList,#hlAll) .more{display:block;width:100%;padding:10px;color:var(--acc);font-size:12.5px}
   #hlCol .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:0}
   #rbar #btnBm.good{background:var(--acc);border-color:var(--acc);color:#0b1220}
+  #ttsbar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + 30px);z-index:30;
+    display:none;align-items:center;gap:2px;padding:6px 8px;border-radius:14px;
+    background:var(--barbg);border:1px solid #00000022;box-shadow:0 4px 18px #0003;color:var(--barfg);white-space:nowrap}
+  #ttsbar.on{display:flex}
+  #ttsbar button{min-width:36px;height:36px;padding:0 6px;font-size:16px;color:var(--barfg);border-radius:9px}
+  #ttsbar button.big{font-size:20px;min-width:44px;color:var(--acc)}
+  #ttsbar #ttsRateV{font-size:12px;min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
+  #ttsbar #ttsTimer.on{color:var(--acc);font-size:12px}
+  #ttsbar .sep{width:1px;height:20px;background:currentColor;opacity:.2;margin:0 4px}
+  body.eink #ttsbar{box-shadow:none;border-color:#000;background:#fff;color:#000}
+  #ttsov{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+  #ttsov i{position:absolute;border-bottom:2px solid var(--acc);background:rgba(110,168,254,.16);border-radius:2px}
+  body.eink #ttsov i{background:none;border-bottom:2px solid #000}
+  #rbar #btnTts.good{background:var(--acc);border-color:var(--acc);color:#0b1220}
   #tocList{max-height:62vh;overflow-y:auto;margin-top:4px}
   #tocList button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;
     padding:10px 4px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--tx)}
@@ -567,12 +581,25 @@
     <div id="rtitle"></div>
     <button class="ib" id="btnPen" title="펜슬 필기">펜</button>
     <button class="ib" id="btnDraw" title="긋기 모드">긋기</button>
+    <button class="ib" id="btnTts" title="읽어주기">🔊</button>
     <button class="ib" id="btnToc" title="목차">목차</button>
     <button class="ib" id="btnBm" title="책갈피 꽂기·빼기">🔖</button>
     <button class="ib" id="btnHl" title="형광펜·메모·책갈피 목록">메모</button>
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
+  <div id="ttsov"></div>
+  <div id="ttsbar">
+    <button id="ttsPrev" title="앞 문장">⏮</button>
+    <button id="ttsPlay" class="big" title="읽기 / 멈춤">▶</button>
+    <button id="ttsNext" title="다음 문장">⏭</button>
+    <span class="sep"></span>
+    <button id="ttsSlow" title="느리게">−</button><span id="ttsRateV">1.0×</span><button id="ttsFast" title="빠르게">＋</button>
+    <span class="sep"></span>
+    <button id="ttsTimer" title="취침 타이머">⏱</button>
+    <button id="ttsSet" title="목소리">⚙</button>
+    <button id="ttsOff" title="읽어주기 끄기">✕</button>
+  </div>
 </div>
 
 <div id="penbar">
@@ -675,6 +702,21 @@
     </div></div>
 </div>
 
+<!-- 읽어주기 설정 -->
+<div class="pan" id="panTts">
+  <h4>읽어주기 <button id="ttsClose">닫기</button></h4>
+  <div class="grp"><div class="lb">목소리</div>
+    <select id="ttsVoice" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--tx)"></select></div>
+  <div class="grp"><div class="lb"><span>빠르기</span><span id="vTtsRate"></span></div>
+    <input type="range" id="rgTtsRate" min="50" max="250" step="10"></div>
+  <div class="grp"><div class="lb">취침 타이머</div>
+    <div class="seg" id="segTimer">
+      <button data-v="0">끄기</button><button data-v="15">15분</button><button data-v="30">30분</button>
+      <button data-v="45">45분</button><button data-v="60">60분</button>
+    </div></div>
+  <div class="note" id="ttsNote" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:10px"></div>
+</div>
+
 <!-- 목차 — EPUB 은 책에 든 것, PDF 는 책갈피(개요), TXT 는 제목 줄을 찾아 만듭니다 -->
 <div class="pan" id="panToc">
   <h4><span id="tocTitle">목차</span> <button id="tocClose">닫기</button></h4>
@@ -742,6 +784,11 @@
       <button data-v="0">기본 방향</button><button data-v="1">거꾸로</button>
     </div>
     <div class="seg" style="margin-top:6px"><button id="smartSave">⚡ 지금 목록을 서가로 저장</button></div></div>
+  <div class="grp"><div class="lb">책 정보 <span style="opacity:.7">· 제목 · 표지 · 저자 · 분류</span></div>
+    <div class="seg" id="segMeta">
+      <button data-v="sure">확실한 것만</button><button data-v="aladin">알라딘 그대로</button><button data-v="file">파일 이름</button>
+    </div>
+    <div id="metaNote" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:6px"></div></div>
   <div class="grp"><div class="lb">분류 기준</div>
     <div class="seg" id="segCat">
       <button data-v="tree">계층</button><button data-v="b">대분류</button>
@@ -1023,7 +1070,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v33';
+const BUILD='v34.2';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1381,7 +1428,57 @@ function apply(d){
       옛 순서표가 새 목록에 덮여 엉뚱한 순서로 보이고 새 책이 빠지기도 했습니다) */
   Object.keys(ORD).forEach(k=>delete ORD[k]);
   BOOKS.forEach(b=>{ if(b.a)b.a=b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
-  HAY=BOOKS.map(b=>norm([b.t,b.o,b.a,b.p,b.c].filter(Boolean).join('|')));
+  metaApply();
+}
+
+/* ══════════ 책 정보 — 믿을 만한 것만 보여주기 (v34.2) ══════════
+   색인의 제목·표지·저자·분류는 Apps Script 가 알라딘(·국중도)에서 찾아 붙입니다.
+   짝을 얼마나 믿을 수 있는지가 n(신뢰도) 칸에 있습니다: 높음 · 중간 · 낮음 · 의심 · 실패.
+   '낮음·의심' 은 엉뚱한 책이 붙은 경우가 많아, 폴더에 없는 책처럼 보였습니다.
+
+     P.meta = 'sure'   (처음 값) 높음·중간만 알라딘 값. 나머지는 원제(파일명 제목), 표지·저자·출판사·출간일·분류 비움
+              'aladin' 색인 그대로
+              'file'   늘 원제(파일명 제목), 표지 없음
+
+   ★ 찾는 데는 그대로 씁니다. 화면에서 내린 알라딘 제목도 검색어(HAY)에는 남습니다.
+   ★ Apps Script v15 색인(BUILD_INDEX 교체본)은 이미 이 기준으로 정리돼 옵니다.
+     그 경우 r='1' 이 '알라딘 결과를 안 쓴 책' 이고, h 가 검색용 알라딘 제목입니다.
+   원래 값은 b._0 에 한 번만 담아 두고, 고를 때마다 거기서 다시 만듭니다. */
+const META_KEYS=['t','a','v','p','d','c','b','m','s'];
+function metaTrust(b){
+  if(b.r)return false;                         // v15 색인: 이미 정리된 책
+  const n=String(b.n||'');
+  // 신뢰도가 없거나 '실패' 면 알라딘 값이 아예 없는 책 — EPUB·파일명 정보라 그대로 둡니다
+  return !n||n==='실패'||n==='높음'||n==='중간';
+}
+function metaApply(){
+  if(!P.meta)P.meta='sure';
+  let hid=0;
+  BOOKS.forEach(b=>{
+    if(!b._0){ const o={}; META_KEYS.forEach(k=>{ if(b[k]!=null)o[k]=b[k]; }); b._0=o; }
+    const o=b._0;
+    META_KEYS.forEach(k=>{ if(k in o)b[k]=o[k]; else delete b[k]; });   // 원래대로 되돌린 뒤
+    const ok=metaTrust(b);
+    if(P.meta==='file'){
+      if(b.o)b.t=b.o; delete b.v;
+      if(!ok&&!b.r){ ['a','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; }
+    } else if(P.meta==='sure'&&!ok&&!b.r){
+      if(b.o)b.t=b.o;
+      ['a','v','p','d','c','b','m','s'].forEach(k=>delete b[k]);
+      hid++;
+    }
+  });
+  metaApply.hid=hid;
+  // 찾기는 보이는 것 + 원래 것 + 원제 + 검색용(h) 모두로
+  HAY=BOOKS.map(b=>norm([b.t,b.o,b._0&&b._0.t,b.h,b.a,b._0&&b._0.a,b.p,b.c].filter(Boolean).join('|')));
+  Object.keys(ORD).forEach(k=>delete ORD[k]);
+  try{ IXT=null; }catch(e){}
+}
+function metaCount(){
+  let ok=0,low=0,none=0,cleaned=0;
+  BOOKS.forEach(b=>{ const n=String(b.n||'');
+    if(b.r)cleaned++; else if(!n||n==='실패')none++; else if(n==='높음'||n==='중간')ok++; else low++; });
+  return {ok,low,none,cleaned};
 }
 
 /* ── 읽은 기록 ──
@@ -1743,6 +1840,7 @@ async function showReader(b,buf){
   markRead(b.i,null);            // 연 것만으로 '읽는 중'에 들어갑니다
   rend.on('relocated',loc=>{
     EPLOC=loc; paintBmBtn();
+    if(TTS.on&&!TTS.turning&&TTS.playing&&KIND==='epub')ttsManualTurn();
     const p=loc?.start?.percentage;
     if(!noMark){
       if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
@@ -3232,6 +3330,7 @@ function openShell(b){
   $('#drawPager').classList.toggle('on',drawMode);
   $('#btnPen').style.display = KIND==='pdf' ? '' : 'none';
   HLTAB='hl'; $('#btnBm').classList.remove('good');
+  if(typeof ttsStop==='function')ttsStop();
   if(KIND!=='pdf')setPen(false);
   $('#page').innerHTML=''; if(KIND!=='pdf')$('#pdf').innerHTML='';
   if(KIND!=='txt')$('#txt').innerHTML='';
@@ -3287,7 +3386,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
+function closeReader(){ ttsStop(); saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
@@ -3852,6 +3951,322 @@ $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
+/* ── v34.2 책 정보 단추 ── */
+function paintMetaNote(){
+  const el=$('#metaNote'); if(!el)return;
+  const c=metaCount();
+  const doubt=c.low+c.cleaned;
+  el.innerHTML = BOOKS.length
+    ? `알라딘·국중도 짝이 믿을 만한 책 ${c.ok.toLocaleString()}권 · <b>믿기 어려운 책 ${doubt.toLocaleString()}권</b>`
+      +` · 짝이 없는 책 ${c.none.toLocaleString()}권<br>`
+      +(P.meta==='sure'?'믿기 어려운 책은 파일 이름에서 뽑은 제목으로 보이고, 표지·저자·분류를 비웠습니다. 검색은 그대로 됩니다.'
+       :P.meta==='file'?'모든 책을 파일 이름에서 뽑은 제목으로 보입니다. 표지는 끕니다.'
+       :'색인에 적힌 그대로 보입니다. 엉뚱한 책이 섞여 보일 수 있습니다.')
+      +(c.cleaned?'<br>(새 색인 v15 — Apps Script 에서 이미 정리돼 왔습니다)':'')
+    : '';
+}
+seg('#segMeta','meta',()=>{ metaApply(); paintTabs(); buildChips(); LASTEX=null; render(true); paintMetaNote();
+  toast(P.meta==='sure'?'믿을 만한 책 정보만 보여 드립니다':P.meta==='file'?'파일 이름으로 보여 드립니다':'색인 그대로 보여 드립니다'); });
+{ const ov=$('#btnView').onclick; $('#btnView').onclick=()=>{ ov(); segSet('#segMeta',P.meta||'sure'); paintMetaNote(); }; }
+
+/* ══════════ v34 — 읽어주기 (TTS) ══════════
+   기기에 들어 있는 목소리(speechSynthesis)로 읽습니다. 돈이 들지 않고 인터넷도 필요 없습니다.
+
+   ★ 한 문장씩 넘겨줍니다. 길게 한 번에 주면 크롬은 15초쯤에서 끊고,
+     사파리는 멈췄다 이어 읽기를 잘 못 합니다. 멈춤도 pause() 대신 cancel() 후
+     그 문장부터 다시 읽는 식으로 합니다.
+   ★ 아이패드는 화면이 꺼지면 읽기를 멈춥니다. 읽는 동안 화면이 꺼지지 않게 잡아 둡니다(Wake Lock).
+
+   읽을 글은 지금 보이는 자리부터 끝까지를 '글자 지도'로 만들어 둡니다.
+     TTS.map = [{n:글자노드(없으면 줄바꿈), s:이 노드가 지도에서 시작하는 위치}]
+     TTS.chunks = [{s,e,t}]  — 문장(또는 200자 안쪽 토막)
+   지도 덕분에 읽는 문장을 화면에 표시하고, 쪽을 넘기고, 멈춘 자리를 압니다.  */
+const TTS={ on:false, playing:false, turning:false, dirty:false, gen:0,
+  text:'', map:[], chunks:[], k:0, doc:null, until:0, lock:null, pdfPg:0 };
+if(!P.ttsRate)P.ttsRate=1;
+const synth=window.speechSynthesis||null;
+let VOICES=[];
+function loadVoices(){
+  if(!synth)return;
+  const all=synth.getVoices()||[];
+  VOICES=all.filter(v=>/^ko/i.test(v.lang||''));
+  if(!VOICES.length)VOICES=all.slice();
+}
+if(synth){ loadVoices(); try{ synth.addEventListener('voiceschanged',loadVoices); }catch(e){ synth.onvoiceschanged=loadVoices; } }
+const pickVoice=()=>VOICES.find(v=>v.voiceURI===P.ttsVoice)||VOICES.find(v=>/^ko/i.test(v.lang))||null;
+
+/* ── 글자 지도 ── */
+const TTS_BLOCK='p,div,li,h1,h2,h3,h4,h5,h6,blockquote,td,th,dd,dt,section,article,pre,figcaption,tr';
+function textMap(root,startNode,startOff){
+  const doc=root.ownerDocument;
+  const w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
+    const p=n.parentElement; if(!p)return NodeFilter.FILTER_REJECT;
+    if(p.closest('script,style,rt,rp,noscript'))return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT; }});
+  let text='', map=[], lastBlk=null, started=!startNode, n;
+  while(n=w.nextNode()){
+    let v=n.nodeValue, base=0;
+    if(!started){
+      if(n===startNode){ started=true; base=startOff||0; v=v.slice(base); }
+      else if(startNode.nodeType===1&&startNode.contains(n)){ started=true; }
+      else if(startNode.compareDocumentPosition&&(startNode.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)
+              &&!(startNode.nodeType===3)){ started=true; }
+      else continue;
+    }
+    const blk=n.parentElement&&n.parentElement.closest(TTS_BLOCK);
+    if(lastBlk&&blk!==lastBlk&&text&&!/\n$/.test(text)){ map.push({n:null,s:text.length,b:0}); text+='\n'; }
+    lastBlk=blk;
+    map.push({n,s:text.length,b:base}); text+=v;
+  }
+  return {text,map};
+}
+/* 지도 위치 → (노드, 글자) */
+function mapPoint(pos){
+  const m=TTS.map; let lo=0, hi=m.length-1;
+  while(lo<hi){ const mid=(lo+hi+1)>>1; if(m[mid].s<=pos)lo=mid; else hi=mid-1; }
+  let e=m[lo]; let k=lo;
+  while(e&&!e.n&&k<m.length-1){ e=m[++k]; pos=e.s; }
+  if(!e||!e.n)return null;
+  return {node:e.n, off:Math.min(e.n.nodeValue.length, e.b+(pos-e.s))};
+}
+function chunkRange(c){
+  const a=mapPoint(c.s), b=mapPoint(Math.max(c.s,c.e-1));
+  if(!a||!b)return null;
+  try{ const r=a.node.ownerDocument.createRange(); r.setStart(a.node,a.off); r.setEnd(b.node,Math.min(b.node.nodeValue.length,b.off+1)); return r; }
+  catch(e){ return null; }
+}
+/* 문장 나누기 — 마침표·물음표·느낌표·말줄임 뒤, 줄바꿈에서. 200자를 넘으면 쉼표·빈칸에서 한 번 더. */
+function splitChunks(text){
+  const out=[]; const re=/[^\n.?!。！？…]*(?:[.?!。！？…]+["'”’」』)\]]*|\n|$)/g; let m;
+  while((m=re.exec(text))){
+    if(m[0]===''){ if(re.lastIndex>=text.length)break; re.lastIndex++; continue; }
+    let s=m.index, e=s+m[0].length;
+    while(e-s>200){ const seg=text.slice(s,s+200); let cut=Math.max(seg.lastIndexOf(', '),seg.lastIndexOf(' '));
+      if(cut<60)cut=200; out.push({s,e:s+cut}); s+=cut; }
+    out.push({s,e});
+  }
+  return out.map(c=>Object.assign(c,{t:text.slice(c.s,c.e).replace(/[​\s]+/g,' ').trim()}))
+            .filter(c=>/[0-9A-Za-z가-힣ㄱ-ㅎ一-龥ぁ-んァ-ン]/.test(c.t));
+}
+
+/* ── 지금 자리부터 읽을 거리 만들기 ── */
+async function ttsBuild(){
+  TTS.map=[]; TTS.text=''; TTS.chunks=[]; TTS.k=0; TTS.doc=null; TTS.dirty=false;
+  if(KIND==='txt'){
+    const host=$('#txt'), body=$('#txt .body'); if(!body)return false;
+    const hb=host.getBoundingClientRect();
+    let r=null; try{ r=caretAt(hb.left+Math.max(20,hb.width*0.15),hb.top+18,document); }catch(e){}
+    const st=r&&body.contains(r.startContainer)?r:null;
+    const tm=textMap(body, st?st.startContainer:null, st?st.startOffset:0);
+    Object.assign(TTS,{text:tm.text,map:tm.map,doc:document});
+  } else if(KIND==='epub'){
+    const cs=rend&&rend.getContents?rend.getContents():[];
+    const c=(cs&&cs[0])||null; if(!c||!c.document)return false;
+    let r=null;
+    try{ if(EPLOC&&EPLOC.start&&EPLOC.start.cfi)r=c.range(EPLOC.start.cfi); }catch(e){}
+    const tm=textMap(c.document.body, r?r.startContainer:null, r?r.startOffset:0);
+    Object.assign(TTS,{text:tm.text,map:tm.map,doc:c.document,sec:(EPLOC&&EPLOC.start&&EPLOC.start.index)});
+  } else if(KIND==='pdf'){
+    if(!pdfDoc)return false;
+    TTS.pdfPg=pdfPg;
+    const pg=await pdfDoc.getPage(pdfPg); const tc=await pg.getTextContent();
+    TTS.text=tc.items.map(it=>(it.str||'')+(it.hasEOL?'\n':'')).join('');
+  } else return false;
+  TTS.chunks=splitChunks(TTS.text);
+  return true;
+}
+/* 이 장(쪽)을 다 읽으면 다음으로 */
+async function ttsNextPart(){
+  if(KIND==='epub'){
+    const idx=(EPLOC&&EPLOC.start&&EPLOC.start.index!=null)?EPLOC.start.index:TTS.sec;
+    const nx=book&&book.spine&&book.spine.get(idx+1);
+    if(!nx)return false;
+    TTS.turning=true;
+    try{ await rend.display(nx.href); }catch(e){ TTS.turning=false; return false; }
+    await new Promise(r=>setTimeout(r,250)); TTS.turning=false;
+    const cs=rend.getContents(); const c=cs.find(x=>x.sectionIndex===idx+1)||cs[0];
+    if(!c||!c.document)return false;
+    const tm=textMap(c.document.body,null,0);
+    Object.assign(TTS,{text:tm.text,map:tm.map,doc:c.document,sec:idx+1,k:0});
+    TTS.chunks=splitChunks(TTS.text);
+    return true;
+  }
+  if(KIND==='pdf'){
+    if(!pdfDoc||TTS.pdfPg>=pdfDoc.numPages)return false;
+    TTS.turning=true; goPdfPage(TTS.pdfPg+1); setTimeout(()=>TTS.turning=false,400);
+    TTS.pdfPg++;
+    const pg=await pdfDoc.getPage(TTS.pdfPg); const tc=await pg.getTextContent();
+    TTS.text=tc.items.map(it=>(it.str||'')+(it.hasEOL?'\n':'')).join('');
+    TTS.chunks=splitChunks(TTS.text); TTS.k=0;
+    return true;
+  }
+  return false;   // TXT 는 한 번에 끝까지 담았습니다
+}
+
+/* ── 읽는 문장 보이기 · 쪽 따라가기 ── */
+/* 문장 표시가 실패해도 읽기는 이어갑니다 */
+function ttsShow(c){ try{ ttsShow0(c); }catch(e){ log('읽는 문장 표시 실패: '+(e.message||e)); } }
+function ttsShow0(c){
+  const ov=$('#ttsov'); ov.innerHTML='';
+  if(KIND==='pdf'||!c)return;
+  const r=chunkRange(c); if(!r)return;
+  const vb=$('#view').getBoundingClientRect();
+  let ox=0, oy=0;
+  if(KIND==='epub'){ const f=$('#page iframe'); if(!f)return; const fb=f.getBoundingClientRect(); ox=fb.left-vb.left; oy=fb.top-vb.top; }
+  else { ox=-vb.left; oy=-vb.top; }
+  let rects=[...r.getClientRects()].filter(x=>x.width>0.5&&x.height>0.5);
+  if(!rects.length)return;
+  // 쪽 따라가기
+  if(KIND==='epub'){
+    const x0=ox+rects[0].left;
+    if(x0>vb.width-4||x0<-4){
+      TTS.turning=true;
+      try{ const cfi=TTS.doc&&rend.getContents()[0].cfiFromRange(r); rend.display(cfi); }
+      catch(e){ x0>0?rend.next():rend.prev(); }
+      setTimeout(()=>{ TTS.turning=false; ttsShow(c); },420);
+      return;
+    }
+  } else if(KIND==='txt'){
+    const host=$('#txt'), hb=host.getBoundingClientRect(), t=rects[0].top, b=rects[rects.length-1].bottom;
+    if(t<hb.top+30||b>hb.bottom-90){
+      TTS.turning=true; host.scrollTop+=t-hb.top-hb.height*0.3;
+      setTimeout(()=>{ TTS.turning=false; },200);
+      rects=[...r.getClientRects()].filter(x=>x.width>0.5&&x.height>0.5);
+    }
+  }
+  const f=document.createDocumentFragment();
+  rects.forEach(x=>{ const L=ox+x.left, T=oy+x.top; if(L>vb.width||L+x.width<0)return;
+    const i=document.createElement('i');
+    i.style.left=L+'px'; i.style.top=T+'px'; i.style.width=x.width+'px'; i.style.height=x.height+'px';
+    f.appendChild(i); });
+  ov.appendChild(f);
+}
+
+/* ── 말하기 ── */
+function ttsSpeak(){
+  if(!TTS.playing)return;
+  if(TTS.until&&Date.now()>=TTS.until){ ttsPause(); TTS.until=0; paintTts();
+    toast('취침 타이머로 읽기를 멈췄습니다'); return; }
+  const c=TTS.chunks[TTS.k];
+  if(!c){
+    ttsNextPart().then(ok=>{ if(!TTS.playing)return;
+      if(ok&&TTS.chunks.length){ ttsSpeak(); }
+      else { ttsPause(); $('#ttsov').innerHTML=''; toast('끝까지 읽었습니다'); } });
+    return;
+  }
+  ttsShow(c);
+  try{ ACT=Date.now(); }catch(e){}
+  const my=++TTS.gen;
+  const u=new SpeechSynthesisUtterance(c.t);
+  u.lang='ko-KR'; u.rate=P.ttsRate||1;
+  const v=pickVoice(); if(v){ u.voice=v; u.lang=v.lang; }
+  u.onend=()=>{ if(my!==TTS.gen||!TTS.playing)return; TTS.k++; ttsSpeak(); };
+  u.onerror=e=>{ if(my!==TTS.gen||!TTS.playing)return;
+    if(e&&(e.error==='interrupted'||e.error==='canceled'))return;
+    log('읽어주기 오류: '+(e&&e.error)); TTS.k++; setTimeout(ttsSpeak,200); };
+  try{ synth.speak(u); }catch(e){ log('읽어주기 실패: '+(e.message||e)); ttsPause(); }
+}
+async function ttsPlay(){
+  if(!synth){ toast('이 브라우저는 읽어주기를 지원하지 않습니다',4000); return; }
+  if(!TTS.chunks.length||TTS.dirty||TTS.k>=TTS.chunks.length){
+    const ok=await ttsBuild();
+    if(!ok||!TTS.chunks.length){
+      toast(KIND==='pdf'?'이 쪽에서 읽을 글자를 찾지 못했습니다.\n스캔한 PDF 는 그림이라 읽을 수 없습니다'
+                        :'읽을 글을 찾지 못했습니다',4500); return; }
+  }
+  TTS.playing=true; try{ synth.cancel(); }catch(e){}
+  wakeOn(); paintTts(); mediaOn(); ttsSpeak();
+}
+function ttsPause(){
+  TTS.playing=false; TTS.gen++; try{ synth&&synth.cancel(); }catch(e){}
+  wakeOff(); paintTts();
+}
+function ttsStop(){
+  if(!TTS.on&&!TTS.playing)return;
+  ttsPause(); TTS.on=false; TTS.chunks=[]; TTS.k=0; TTS.until=0;
+  const ov=$('#ttsov'); if(ov)ov.innerHTML='';
+  $('#ttsbar').classList.remove('on'); $('#btnTts').classList.remove('good');
+}
+function ttsJump(d){
+  if(!TTS.chunks.length)return;
+  TTS.k=Math.max(0,Math.min(TTS.chunks.length-1,TTS.k+d));
+  if(TTS.playing){ TTS.gen++; try{ synth.cancel(); }catch(e){} setTimeout(ttsSpeak,60); }
+  else ttsShow(TTS.chunks[TTS.k]);
+}
+function ttsManualTurn(){
+  // 읽는 중에 손으로 쪽을 넘기셨으면, 거기서부터 다시 읽을 수 있게 멈춥니다
+  ttsPause(); TTS.dirty=true; $('#ttsov').innerHTML='';
+  toast('쪽을 넘기셔서 읽기를 멈췄습니다.\n▶ 를 누르면 이 쪽부터 읽습니다',3500);
+}
+function paintTts(){
+  $('#ttsPlay').textContent=TTS.playing?'⏸':'▶';
+  $('#ttsRateV').textContent=(P.ttsRate||1).toFixed(1)+'×';
+  const left=TTS.until?Math.max(0,Math.ceil((TTS.until-Date.now())/60000)):0;
+  $('#ttsTimer').textContent=left?left+'분':'⏱'; $('#ttsTimer').classList.toggle('on',!!left);
+  if('mediaSession' in navigator){ try{ navigator.mediaSession.playbackState=TTS.playing?'playing':'paused'; }catch(e){} }
+}
+setInterval(()=>{ if(TTS.on&&TTS.until)paintTts(); },30000);
+function setRate(r){ P.ttsRate=Math.round(Math.max(0.5,Math.min(2.5,r))*10)/10; savePref(); paintTts();
+  $('#vTtsRate')&&($('#vTtsRate').textContent=P.ttsRate.toFixed(1)+'×');
+  if(TTS.playing){ TTS.gen++; try{ synth.cancel(); }catch(e){} setTimeout(ttsSpeak,60); } }
+
+/* 화면 꺼짐 막기 — 아이패드는 화면이 꺼지면 읽기가 멈춥니다 */
+async function wakeOn(){ try{ if(navigator.wakeLock&&!TTS.lock){ TTS.lock=await navigator.wakeLock.request('screen');
+  TTS.lock.addEventListener('release',()=>{ TTS.lock=null; }); } }catch(e){} }
+function wakeOff(){ try{ TTS.lock&&TTS.lock.release(); }catch(e){} TTS.lock=null; }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&TTS.playing)wakeOn(); });
+/* 잠금 화면·이어폰 단추 (되는 기기에서만) */
+function mediaOn(){
+  if(!('mediaSession' in navigator))return;
+  try{ navigator.mediaSession.metadata=new MediaMetadata({title:(curB&&curB.t)||'읽어주기',artist:(curB&&curB.a)||'우리 도서관'});
+    navigator.mediaSession.setActionHandler('play',()=>ttsPlay());
+    navigator.mediaSession.setActionHandler('pause',()=>ttsPause());
+    navigator.mediaSession.setActionHandler('nexttrack',()=>ttsJump(1));
+    navigator.mediaSession.setActionHandler('previoustrack',()=>ttsJump(-1)); }catch(e){}
+}
+
+/* ── 단추 ── */
+$('#btnTts').onclick=()=>{
+  if(!readerOn())return;
+  if(TTS.on){ ttsStop(); return; }
+  TTS.on=true; $('#ttsbar').classList.add('on'); $('#btnTts').classList.add('good');
+  ttsPlay();
+};
+$('#ttsPlay').onclick=()=>TTS.playing?ttsPause():ttsPlay();
+$('#ttsPrev').onclick=()=>ttsJump(-1);
+$('#ttsNext').onclick=()=>ttsJump(1);
+$('#ttsSlow').onclick=()=>setRate((P.ttsRate||1)-0.1);
+$('#ttsFast').onclick=()=>setRate((P.ttsRate||1)+0.1);
+$('#ttsOff').onclick=()=>ttsStop();
+$('#ttsTimer').onclick=()=>{
+  const steps=[0,15,30,45,60], left=TTS.until?Math.ceil((TTS.until-Date.now())/60000):0;
+  const nx=steps.find(x=>x>left)||0;
+  TTS.until=nx?Date.now()+nx*60000:0; paintTts(); segSet('#segTimer',nx);
+  toast(nx?`${nx}분 뒤에 멈춥니다`:'취침 타이머를 껐습니다');
+};
+function paintTtsPan(){
+  const sel=$('#ttsVoice'); sel.innerHTML='';
+  loadVoices();
+  if(!VOICES.length) sel.innerHTML='<option value="">기기 기본 목소리</option>';
+  VOICES.forEach(v=>{ const o=document.createElement('option'); o.value=v.voiceURI;
+    o.textContent=v.name+(v.localService===false?' (온라인)':''); if(v.voiceURI===P.ttsVoice)o.selected=true; sel.appendChild(o); });
+  $('#rgTtsRate').value=Math.round((P.ttsRate||1)*100); $('#vTtsRate').textContent=(P.ttsRate||1).toFixed(1)+'×';
+  const left=TTS.until?Math.ceil((TTS.until-Date.now())/60000):0;
+  segSet('#segTimer',[15,30,45,60].includes(left)?left:(left?'':0));
+  const ko=VOICES.some(v=>/^ko/i.test(v.lang));
+  $('#ttsNote').innerHTML=(ko?'':'<b>이 기기에서 한국어 목소리를 찾지 못했습니다.</b><br>')
+    +'아이패드: 설정 → 손쉬운 사용 → 읽기 및 말하기 → 음성 → 한국어 에서 더 좋은 목소리(예: 유나 고품질)를 내려받으면 여기 목록에 나타납니다.'
+    +'<br>읽는 동안에는 화면이 꺼지지 않게 잡아 둡니다. 화면을 직접 끄거나 다른 앱으로 가면 멈출 수 있습니다.';
+}
+$('#ttsSet').onclick=()=>{ paintTtsPan(); pan('#panTts',true); };
+$('#ttsClose').onclick=panOff;
+PANS.push('#panTts');
+$('#ttsVoice').onchange=()=>{ P.ttsVoice=$('#ttsVoice').value; savePref();
+  if(TTS.playing){ TTS.gen++; try{ synth.cancel(); }catch(e){} setTimeout(ttsSpeak,60); } };
+$('#rgTtsRate').oninput=()=>setRate(Number($('#rgTtsRate').value)/100);
+$$('#segTimer button').forEach(b=>b.onclick=()=>{ const m=Number(b.dataset.v);
+  TTS.until=m?Date.now()+m*60000:0; segSet('#segTimer',m); paintTts(); });
+
 /* ══════════ v33 — 읽은 시간 · 독서 달력 ══════════
    DAYS['2026-11-06'] = { '책ID|기기': 초 }
    기기마다 따로 세어 두고, 볼 때 더합니다. 그래야 기기끼리 맞출 때 겹쳐 세지 않습니다.
@@ -4341,6 +4756,27 @@ function exSort(a){
   a.sort(f); if(P.rev)a.reverse(); return a;
 }
 const exSortName=()=>(P.sort==='t'?'이름순':((SORTN||{})[P.sort]||'')+'순')+(P.rev?' 거꾸로':'');
+/* ★ 폴더 탭에서는 '폴더에 실제로 있는 그대로' 보여 드립니다 (v34.1)
+   색인의 제목·표지는 Apps Script 가 알라딘에서 찾아 붙인 것이라,
+   웹소설처럼 짝을 잘못 지은 책은 폴더에 없는 다른 책처럼 보였습니다.
+     실시간  제목 = 실제 파일 이름, 표지 없음, 저자 없음
+     색인    제목 = 색인 제목 (경로 끝에 파일 이름이 있으면 그것), 표지 없음, '색인 정보' 표시
+   책을 열면 이 이름이 읽기 화면 제목이 됩니다. 읽은 기록·형광펜은 파일 ID 로 붙으므로 그대로입니다. */
+function exShow(b,mode){
+  let t=b.t||'';
+  if(mode==='live'&&b._fn) t=b._fn;
+  else if(mode==='index'){
+    const last=String(b.f||'').split('/').pop()||'';
+    if(b.x&&last.toLowerCase().endsWith('.'+String(b.x).toLowerCase()))t=last;
+    else if(b.o)t=b.o;                       // 원제 = 파일명에서 뽑은 제목
+  }
+  return Object.assign({},b,{t, a:mode==='index'?'색인 정보':'', v:''});
+}
+function exIndexTime(){
+  const u=String(UPDATED||'').trim(); if(!u)return 0;
+  const t=Date.parse(u.replace(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/,'$1-$2-$3').replace(' ','T'));
+  return isNaN(t)?0:t;
+}
 function folderCard(f){
   const d=document.createElement('div'); d.className='card fold';
   const w=document.createElement('div'); w.className='cvw'; w.innerHTML='<div class="fd">📁</div>';
@@ -4361,9 +4797,11 @@ function drawExp(data){
   const g=$('#grid'); g.className=P.mode; g.innerHTML='';
   const f=document.createDocumentFragment();
   fs.forEach(x=>f.appendChild(folderCard(x)));
-  bs.forEach(b=>{ const c=card(b);
-    if(b._new){ const w=c.querySelector('.cvw'); if(w&&!saved.has(b.i))w.insertAdjacentHTML('beforeend','<div class="tag nw">새로</div>');
-      const a=c.querySelector('.au'); if(a&&!b.a){ a.textContent='색인에 아직 없음'; } }
+  const upd=exIndexTime();
+  bs.forEach(b=>{ const c=card(exShow(b,data.mode));
+    // '새로' 는 색인을 만든 뒤에 드라이브에 들어온 파일에만 붙입니다
+    if(b._new&&b._ct&&upd&&Date.parse(b._ct)>upd){ const w=c.querySelector('.cvw');
+      if(w&&!saved.has(b.i))w.insertAdjacentHTML('beforeend','<div class="tag nw">새로</div>'); }
     f.appendChild(c); });
   if(!fs.length&&!bs.length){ const e=document.createElement('div'); e.id='more';
     e.textContent=k?'이 폴더에 맞는 것이 없습니다':'빈 폴더입니다'; f.appendChild(e); }
@@ -4374,7 +4812,8 @@ function drawExp(data){
   $('#exGet').disabled=!can; $('#exGet').style.opacity=can?'':'0.45';
   stat(`폴더 ${fs.length}  ·  책 ${bs.length}`
     +`  ·  ${data.mode==='live'?'실시간':'색인'}${when}  ·  ${exSortName()}  ·  ${BUILD}`
-    +(data.note?'\n'+data.note:''), false);
+    +(data.note?'\n'+data.note:'')
+    +(data.mode==='index'?'\n색인 방식은 색인에 적힌 제목입니다 · 실제 파일 이름은 [실시간] 에서 보입니다':''), false);
 }
 $$('#exMode button').forEach(x=>x.onclick=()=>{
   if(P.exp===x.dataset.v)return;
