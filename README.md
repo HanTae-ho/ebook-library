@@ -149,8 +149,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v35';   // ← 이것
-const BUILD = 'v35';   // ← index.html 의 이것도 같이
+const V = 'ebl-v35.1';   // ← 이것
+const BUILD = 'v35.1';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
@@ -191,6 +191,9 @@ ZIP 끝의 목차(중앙 디렉터리)만 Range 로 받고, 장마다 그 그림
 deflate 는 DecompressionStream('deflate-raw'), 없으면 한 조각짜리 ZIP 을 지어 JSZip 으로.
 UTF-8 표시 없는 이름은 CP949 로 읽는다. 그림 주소(blob)는 24장만 들고 나머지는 놓는다.
 150MB 넘는 만화는 폴더 '받아두기' 에서 뺀다. CBR(RAR)·7z 는 아직 못 연다.
+v35.1: ZIP 안의 ZIP(권마다 묶은 전집)은 압축 안 한 채면 바깥 ZIP 의 그 구간을 그대로 읽는다 (`innerSrc`),
+끝나면 같은 전집의 다음 권으로. 앞에 다른 데이터가 붙은 ZIP 은 목차 자리를 다시 잡는다.
+열 것이 없으면 안에 든 확장자별 개수를 보여 주고, 관리 → 기록에도 'ZIP 열기: … (jpg 120, …)' 로 남긴다.
 
 **★ 책 정보는 신뢰도로 거른다 (v34.2 · Apps Script v15).**
 
