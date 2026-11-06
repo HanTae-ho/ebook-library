@@ -489,6 +489,17 @@
     padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px}
   #zipList button span:last-child{color:var(--dim);font-size:11.5px;flex:0 0 auto}
   #zipList button.all{color:var(--acc);font-weight:600}
+  #y24Body .yh{display:flex;gap:12px;align-items:flex-start}
+  #y24Body .yh img{width:84px;border-radius:4px;flex:0 0 auto}
+  #y24Body .yh b{display:block;font-size:15px;line-height:1.4}
+  #y24Body .yh i{display:block;font-style:normal;font-size:12.5px;color:var(--dim);margin-top:2px}
+  #y24Body .yh span{display:block;font-size:12px;color:var(--dim);margin-top:6px}
+  #y24Body .yh em{display:block;font-style:normal;font-size:11.5px;color:var(--bad);margin-top:6px}
+  #y24Body details{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+  #y24Body summary{font-size:13px;color:var(--acc);font-weight:600;cursor:pointer}
+  #y24Body .yt{white-space:pre-wrap;font-size:13px;line-height:1.7;margin-top:6px;max-height:46vh;overflow:auto}
+  #y24Body .ysrc{margin-top:14px;font-size:11.5px;color:var(--dim)}
+  #y24Body .ysrc a{color:var(--acc)}
   #tocList{max-height:62vh;overflow-y:auto;margin-top:4px}
   #tocList button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;
     padding:10px 4px;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--tx)}
@@ -1108,6 +1119,14 @@
   </div>
 </div>
 
+<!-- 책 소개 (YES24) — 출처와 링크를 늘 함께 -->
+<div class="sheet" id="y24Sheet">
+  <div class="box" style="max-width:560px">
+    <div id="y24Body"></div>
+    <div class="btns"><button id="y24Close" class="pri">닫기</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="pinSheet">
   <div class="box">
     <h3>내 서가 고르기</h3>
@@ -1134,7 +1153,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v36';
+const BUILD='v37.1';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1546,10 +1565,11 @@ function metaApply(){
   try{ IXT=null; }catch(e){}
 }
 function metaCount(){
-  let ok=0,low=0,none=0,cleaned=0;
+  let ok=0,low=0,none=0,cleaned=0,y24=0;
   BOOKS.forEach(b=>{ const n=String(b.n||'');
+    if(b.y)y24++;
     if(b.r)cleaned++; else if(!n||n==='실패')none++; else if(n==='높음'||n==='중간')ok++; else low++; });
-  return {ok,low,none,cleaned};
+  return {ok,low,none,cleaned,y24};
 }
 
 /* ── 읽은 기록 ──
@@ -3528,6 +3548,10 @@ function openPanBook(b){
     async()=>{ try{ await DB.del('books',b.i); saved.delete(b.i); }catch(e){}
       toast('파일을 지웠습니다'); paintTabs(); render(true); },'warn');
   if(b.u) add('드라이브에서 열기','',()=>window.open(b.u,'_blank','noopener'));
+  // v37.1 — 책 정보가 YES24 에서 왔으면 출처와 상품 링크 (YES24 약관)
+  if(b.y&&!isWrong(b.i)) add('YES24 에서 보기','이 책의 제목·저자·표지는 YES24 에서 가져왔습니다',
+    ()=>window.open('https://www.yes24.com/Product/Goods/'+encodeURIComponent(b.y),'_blank','noopener'));
+  if(kindOf(b)!=='comic'&&cfg('url')) add('책 소개 (YES24)','소개·목차를 그때그때 받아 봅니다. 쌓아 두지 않습니다',()=>showY24(b));
   if(isWrong(b.i)) add('책 정보 되돌리기','알라딘 제목·표지를 다시 보입니다',()=>setWrong(b,0));
   else if(b._0&&(b._0.v||b._0.a||b._0.b)) add('책 정보가 틀림','이 책만 파일 이름으로 보이고, 엉뚱한 표지·저자·분류를 감춥니다',()=>setWrong(b,1),'warn');
 
@@ -4040,6 +4064,62 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v37 — 책 소개 (YES24) ══════════
+   앱이 YES24 에 직접 묻지 않습니다 — 키를 앱에 넣으면 안 되기 때문입니다 (YES24 약관).
+   우리 Apps Script 웹앱(mode=y24)이 대신 묻고, 결과만 돌려줍니다. 키는 스크립트 속성에만.
+   받은 소개는 이 창을 닫으면 버립니다 (쌓지 않음). 출처 'YES24' 와 상품 링크를 늘 함께 보입니다.
+   ★ 웹앱을 새 버전으로 배포하기 전이면, 옛 웹앱이 모르는 mode 라 색인 전체(15MB)를 돌려보냅니다.
+     그래서 512KB 가 넘게 오면 바로 끊고 '새 버전 배포' 를 안내합니다. */
+async function y24Fetch(b){
+  const base=checkUrl();
+  const q=new URLSearchParams({ token:cfg('tok'), uid:ME.id||'', mode:'y24',
+    isbn:String(b.k||'').replace(/[^0-9Xx]/g,''), t:(b._0&&b._0.t)||b.o||b.t||'', a:(b._0&&b._0.a)||b.a||'' });
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),25000);
+  const r=await fetch(base+(base.includes('?')?'&':'?')+q.toString(),{signal:ac.signal});
+  if(!r.ok){ clearTimeout(tm); throw new Error('웹앱 응답 '+r.status); }
+  const rd=r.body&&r.body.getReader?r.body.getReader():null; let txt='';
+  if(rd){ const dec=new TextDecoder(); let n=0;
+    for(;;){ const {done,value}=await rd.read(); if(done)break; n+=value.length; txt+=dec.decode(value,{stream:true});
+      if(n>512*1024){ try{ ac.abort(); }catch(e){} clearTimeout(tm);
+        throw new Error('웹앱이 아직 책 소개를 모릅니다.\nApps Script 에서 YES24 추가분을 붙이고\n배포 관리 → 새 버전으로 배포해 주세요'); } } }
+  else txt=await r.text();
+  clearTimeout(tm);
+  let d; try{ d=JSON.parse(txt); }catch(e){ throw new Error('웹앱 응답을 읽지 못했습니다'); }
+  if(d.error)throw new Error(d.error);
+  return d;
+}
+async function showY24(b){
+  busy(true,'YES24 에서 책 소개를 찾는 중…','',0);
+  let d;
+  try{ d=await y24Fetch(b); }
+  catch(e){ busy(false); toast(e.name==='AbortError'?'응답이 너무 늦습니다':(e.message||e),6000); return; }
+  busy(false);
+  const el=$('#y24Body'); el.innerHTML='';
+  if(!d.found){ el.innerHTML='<div class="note">YES24 에서 이 책을 찾지 못했습니다.<br>웹소설·스캔본은 없을 수 있습니다.</div>';
+    $('#y24Sheet').classList.add('on'); return; }
+  const it=d.item||{};
+  const txt=s=>{ const t=document.createElement('textarea'); t.innerHTML=String(s||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li)>/gi,'\n').replace(/<[^>]*>/g,'');
+    return t.value.replace(/\n{3,}/g,'\n\n').trim(); };
+  const head=document.createElement('div'); head.className='yh';
+  head.innerHTML=(it.cover?`<img src="${esc(it.cover)}" alt="" referrerpolicy="no-referrer">`:'')
+    +`<div><b>${esc(txt(it.title))}</b>${it.sub?`<i>${esc(txt(it.sub))}</i>`:''}`
+    +`<span>${esc([txt(it.author),txt(it.publisher),String(it.date||'').slice(0,10)].filter(Boolean).join(' · '))}</span>`
+    +(d.conf&&d.conf!=='높음'?`<em>제목으로 찾은 것이라 다른 책일 수 있습니다</em>`:'')+'</div>';
+  el.appendChild(head);
+  const sec=(t,s,open)=>{ if(!s)return; const x=document.createElement('details'); if(open)x.open=true;
+    x.innerHTML=`<summary>${t}</summary><div class="yt"></div>`; x.querySelector('.yt').textContent=txt(s); el.appendChild(x); };
+  sec('책 소개',it.intro||it.summary,true);
+  if(it.intro&&it.summary)sec('줄거리',it.summary,false);
+  sec('목차',it.toc,false);
+  const src=document.createElement('div'); src.className='ysrc';
+  src.innerHTML=`자료: YES24 · <a href="${esc(it.link||'https://www.yes24.com')}" target="_blank" rel="noopener">YES24 에서 보기 ›</a>`;
+  el.appendChild(src);
+  $('#y24Sheet').classList.add('on');
+}
+$('#y24Close').onclick=()=>{ $('#y24Sheet').classList.remove('on'); $('#y24Body').innerHTML=''; };
+$('#y24Sheet').addEventListener('click',e=>{ if(e.target.id==='y24Sheet')$('#y24Close').click(); });
+
 
 /* ══════════ v36 — RAR · 7z (CBR · CB7) ══════════
    ZIP 과 달리 RAR·7z 는 '필요한 장만 받기' 가 안 됩니다 (목차가 앞에 있고, 대개 통째로 눌러 담김).
@@ -4572,6 +4652,8 @@ function paintMetaNote(){
        :P.meta==='file'?'모든 책을 파일 이름에서 뽑은 제목으로 보입니다. 표지는 끕니다.'
        :'색인에 적힌 그대로 보입니다. 엉뚱한 책이 섞여 보일 수 있습니다.')
       +(c.cleaned?'<br>(새 색인 v15 — Apps Script 에서 이미 정리돼 왔습니다)':'')
+      +'<br>책 정보 출처: 알라딘(2026년 10월까지) · <b>YES24</b> · 국립중앙도서관'
+      +(c.y24?` — YES24 에서 온 책 ${c.y24.toLocaleString()}권 (길게 눌러 'YES24 에서 보기')`:'')
     : '';
 }
 seg('#segMeta','meta',()=>{ metaApply(); paintTabs(); buildChips(); LASTEX=null; render(true); paintMetaNote();
