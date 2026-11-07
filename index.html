@@ -1536,7 +1536,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v54.1';
+const BUILD='v54.3';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1965,6 +1965,26 @@ function metaTrust(b){
   // 신뢰도가 없거나 '실패' 면 알라딘 값이 아예 없는 책 — EPUB·파일명 정보라 그대로 둡니다
   return !n||n==='실패'||n==='높음'||n==='중간';
 }
+/* v54.3 — 파일 이름에서 온 제목을 보기 좋게: '[가와바타 야스나리] 설국 - 우리시대의 세계문학 065' → 제목 '설국' · 저자 '가와바타 야스나리'
+   (Apps Script v18.19 parseName_ 와 같은 규칙. 화면에서만 — 찾기에는 원래 이름도 그대로 씁니다) */
+const SERW=/(시리즈|세계문학|문학전집|전집|문고|총서|명시|클래식|클라우드|선집|컬렉션|에디션|라이브러리|민음사|문학동네|열린책들|을유|펭귄|창비|우리시대|살면서|꼭 읽어야|필독|베스트셀러|특별판|개정판|합본|세트|완역|원서|영한대역|오디오북|큰글자)/;
+function authorLike(s){ s=String(s||'').trim(); if(!s||s.length>30||/[\d()（）:!?~]/.test(s)||SERW.test(s))return false;
+  const tk=s.replace(/\s*(외|등|지음|저|역|옮김|글|그림|편저?|엮음|공저)\s*$/,'').split(/[\s,·]+/).filter(Boolean);
+  if(!tk.length||tk.length>4)return false; if(/[가-힣]/.test(s))return tk.every(t=>t.length<=6); return /^[A-Za-z.\-' ]+$/.test(s); }
+function seriesLike(s){ s=String(s||'').trim(); return /\d{2,}\s*$/.test(s)||/^\D{0,20}\s\d{2,}\b/.test(s)||SERW.test(s); }
+function tidyName(b){
+  const fromFile=b.o?b.t===b.o:!(b.n==='높음'||b.n==='중간');
+  if(!fromFile||!b.t)return;
+  let t=String(b.t).trim(), m;
+  if((m=t.match(/^\[([^\]]{1,40})\]\s*(.+)$/))){ if(authorLike(m[1])&&!b.a)b.a=m[1].trim(); t=m[2].trim(); }
+  const parts=t.split(/\s+[-–—]\s+/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>=2){ const keep=parts.filter(x=>!(seriesLike(x)&&!authorLike(x)));
+    if(keep.length){ if(keep.length>=2&&authorLike(keep[keep.length-1])&&!authorLike(keep[0])){ if(!b.a)b.a=keep[keep.length-1]; t=keep.slice(0,-1).join(' - '); }
+      else if(keep.length>=2&&authorLike(keep[0])&&!authorLike(keep[keep.length-1])){ if(!b.a)b.a=keep[0]; t=keep.slice(1).join(' - '); }
+      else t=keep.join(' - '); } }
+  if((m=t.match(/^(.*\S)\s*-\s*([^-]+)$/))&&seriesLike(m[2])&&!authorLike(m[2]))t=m[1];
+  if(t&&t!==b.t)b.t=t;
+}
 const EDRE=/^\s*\[(큰글자도서|큰글자책|큰글씨책|큰글자|eBook|ebook|전자책|POD|오디오북|특별판|한정판|리커버|개정판)\]\s*/;
 /* v54.1 — 파일 이름(대개 맞음)과 짝지어진 책 제목이 딴판이면 그 짝은 믿지 않습니다.
    ① 서로 품지 않고 글자 짝(2글자씩)이 절반도 안 겹침  예) '20대에 하지 않으면 안될 50가지' ↔ '20대에 꼭 만나야 할 50인'
@@ -2008,6 +2028,7 @@ function metaApply(){
     }
   });
   metaApply.hid=hid;
+  if(P.meta!=='aladin')BOOKS.forEach(b=>{ try{ tidyName(b); }catch(e){} });
   // 찾기는 보이는 것 + 원래 것 + 원제 + 검색용(h) 모두로
   HAY=BOOKS.map(b=>norm([b.t,b.o,b._0&&b._0.t,b.h,b.a,b._0&&b._0.a,b.p,b.c].filter(Boolean).join('|')));
   Object.keys(ORD).forEach(k=>delete ORD[k]);
@@ -4118,7 +4139,7 @@ function openPanBook(b){
   if(b.y&&!isWrong(b.i)) add('YES24 에서 보기','이 책의 제목·저자·표지는 YES24 에서 가져왔습니다',
     ()=>window.open('https://www.yes24.com/Product/Goods/'+encodeURIComponent(b.y),'_blank','noopener'));
   if(kindOf(b)!=='comic'&&cfg('url')) add('책 소개 (YES24)','소개·목차를 그때그때 받아 봅니다. 쌓아 두지 않습니다',()=>showY24(b));
-  if(isWrong(b.i)) add('책 정보 되돌리기','알라딘 제목·표지를 다시 보입니다',()=>setWrong(b,0));
+  if(isWrong(b.i)) add('책 정보 되돌리기','찾은 책 정보(제목·표지)를 다시 보입니다',()=>setWrong(b,0));
   else if(b._0&&(b._0.v||b._0.a||b._0.b)) add('책 정보가 틀림','이 책만 파일 이름으로 보이고, 엉뚱한 표지·저자·분류를 감춥니다',()=>setWrong(b,1),'warn');
 
   pan('#panBook',true);
@@ -6055,7 +6076,7 @@ function setWrong(b,v){
   WRONG[b.i]={v:v?1:0,t:Date.now()};
   try{ localStorage.setItem('ebl_wrong',JSON.stringify(WRONG)); }catch(e){}
   metaApply(); LASTEX=null; paintTabs(); render(true); syncSoon();
-  toast(v?'이 책은 파일 이름으로 보여 드립니다.\n다른 기기에도 맞춰집니다':'알라딘 정보로 되돌렸습니다');
+  toast(v?'이 책은 파일 이름으로 보여 드립니다.\n다른 기기에도 맞춰집니다':'찾은 책 정보로 되돌렸습니다');
 }
 /* 책 속 표지를 작게 줄여 기기에 담습니다 — 알라딘 표지가 엉뚱하거나 없을 때 진짜 얼굴이 보입니다 */
 let coverSaveT=null;
@@ -6473,7 +6494,7 @@ function paintMetaNote(){
   const c=metaCount();
   const doubt=c.low+c.cleaned;
   el.innerHTML = BOOKS.length
-    ? `알라딘·국중도 짝이 믿을 만한 책 ${c.ok.toLocaleString()}권 · <b>믿기 어려운 책 ${doubt.toLocaleString()}권</b>`
+    ? `찾은 책 정보(YES24·국중도)가 믿을 만한 책 ${c.ok.toLocaleString()}권 · <b>믿기 어려운 책 ${doubt.toLocaleString()}권</b>`
       +` · 짝이 없는 책 ${c.none.toLocaleString()}권<br>`
       +(P.meta==='sure'?'믿기 어려운 책은 파일 이름에서 뽑은 제목으로 보이고, 표지·저자·분류를 비웠습니다. 검색은 그대로 됩니다.'
        :P.meta==='file'?'모든 책을 파일 이름에서 뽑은 제목으로 보입니다. 표지는 끕니다.'
