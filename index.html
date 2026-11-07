@@ -366,8 +366,62 @@
   #ruler .rb{top:calc(var(--ry,30vh) + var(--rh,90px));bottom:0}
   #ruler .rh{position:absolute;right:6px;top:50%;transform:translateY(-50%);pointer-events:auto;touch-action:none;cursor:ns-resize;
     width:28px;height:28px;border-radius:50%;background:var(--acc);color:#0b1220;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.85}
-  #hGoal{margin:6px 0 2px}
+  #hGoal{margin:0}
+  /* v51 — 시안에 맞춘 머리 · 요약 줄 · 넓은 화면 */
+  header{padding-left:max(12px,calc((100% - 1240px)/2));padding-right:max(12px,calc((100% - 1240px)/2))}
+  header>.row{flex-wrap:wrap;gap:8px 12px}
+  header .logo{display:flex;align-items:center;gap:8px;flex:1 0 auto;min-width:0}
+  header .logo b{font-size:18px;font-weight:800;letter-spacing:-.4px;white-space:nowrap}
+  header #hseg{order:2;margin-top:0;flex:0 0 auto}
+  header #hseg button{flex:0 0 auto;padding:6px 14px;border-radius:16px}
+  header .ibs{order:3;display:flex;gap:6px}
+  header #q{order:5;flex:1 1 100%}
+  header #tabs{order:6;flex:1 1 100%;margin-top:0;border-bottom:0;gap:6px;overflow-x:auto;scrollbar-width:none}
+  header #tabs::-webkit-scrollbar{display:none}
+  header #tabs button{flex:0 0 auto;height:38px;padding:0 15px;border-radius:19px;border:1px solid var(--line);color:var(--tx)}
+  header #tabs button.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:700}
+  @media(max-width:430px){ header .logo b{display:none} }
+  @media(min-width:1000px){
+    header .logo{flex:0 0 auto}
+    header #hseg{order:1} header #tabs{order:2;flex:0 1 auto}
+    header #q{order:3;flex:1 1 220px;max-width:380px;margin-left:auto;border-radius:22px}
+    header .ibs{order:4}
+  }
+  #home{padding-left:max(0px,calc((100% - 1240px)/2));padding-right:max(0px,calc((100% - 1240px)/2))}
+  #hToday,#hBanner,.hchips,.h2c,.hpk,#hThemes .hbox,#hBoard .hbox{margin-left:12px;margin-right:12px}
+  .hbox .hh,.hbox .hscr{padding-left:0;padding-right:0}
+  .hqk{display:grid;grid-template-columns:1fr;gap:12px;padding:12px 12px 0}
+  @media(min-width:640px){ .hqk{grid-template-columns:1fr 1fr} .hqk .hql{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))} #hToday.h3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))} }
+  @media(min-width:1100px){ .hqk{grid-template-columns:1fr 1fr 1fr} .hqk .hql{grid-column:auto;grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .hqk>:empty{display:none}
+  .hqk #hGoal .g{height:100%;box-sizing:border-box;padding:14px;border-radius:14px;background:var(--panel)}
+  #hqRead.qc{display:flex;gap:14px;align-items:center;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);cursor:pointer;min-width:0}
+  #hqRead .cv{position:relative;width:52px;aspect-ratio:.7;flex:0 0 auto;border-radius:4px;overflow:hidden;background:#2a3038}
+  #hqRead .cv img{width:100%;height:100%;object-fit:cover}
+  #hqRead .cv .ph{position:absolute;inset:0;font-size:8px;padding:4px}
+  #hqRead .m{min-width:0;flex:1}
+  #hqRead .lb{font-size:12px;color:var(--dim)}
+  #hqRead .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #hqRead .bar{height:4px;border-radius:2px;background:var(--line);margin-top:8px;max-width:170px}
+  #hqRead .bar i{display:block;height:4px;border-radius:2px;background:var(--acc)}
+  .hql{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .hql button{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:13px;min-height:44px;text-align:left;min-width:0}
+  .hql button i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .hql button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #hBanner .bn .who{margin-left:10px;font-size:12.5px;color:rgba(255,255,255,.8)}
+  #hBanner .bn .cv{position:relative;cursor:pointer}
+  #hBanner .bn .cv .ph{position:absolute;inset:0;font-size:10px;padding:6px}
+  #hBanner .bn .dots{position:absolute;right:20px;bottom:14px;display:flex;gap:6px}
+  #hBanner .bn .dots button{width:8px;height:8px;border-radius:4px;border:0;padding:0;background:rgba(255,255,255,.4)}
+  #hBanner .bn .dots button.on{width:22px;background:#fff}
+  @media(min-width:700px){ .hh b{font-size:18px;font-weight:800} .h2c h4{font-size:17px}
+    #hNewB .hscr{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:18px 16px;overflow:visible}
+    #hNewB .hscr .card{width:auto;flex:none} }
+  @media(max-width:600px){ #hBanner .bn{padding:20px 20px 30px} #hBanner .bn h2{font-size:22px} #hBanner .bn .cvs .cv{width:64px} #hBanner .bn .cvs .cv:nth-child(2){width:74px} #hBanner .bn .cvs .cv:nth-child(n+4){display:none} }
+  @media(min-width:900px){ #hBanner .bn{padding:34px 40px} #hBanner .bn h2{font-size:34px}
+    #hBanner .bn .cvs .cv{width:104px} #hBanner .bn .cvs .cv:nth-child(2){width:118px} }
   #hGoal .g{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+  #hGoal .gnew{border-style:dashed;color:var(--sub,#888)} #hGoal .gnew b{color:var(--acc)}
   #hGoal .ring{width:44px;height:44px;flex:0 0 auto}
   #hGoal .tx{font-size:13px;line-height:1.55}
   #hGoal .tx b{font-size:15px}
@@ -647,19 +701,22 @@
 <div id="library">
   <header>
     <div class="row">
+      <span class="logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M11 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/><path d="M14 7h3M14 11h3"/></svg><b>우리 도서관</b></span>
+      <div class="seg" id="hseg"></div>
+      <div id="tabs">
+        <button data-v="home">홈</button>
+        <button data-v="">전체</button>
+        <button data-v="folder">폴더</button>
+        <button data-v="reading">읽는 중</button>
+        <button data-v="done">다 읽음</button>
+        <button data-v="saved">받아둔</button>
+      </div>
       <input id="q" type="search" placeholder="제목 · 저자 · 분류로 검색" autocomplete="off">
-      <button class="ib" id="btnLogin" title="구글 로그인">🔑</button>
-      <button class="ib" id="btnView" title="보기 설정">☰</button>
-      <button class="ib" id="btnSet" title="설정">⚙</button>
-    </div>
-    <div class="seg" id="hseg"></div>
-    <div id="tabs">
-      <button data-v="home">홈</button>
-      <button data-v="">전체</button>
-      <button data-v="folder">폴더</button>
-      <button data-v="reading">읽는 중</button>
-      <button data-v="done">다 읽음</button>
-      <button data-v="saved">받아둔</button>
+      <span class="ibs">
+        <button class="ib" id="btnLogin" title="구글 로그인">🔑</button>
+        <button class="ib" id="btnView" title="보기 설정">☰</button>
+        <button class="ib" id="btnSet" title="설정">⚙</button>
+      </span>
     </div>
     <div id="chips"></div>
     <div id="exbar">
@@ -674,7 +731,7 @@
   <div id="home">
     <div class="hs" id="hqWrap"><div class="hrow" id="hq"></div></div>
 
-    <div id="hGoal"></div>
+    <div class="hqk" id="hQuick"><div id="hqRead"></div><div id="hGoal"></div><div class="hql" id="hqLinks"></div></div>
     <div id="hBanner"></div>
     <div id="hRow1"></div>
 
@@ -1457,7 +1514,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v49';
+const BUILD='v51';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -3196,6 +3253,7 @@ function localState(){
            rd:RD, hl:HL, del:DEL, rdel:RDEL,
            days:DAYS, wrong:WRONG, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
            pins:P.pins||[], rq:RQ, rv:RV,
+           goal:P.goal||0, goalY:P.goalY||0, goalAt:Number(localStorage.getItem('ebl_goalat')||0),
            jp:P.jpat||[], jpAt:Number(localStorage.getItem('ebl_jpatat')||0),
            shr:P.shareRead?1:0, shrAt:Number(localStorage.getItem('ebl_shrat')||0),
            mates:MATES, matesAt:Number(localStorage.getItem('ebl_matesat')||0),
@@ -3211,6 +3269,7 @@ function mergeState(a,b){
   [a.days,b.days].forEach(D=>Object.entries(D||{}).forEach(([d,m])=>{
     const o=out.days[d]||(out.days[d]={});
     Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
+  if((a.goalAt||0)>=(b.goalAt||0)){ out.goal=a.goal; out.goalY=a.goalY; out.goalAt=a.goalAt||0; } else { out.goal=b.goal; out.goalY=b.goalY; out.goalAt=b.goalAt||0; }
   if((a.jpAt||0)>=(b.jpAt||0)){ out.jp=a.jp; out.jpAt=a.jpAt||0; } else { out.jp=b.jp; out.jpAt=b.jpAt||0; }
   if((a.shrAt||0)>=(b.shrAt||0)){ out.shr=a.shr; out.shrAt=a.shrAt||0; } else { out.shr=b.shr; out.shrAt=b.shrAt||0; }
   if((a.matesAt||0)>=(b.matesAt||0)){ out.mates=a.mates; out.matesAt=a.matesAt||0; } else { out.mates=b.mates; out.matesAt=b.matesAt||0; }
@@ -3282,6 +3341,8 @@ function applyState(s){
     try{ localStorage.setItem('ebl_shrat',String(s.shrAt)); }catch(e){} }
   if(Array.isArray(s.mates)&&(s.matesAt||0)>Number(localStorage.getItem('ebl_matesat')||0)){ MATES=s.mates;
     try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES)); localStorage.setItem('ebl_matesat',String(s.matesAt)); }catch(e){} }
+  if((s.goalAt||0)>Number(localStorage.getItem('ebl_goalat')||0)){ P.goal=s.goal||0; P.goalY=s.goalY||0;
+    try{ localStorage.setItem('ebl_goalat',String(s.goalAt)); }catch(e){} try{ paintGoal(); }catch(e){} }
   if(Array.isArray(s.jp)&&(s.jpAt||0)>Number(localStorage.getItem('ebl_jpatat')||0)){
     P.jpat=s.jp; try{ localStorage.setItem('ebl_jpatat',String(s.jpAt)); }catch(e){} TXTC=''; }
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
@@ -4482,20 +4543,20 @@ $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
    P.home = {order:[칸], hide:{칸:1}, size:{칸:값}} — 이 기기만 (P 는 동기화하지 않습니다).
    아직 꾸민 적이 없으면 팀장님이 정한 '식구 기본 홈'(모임 칸 kind:'homedef') → 없으면 처음 모양. */
 var HK=[
-  {k:'q',      id:'hqWrap',  n:'최근 검색어'},
-  {k:'goal',   id:'hGoal',   n:'독서 목표'},
+  {k:'quick',  id:'hQuick',  n:'요약 줄', h:'이어 읽기 한 권 · 독서 목표 · 바로가기'},
   {k:'banner', id:'hBanner', n:'이달의 특집'},
-  {k:'reading',id:'hRow1',   n:'이어 읽기',     sz:[12,24], u:'권'},
-  {k:'pin',    id:'hsPin',   n:'내 서가'},
   {k:'today',  id:'hsToday', n:'오늘의 책',     sz:[1,3,6], u:'권'},
   {k:'new',    id:'hNewB',   n:'새로 담긴 책',   sz:[12,24,36], u:'권'},
   {k:'themes', id:'hThemes', n:'테마 서가',     sz:[1,3,5], u:'칸'},
   {k:'rank',   id:'hRank',   n:'우리집 순위',    sz:[3,5,10], u:'위', h:'많이 읽은 책 · 별점 높은 책'},
   {k:'picks',  id:'hPicks',  n:'분야별 다섯 권', sz:[2,4,6], u:'분야'},
+  {k:'reading',id:'hRow1',   n:'이어 읽기',     sz:[12,24], u:'권'},
+  {k:'pin',    id:'hsPin',   n:'내 서가'},
   {k:'recent', id:'hRow2',   n:'최근 본 책',     sz:[12,24], u:'권'},
   {k:'saved',  id:'hSaved',  n:'받아둔 책',     sz:[12,24], u:'권'},
   {k:'done',   id:'hDone',   n:'다 읽은 책',     sz:[12,24], u:'권'},
   {k:'board',  id:'hBoard',  n:'알림판'},
+  {k:'q',      id:'hqWrap',  n:'최근 검색어'},
   {k:'links',  id:'hLinks',  n:'바로가기', h:'전체 둘러보기 · 모은 형광펜 · 독서 달력'}
 ];
 var HK_DEF_SIZE={reading:12,today:3,new:12,themes:3,rank:5,picks:4,recent:12,saved:12,done:12};
@@ -4608,29 +4669,79 @@ function paintToday3(pool){
 function featShelf(){ const sh=(typeof shelves==='function')?shelves():[];
   return sh.filter(o=>unpackVal(o['값']).feat).sort((a,b)=>Number(b['언제'])-Number(a['언제']))[0]||null; }
 const BTINT=['linear-gradient(135deg,#27486b,#1b2f45)','linear-gradient(135deg,#3d5a2f,#243a1d)','linear-gradient(135deg,#5a3a5f,#35213a)','linear-gradient(135deg,#6a4a2a,#3d2a17)'];
-function paintBanner(){
-  const el=$('#hBanner'); if(!el)return; el.innerHTML='';
-  const o=featShelf(), own=isOwner(), sh=(typeof shelves==='function')?shelves():[];
-  if(!o){
-    if(own&&sh.length){ el.innerHTML='<div class="hint"><span>서가 하나를 <b>이달의 특집</b>으로 걸면 식구 모두의 홈 맨 위에 크게 뜹니다.</span><button class="pri" id="featPick">특집 고르기</button></div>';
-      $('#featPick').onclick=pickFeat; }
-    return; }
-  const v=unpackVal(o['값']), books=shelfBooks(o.id).map(x=>bookOf(x['책ID'])).filter(Boolean);
-  let hsh=0; for(const c of String(o.id))hsh=(hsh*31+c.charCodeAt(0))|0;
-  const d=document.createElement('div'); d.className='bn'; d.style.background=BTINT[Math.abs(hsh)%BTINT.length];
-  d.innerHTML=`<div style="flex:1 1 300px;min-width:0"><span class="tg">${esc(v.tag||'이달의 특집')}</span>`
-    +`<h2>${esc(o['제목']||'')}</h2><p>${esc(v.d||'')}</p>`
-    +`<button class="go">서가 열기 · ${books.length}권</button>`
-    +`<span style="margin-left:10px;font-size:12.5px;color:rgba(255,255,255,.8)">${esc(nameOf(o['누가'])||'')}가 꾸민 서가</span></div><div class="cvs"></div>`
-    +(own?'<button class="ed">특집 바꾸기</button>':'');
-  const cv=d.querySelector('.cvs');
-  books.slice(0,4).forEach(b=>{ const x=document.createElement('div'); x.className='cv';
-    if(b.v){ const im=document.createElement('img'); im.src=b.v; im.alt=''; im.onerror=()=>{ im.remove(); x.innerHTML=phHtml(b); }; x.appendChild(im); }
-    else x.innerHTML=phHtml(b);
-    cv.appendChild(x); });
-  d.querySelector('.go').onclick=()=>goShelf(o);
-  if(own)d.querySelector('.ed').onclick=pickFeat;
-  el.appendChild(d);
+/* v51 — 배너는 넘기는 판 여러 장. 특집이 없어도 '이달의 분야' · '새로 담긴 책' 으로 채웁니다 */
+var BNI=0, BNT=0;
+function monthCat(vis){ const cc={}; (vis||[]).forEach(b=>{ if(b.b)cc[b.b]=(cc[b.b]||0)+1; });
+  const cats=Object.keys(cc).filter(k=>cc[k]>=12).sort(); if(!cats.length)return '';
+  const d=new Date(); return cats[(d.getFullYear()*12+d.getMonth())%cats.length]; }
+function bannerSlides(vis){
+  const out=[], own=isOwner(), sh=(typeof shelves==='function')?shelves():[], o=featShelf();
+  const tint=x=>{ let h=0; for(const c of String(x))h=(h*31+c.charCodeAt(0))|0; return BTINT[Math.abs(h)%BTINT.length]; };
+  if(o){ const v=unpackVal(o['값']), books=shelfBooks(o.id).map(x=>bookOf(x['책ID'])).filter(Boolean);
+    out.push({tag:v.tag||'이달의 특집', title:o['제목']||'', desc:v.d||'', btn:'서가 열기 · '+books.length+'권', go:()=>goShelf(o),
+      who:(nameOf(o['누가'])||'')+'가 꾸민 서가', covers:books.slice(0,4), bg:tint(o.id), ed:own?['특집 바꾸기',pickFeat]:null}); }
+  const c=monthCat(vis), d=new Date();
+  if(c){ const all=vis.filter(b=>b.b===c), un=all.filter(b=>!RD[b.i]);
+    out.push({tag:(d.getMonth()+1)+'월의 분야', title:c+' — 한 달 동안 둘러보기',
+      desc:`${c} ${all.length.toLocaleString()}권 가운데 아직 안 연 책 ${un.length.toLocaleString()}권. 매달 1일에 분야가 바뀝니다.`,
+      btn:'분야 열기 · '+all.length.toLocaleString()+'권', go:()=>goList('',c), covers:pickDistinct(un.length>=4?un:all,4,d.getMonth()+3),
+      bg:tint(c), ed:(!o&&own&&sh.length)?['특집 걸기',pickFeat]:null}); }
+  const iso=t=>new Date(t).toISOString().slice(0,10);
+  let fr=vis.filter(b=>b.g&&String(b.g)>=iso(Date.now()-7*864e5)), span='이번 주에';
+  if(!fr.length){ fr=vis.filter(b=>b.g&&String(b.g)>=iso(Date.now()-30*864e5)); span='이번 달에'; }
+  if(fr.length){ fr.sort((x,y)=>String(y.g).localeCompare(String(x.g)));
+    out.push({tag:'새로 담김', title:`${span} 들어온 책 ${fr.length.toLocaleString()}권`, desc:'드라이브 책 폴더에 넣으면 새벽에 저절로 들어옵니다.',
+      btn:'모두 보기 ›', go:()=>goList('new'), covers:fr.slice(0,4), bg:BTINT[2]}); }
+  return out;
+}
+function paintBanner(vis){
+  const el=$('#hBanner'); if(!el)return; el.innerHTML=''; clearInterval(BNT);
+  const sl=bannerSlides(vis||BOOKS||[]); if(!sl.length)return;
+  if(BNI>=sl.length)BNI=0;
+  const d=document.createElement('div'); d.className='bn'; el.appendChild(d);
+  const restart=()=>{ clearInterval(BNT); if(sl.length>1)BNT=setInterval(()=>{ if(document.hidden||!d.isConnected)return; show((BNI+1)%sl.length); },9000); };
+  const show=i=>{ BNI=i; const x=sl[i]; d.style.background=x.bg;
+    d.innerHTML=`<div style="flex:1 1 300px;min-width:0"><span class="tg">${esc(x.tag)}</span><h2>${esc(x.title)}</h2><p>${esc(x.desc)}</p>`
+      +`<button class="go">${esc(x.btn)}</button>${x.who?`<span class="who">${esc(x.who)}</span>`:''}</div><div class="cvs"></div>`
+      +(x.ed?`<button class="ed">${esc(x.ed[0])}</button>`:'')
+      +(sl.length>1?'<div class="dots">'+sl.map((y,k)=>`<button aria-label="${k+1}번째 판" class="${k===i?'on':''}"></button>`).join('')+'</div>':'');
+    const cv=d.querySelector('.cvs');
+    x.covers.forEach(b=>{ const c=document.createElement('div'); c.className='cv'; const u=(COVERS&&COVERS[b.i])||b.v;
+      if(u){ const im=document.createElement('img'); im.src=u; im.alt=''; im.onerror=()=>{ im.remove(); c.innerHTML=phHtml(b); }; c.appendChild(im); }
+      else c.innerHTML=phHtml(b);
+      c.onclick=e=>{ e.stopPropagation(); openPanBook(b); }; cv.appendChild(c); });
+    d.querySelector('.go').onclick=x.go;
+    if(x.ed)d.querySelector('.ed').onclick=x.ed[1];
+    d.querySelectorAll('.dots button').forEach((b,k)=>b.onclick=()=>{ show(k); restart(); });
+  };
+  show(BNI); restart();
+}
+/* v51 — 요약 줄: 이어 읽기 한 권 · 독서 목표 · 바로가기 넷 */
+function durTxt(sec){ const m=Math.max(1,Math.round(sec/60)); return m<60?m+'분':Math.floor(m/60)+'시간'+(m%60?' '+(m%60)+'분':''); }
+function paintQuick(vis){
+  const rd=$('#hqRead'), lk=$('#hqLinks'); if(!rd||!lk)return;
+  const r=vis.filter(b=>stOf(b)==='reading').sort((x,y)=>((RD[y.i]&&RD[y.i].t)||0)-((RD[x.i]&&RD[x.i].t)||0))[0];
+  rd.innerHTML=''; rd.className=''; rd.onclick=null;
+  if(r){ const p=pctOf(r), pc=Math.round(p*100), sec=bookSec(r.i);
+    const left=(p>=.05&&p<1&&sec>=300)?sec*(1-p)/p:0;
+    rd.className='qc';
+    rd.innerHTML=`<div class="cv"></div><div class="m"><div class="lb">이어 읽기</div><div class="t">${esc(r.t||'')}</div>`
+      +`<div class="bar"><i style="width:${pc}%"></i></div><div class="lb">${pc}%${left?' · 약 '+durTxt(left)+' 남음':(sec>=60?' · 읽은 시간 '+durTxt(sec):'')}</div></div>`;
+    const cv=rd.querySelector('.cv'), u=(COVERS&&COVERS[r.i])||r.v;
+    if(u){ const im=document.createElement('img'); im.src=u; im.alt=''; im.onerror=()=>{ im.remove(); cv.innerHTML=phHtml(r); }; cv.appendChild(im); }
+    else cv.innerHTML=phHtml(r);
+    rd.onclick=()=>openBook(r); }
+  let hl=0; try{ Object.values(HL).forEach(a=>(a||[]).forEach(o=>{ if(!isBm(o))hl++; })); }catch(e){}
+  const mm=dkey().slice(0,7); let nd=0; Object.keys(DAYS||{}).forEach(k=>{ if(k.startsWith(mm)&&daySec(k)>=60)nd++; });
+  let sz=0; try{ saved.forEach(i=>{ sz+=(SIZES[i]&&SIZES[i].b)||0; }); }catch(e){}
+  const szT=sz>=1e9?(sz/1e9).toFixed(1)+'GB':sz>=1e6?Math.round(sz/1e6)+'MB':'';
+  const items=[
+    ['#ffe14d', hl?`모은 형광펜 · ${hl}개`:'모은 형광펜', ()=>openHlAll()],
+    ['var(--acc)', nd?`독서 달력 · 이달 ${nd}일`:'독서 달력', ()=>openCal()],
+    ['#7ee0a0', `받아둔 책 · ${saved.size}권${szT?' · '+szT:''}`, ()=>goList('saved')],
+    ['#ffa8c8', '이 책 넣어주세요', ()=>$('#lkReq').onclick()] ];
+  lk.innerHTML='';
+  items.forEach(([c,t,f])=>{ const b=document.createElement('button'); b.innerHTML=`<i style="background:${c}"></i><span>${esc(t)}</span>`; b.onclick=f; lk.appendChild(b); });
 }
 /* 팀장님: 특집으로 걸 서가 고르기 + 한 줄 소개 */
 async function pickFeat(){
@@ -4657,7 +4768,8 @@ async function pickFeat(){
 }
 let HCHIP='';
 function paintLibHome(vis,n){
-  paintBanner();
+  try{ paintQuick(vis); }catch(e){ log('요약 줄 실패: '+(e.message||e)); }
+  paintBanner(vis);
   /* 새로 담긴 책 — 분야 태그 */
   const nb=$('#hNewB'); nb.innerHTML='';
   const fresh=vis.filter(b=>b.g).sort((x,y)=>String(y.g).localeCompare(String(x.g))).slice(0,300);
@@ -4685,6 +4797,17 @@ function paintLibHome(vis,n){
     const more=document.createElement('button'); more.textContent='모두 보기 ›'; more.onclick=()=>goShelf(o); d.querySelector('.hh').appendChild(more);
     hcards(d.querySelector('.hscr'),books.slice(0,HN)); th.appendChild(d);
   });
+  if(!th.children.length){  // v51 — 식구 서가가 아직 없으면 내 서가(자주 여는 분류) → 없으면 책이 많은 분야
+    const mc=monthCat(vis), mine=(P.pins||[]).length>0; let keys=(P.pins||[]).slice();
+    if(!mine){ const cc={}; vis.forEach(b=>{ if(b.b)cc[b.b]=(cc[b.b]||0)+1; }); keys=Object.keys(cc).sort((a,b)=>cc[b]-cc[a]); }
+    keys.filter(k=>k!==mc).slice(0,homeSize('themes')).forEach((k,ki)=>{
+      const all=vis.filter(b=>b.b===k||b.m===k||b.s===k); if(!all.length)return;
+      const un=all.filter(b=>!RD[b.i]);
+      const d=document.createElement('div'); d.className='hbox';
+      d.innerHTML=`<div class="hh"><b>${esc(k)}</b></div><div class="sub">${mine?'내 서가':'책이 많은 분야'} · ${all.length.toLocaleString()}권 · 안 읽은 책에서 날마다 바뀜</div><div class="hscr"></div>`;
+      const more=document.createElement('button'); more.textContent='모두 보기 ›'; more.onclick=()=>goList('',k); d.querySelector('.hh').appendChild(more);
+      hcards(d.querySelector('.hscr'),pickDistinct(un.length>=6?un:all,HN,ki+31+todayN)); th.appendChild(d); });
+  }
   /* 우리집 많이 읽은 책 · 별점 높은 책 */
   const rk=$('#hRank'); rk.innerHTML='';
   const tally=new Map();
@@ -4696,11 +4819,19 @@ function paintLibHome(vis,n){
   famOf('rv').filter(x=>!x['지움']&&Number(x['값'])>=4).forEach(x=>{ const b=bookOf(x['책ID']); if(b)rv.push({b,s:Number(x['값']),who:String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가'])),say:x['내용']||'',at:Number(x['언제'])||0}); });
   Object.entries(RV).forEach(([i,r])=>{ if(r&&r.s>=4&&!r.sh){ const b=bookOf(i); if(b)rv.push({b,s:r.s,who:'나',say:r.t||'',at:r.at||0}); } });
   rv.sort((a,b)=>b.s-a.s||b.at-a.at);
-  if(top.length||rv.length){
+  let mine=[];
+  if(!top.length){ const sec={}; Object.values(DAYS||{}).forEach(m=>Object.entries(m||{}).forEach(([k,v])=>{ const id=k.split('|')[0]; sec[id]=(sec[id]||0)+v; }));
+    mine=Object.entries(sec).filter(x=>x[1]>=60).map(([i,t])=>({b:bookOf(i),t})).filter(x=>x.b).sort((a,b)=>b.t-a.t).slice(0,homeSize('rank')); }
+  if(top.length||rv.length||mine.length){
     const w=document.createElement('div'); w.className='h2c';
     if(top.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>우리집에서 많이 읽은 책</h4>';
       top.forEach((x,k)=>{ const li=document.createElement('div'); li.className='li';
         li.innerHTML=`<span class="n${k<3?' top':''}">${k+1}</span><span style="min-width:0"><span class="t" style="display:block">${esc(x.b.t)}</span><span class="w">${esc(x.t.w.join(' · '))}</span></span>`;
+        li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
+      w.appendChild(c); }
+    if(mine.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>내가 오래 읽은 책</h4>';
+      mine.forEach((x,k)=>{ const li=document.createElement('div'); li.className='li'; const pc=Math.round(pctOf(x.b)*100);
+        li.innerHTML=`<span class="n${k<3?' top':''}">${k+1}</span><span style="min-width:0"><span class="t" style="display:block">${esc(x.b.t)}</span><span class="w">${durTxt(x.t)}${pc?' · '+pc+'%':''}${stOf(x.b)==='done'?' · 다 읽음':''}</span></span>`;
         li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
       w.appendChild(c); }
     if(rv.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>별점 높은 책</h4>';
@@ -4827,8 +4958,10 @@ function streak(){
 function paintGoal(){
   const el=$('#hGoal'); if(!el)return;
   if(P.goalOff){ el.innerHTML=''; return; }
-  const y=new Date().getFullYear(), n=yearDone(y), goal=P.goal||0, st=streak(), today=daySec(dkey());
-  if(!n&&!st&&!today&&!goal){ el.innerHTML=''; return; }
+  const y=new Date().getFullYear(), n=yearDone(y), goal=goalOf(y), st=streak(), today=daySec(dkey());
+  if(!n&&!st&&!today&&!goal){ // 기록도 목표도 없을 때 — 그래도 목표는 정할 수 있게
+    el.innerHTML=`<div class="g gnew" id="goalCard"><div class="tx"><b>${y}년 독서 목표 정하기 ›</b><br><i>다 읽은 책과 연속 독서일을 여기서 셉니다</i></div></div>`;
+    $('#goalCard').onclick=goalAsk; return; }
   const fr=goal?Math.min(1,n/goal):0, C=2*Math.PI*18;
   // 지금 날짜까지 와 있어야 할 권수
   const doy=(Date.now()-new Date(y,0,1))/86400000, pace=goal?Math.round(goal*doy/365):0;
@@ -4839,11 +4972,24 @@ function paintGoal(){
       <text x="22" y="26" text-anchor="middle" font-size="12" fill="var(--tx)">${n}</text></svg>
     <div class="tx"><b>${y}년 ${n}권</b>${goal?` / 목표 ${goal}권 <i>(지금쯤 ${pace}권${n>=pace?' · 앞서는 중':''})</i>`:' <i>· 누르면 목표를 정합니다</i>'}<br>
       ${st?`연속 ${st}일째`:'오늘 읽어 연속을 시작해 보세요'}${today?` · 오늘 ${shortDur(today)}`:''}</div></div>`;
-  $('#goalCard').onclick=async()=>{
-    const v=await ask(`${y}년 목표 — 몇 권?`,'예) 24 · 0 이면 목표 없이 기록만',String(goal||''));
-    if(v===null)return; const k=Math.max(0,Math.min(999,parseInt(v,10)||0));
-    P.goal=k; savePref(); paintGoal(); toast(k?`올해 목표 ${k}권`:'목표 없이 기록만 보입니다');
-  };
+  $('#goalCard').onclick=goalAsk;
+}
+/* 목표는 해마다 — 해가 바뀌면 지난 목표는 쓰지 않습니다 (v50, 기기끼리 맞춤) */
+function goalOf(y){ return (P.goal&&(!P.goalY||P.goalY===y))?P.goal:0; }
+function goalHint(){
+  const y=new Date().getFullYear(), last=yearDone(y-1), cut=Date.now()-90*86400000;
+  const r90=Object.entries(RD).filter(([id,r])=>r&&r.f&&r.t>=cut&&!/#all$/.test(id)).length;
+  const pace=r90?Math.round(r90*365/90):0;
+  let sug=Math.max(last,pace); sug=sug?Math.min(999,Math.max(1,Math.round(sug*1.1))):12;
+  const bits=[]; if(last)bits.push(`작년 ${last}권`); if(r90)bits.push(`최근 3개월 ${r90}권 → 이 속도면 1년 ${pace}권`);
+  return { sug, txt:(bits.length?bits.join(' · ')+` · 조금 더 해서 ${sug}권을 권합니다`:`기록이 아직 없어 한 달에 한 권(12권)으로 시작해 보세요`) };
+}
+async function goalAsk(){
+  const y=new Date().getFullYear(), cur=goalOf(y), h=goalHint();
+  const v=await ask(`${y}년 목표 — 몇 권?`,h.txt+' · 0 이면 목표 없이 기록만',String(cur||h.sug));
+  if(v===null)return; const k=Math.max(0,Math.min(999,parseInt(v,10)||0));
+  P.goal=k; P.goalY=y; savePref(); try{ localStorage.setItem('ebl_goalat',String(Date.now())); }catch(e){} syncSoon();
+  paintGoal(); toast(k?`올해 목표 ${k}권 — 다른 기기에도 맞춰집니다`:'목표 없이 기록만 보입니다');
 }
 
 /* 저장 공간 한도 — 받아둔 책의 크기와 마지막으로 연 때를 기기에 적어 둡니다 */
