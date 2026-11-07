@@ -187,8 +187,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v54';   // ← 이것
-const BUILD = 'v54';   // ← index.html 의 이것도 같이
+const V = 'ebl-v54.1';   // ← 이것
+const BUILD = 'v54.1';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
@@ -235,7 +235,9 @@ YES24 에 제목·저자·표지 저장을 확인받았다 (답은 따로 보관
 **★ 같은 책 묶기 (v54).** `BOOKS` 는 그대로 전부 (찾기·폴더·기록이 다 파일 ID 로 돌아감). 묶음은 `buildGroups` (apply 끝) →
 `GRP`, 대표 고르기는 `markDups` (filter0·counts·buildHome 마다 — 최근 읽은 파일 → 받아둔 파일 → EPUB → PDF). 숨김은 `dupHide(b)` 로
 `match`·홈 `vis` 에서만, 받아둔 책 칸은 숨기지 않음. 묶는 열쇠는 파일 이름 쪽 제목 `gkT` (괄호 뺀 알맹이, 숫자는 남김 — 1권·2권 따로)
-+ 저자가 어긋나지 않을 것. `SETRE` 는 Apps Script v18.18 `isSet_` 과 같은 식.
++ 저자가 어긋나지 않을 것, **또는** (v54.1) 믿을 만한(높음·중간) YES24 상품번호 `y`·ISBN `k` 가 같을 것 — 파일 이름이 서로 달라도 묶임
+(합치기는 union-find). 세트가 잘못 붙은 책·파일 이름과 딴판인 책(`_sb`, `nameOff` — 서로 품지 않고 2글자 짝 0.5 미만이거나 끝 권 번호가 다름)·낮음·의심은
+상품번호로 묶지 않고 파일 이름 제목으로 보인다 (Apps Script v18.18 `nameOff_` 와 같은 식). `SETRE` 는 Apps Script v18.18 `isSet_` 과 같은 식.
 
 **★ 번역 · 각주 (v53).** 웹앱 부르기는 `gasGet(params, 옛웹앱안내)` — 512KB 넘게 오거나 `books` 가 오면 옛 웹앱으로 본다.
 번역 글은 GET 이라 `trCut` 이 주소 길이(인코딩 6000자)에 맞춰 자른다. 결과는 메모리 `TRC` 에만 (저장 안 함).
