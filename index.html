@@ -1975,10 +1975,11 @@ function volOf(s){ const m=String(s||'').normalize('NFC').replace(/\(.*?\)|\[.*?
 function dice(a,b){ const g=s=>{ const m=new Map(); for(let i=0;i<s.length-1;i++){ const k=s.slice(i,i+2); m.set(k,(m.get(k)||0)+1); } return m; };
   const A=g(a), B=g(b); let n=0, ta=0, tb=0; A.forEach(v=>ta+=v); B.forEach(v=>tb+=v); A.forEach((v,k)=>{ n+=Math.min(v,B.get(k)||0); }); return ta+tb?2*n/(ta+tb):0; }
 function nameOff(matched,file){
-  const main=String(matched||'').split(/\s+-\s+/)[0];
-  const x=coreT(main), y=coreT(file); if(x.length<2||y.length<2)return false;
+  const main=String(matched||'').split(/\s+-\s+/)[0], core=main.split(/\s*:\s+|\s+:\s*/)[0];
+  const x=coreT(core), y=coreT(file); if(x.length<2||y.length<2)return false;
   if(volOf(main)!==volOf(file))return true;
-  if(x.includes(y)||y.includes(x))return false;
+  if(y.includes(x))return false;                                  // 파일 이름이 그 제목을 통째로 품음
+  if(x.includes(y))return y.length<x.length*0.6;                  // 짝 제목이 훨씬 김 — '리어 왕' ↔ '리어왕에게 배우는 경영'
   return dice(x,y)<0.5;
 }
 const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
@@ -1990,9 +1991,10 @@ function metaApply(){
     const o=b._0;
     META_KEYS.forEach(k=>{ if(k in o)b[k]=o[k]; else delete b[k]; });   // 원래대로 되돌린 뒤
     // v54 — 낱권 파일에 '[세트] ○○ + ○○' 처럼 묶음 상품이 짝지어진 경우: 믿지 않고 파일 이름 제목으로
-    const setBad=(SETRE.test(o.t||'')&&!!b.o&&!SETRE.test(b.o))||(!!b.o&&nameOff(o.t,b.o)); b._sb=setBad?1:0;
+    const nameBad=!!b.o&&nameOff(o.t,b.o), setBad=nameBad||(SETRE.test(o.t||'')&&!!b.o&&!SETRE.test(b.o)); b._sb=setBad?1:0;
     const ok=metaTrust(b)&&!isWrong(b.i)&&!setBad;
-    if(setBad&&P.meta!=='aladin'){ b.t=b.o; ['a','v','p','d'].forEach(k=>delete b[k]); hid++; return; }
+    // 딴 책이 붙었으면 분류도 그 책 것이라 함께 뺍니다 (세트는 같은 갈래라 분류는 남김)
+    if(setBad&&P.meta!=='aladin'){ b.t=b.o; (nameBad?['a','v','p','d','c','b','m','s']:['a','v','p','d']).forEach(k=>delete b[k]); hid++; return; }
     // v54 — '[큰글자도서] ○○' 처럼 판(版) 머리표가 붙은 제목은 머리표만 떼어 보입니다 (파일은 보통 일반판)
     if(P.meta!=='aladin'&&b.t&&EDRE.test(b.t)&&!(b.o&&EDRE.test(b.o)))b.t=b.t.replace(EDRE,'').trim();
     if(isWrong(b.i)){ if(b.o)b.t=b.o; ['a','v','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; return; }
