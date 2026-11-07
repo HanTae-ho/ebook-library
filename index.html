@@ -294,6 +294,22 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  #ruler{position:fixed;left:0;right:0;top:0;bottom:0;pointer-events:none;display:none;z-index:24}
+  #ruler.on{display:block}
+  #ruler .rt,#ruler .rb{position:absolute;left:0;right:0;background:rgba(0,0,0,var(--rdim,.45))}
+  body.night #ruler .rt,body.night #ruler .rb{background:rgba(0,0,0,calc(var(--rdim,.45) + .15))}
+  #ruler .rt{top:0;height:var(--ry,30vh)}
+  #ruler .rbd{position:absolute;left:0;right:0;top:var(--ry,30vh);height:var(--rh,90px);
+    border-top:1px solid rgba(110,168,254,.55);border-bottom:1px solid rgba(110,168,254,.55)}
+  #ruler .rb{top:calc(var(--ry,30vh) + var(--rh,90px));bottom:0}
+  #ruler .rh{position:absolute;right:6px;top:50%;transform:translateY(-50%);pointer-events:auto;touch-action:none;cursor:ns-resize;
+    width:28px;height:28px;border-radius:50%;background:var(--acc);color:#0b1220;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.85}
+  #hGoal{margin:6px 0 2px}
+  #hGoal .g{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+  #hGoal .ring{width:44px;height:44px;flex:0 0 auto}
+  #hGoal .tx{font-size:13px;line-height:1.55}
+  #hGoal .tx b{font-size:15px}
+  #hGoal .tx i{font-style:normal;color:var(--dim);font-size:11.5px}
   #hRead .rd{padding:8px 0;border-bottom:1px solid var(--line)}
   #hRead .rd .nm{font-weight:600;font-size:13px}
   #hRead .rd .bk{display:inline-block;margin:4px 6px 0 0;padding:4px 9px;border-radius:14px;border:1px solid var(--line);font-size:12px;cursor:pointer}
@@ -596,6 +612,7 @@
   <div id="home">
     <div class="hs" id="hqWrap"><div class="hrow" id="hq"></div></div>
 
+    <div id="hGoal"></div>
     <div id="hRow1"></div>
 
     <div class="hs" id="hsPin">
@@ -670,6 +687,7 @@
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
+  <div id="ruler"><div class="rt"></div><div class="rbd"><span class="rh" title="끌어서 옮기기">≡</span></div><div class="rb"></div></div>
   <div id="ttsov"></div>
   <div id="ttsbar">
     <button id="ttsPrev" title="앞 문장">⏮</button>
@@ -782,6 +800,16 @@
     </div></div>
   <div class="grp k-epub"><div class="lb"><span>탭 영역 폭</span><span id="vTap"></span></div>
     <input type="range" id="rgTap" min="15" max="45" step="1"></div>
+  <div class="grp"><div class="lb">읽기 자 <span style="opacity:.7">· 읽는 줄만 밝게 (R 키)</span></div>
+    <div class="seg" id="segRuler">
+      <button data-v="0">끔</button><button data-v="1">켬</button><button data-v="2">켬 + 막대 숨김</button>
+    </div>
+    <div id="rulerBox">
+      <div class="lb" style="margin-top:8px"><span>띠 높이</span><span id="vRulerH"></span></div>
+      <input type="range" id="rgRulerH" min="1" max="8" step="1">
+      <div class="lb" style="margin-top:8px"><span>둘레 어둡게</span><span id="vRulerD"></span></div>
+      <input type="range" id="rgRulerD" min="15" max="85" step="5">
+    </div></div>
   <div class="grp"><div class="lb">마우스 휠 <span style="opacity:.7">· PC · EPUB·한 쪽씩 PDF·만화</span></div>
     <div class="seg" id="segWheel">
       <button data-v="page">쪽 넘기기</button><button data-v="off">안 씀</button>
@@ -999,8 +1027,20 @@
     <div class="sect">저장 공간<span id="useInfo"></span></div>
     <div class="btns"><button id="btnClearDone">다 읽은 책 파일 비우기</button></div>
     <div class="btns"><button id="btnClearBooks">받아둔 파일 모두 비우기</button></div>
+    <div class="lb" style="margin-top:10px;font-size:12.5px">받아둔 책 한도 <span id="capInfo" style="color:var(--dim)"></span></div>
+    <div class="seg" id="segCap">
+      <button data-v="0">한도 없음</button><button data-v="1">1GB</button><button data-v="2">2GB</button>
+      <button data-v="5">5GB</button><button data-v="10">10GB</button>
+    </div>
+    <p class="note">넘으면 <b>다 읽은 책</b>부터, 그다음 한 달 넘게 안 연 책을 오래된 순으로 비웁니다.
+      사흘 안에 연 책과 지금 읽는 책은 남깁니다.</p>
     <p class="note">파일만 지웁니다. <b>읽은 기록(진도·다 읽음)은 그대로 남습니다.</b>
       다시 열면 자동으로 받아서 읽던 위치로 갑니다.</p>
+
+    <div class="sect">내 기록 내려받기</div>
+    <div class="btns"><button id="btnExport">파일로 받기 (JSON + 마크다운)</button></div>
+    <p class="note">읽은 기록·형광펜·메모·책갈피·별점·독서 시간을 파일 둘로 받아 둡니다.
+      주소·토큰 같은 설정은 넣지 않습니다.</p>
 
     <div class="sect">읽은 기록</div>
     <div class="btns"><button id="btnClearRead">읽은 기록 모두 지우기</button></div>
@@ -1329,7 +1369,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v44';
+const BUILD='v47';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2021,7 +2061,7 @@ const SRC={
 };
 const srcOf=b=>SRC[(b&&b.s)||'drive'];
 async function getBook(b){
-  const hit=await DB.get('books',b.i); if(hit)return hit;
+  const hit=await DB.get('books',b.i); if(hit){ sizeTouch(b.i); return hit; }
   const src=srcOf(b);
   if(!src)throw new Error('이 책이 있는 곳('+b.s+')은 아직 열 수 없습니다');
   abort=new AbortController();
@@ -2037,7 +2077,7 @@ async function getBook(b){
   } else buf=await res.arrayBuffer();
   /* 기기에 담아두는 일은 읽기와 상관없습니다.
      기다리지 않고 뒤에서 처리해, 저장이 실패해도 책은 열립니다. */
-  DB.put('books',b.i,buf).then(()=>{ saved.add(b.i); })
+  DB.put('books',b.i,buf).then(()=>{ saved.add(b.i); sizeTouch(b.i,buf.byteLength||buf.length||0); setTimeout(()=>capClean(b.i),500); })
     .catch(e=>{ log('받아두기 실패: '+(e.message||e));
       toast('책은 열지만 기기에 담아두지는 못했습니다\n'+(e.message||e),5000); });
   return buf;
@@ -2110,6 +2150,7 @@ function applyRead(){
   segSet('#segFw',P.fw||''); segSet('#segFoot',P.nofoot||0); segSet('#segClean',P.tclean||0); segSet('#segJunk',P.junk||0); segSet('#segResume',P.resume||0); segSet('#segWheel',P.wheel||'page'); segSet('#segSideBtn',P.sidebtn||'page'); paintJunkN();
   $('#rgFs').value=P.fs; $('#rgLh').value=P.lh; $('#rgPd').value=P.pd;
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
+  try{ if(P.ruler)applyRuler(); }catch(e){}
 }
 let EPLOC=null;     // EPUB 에서 지금 펼친 쪽의 처음·끝 (책갈피가 씁니다)
 async function showReader(b,buf){
@@ -2131,8 +2172,9 @@ async function showReader(b,buf){
       markRead(b.i, p, loc&&loc.atEnd);
     }
     const st=stOf(b);
+    try{ pageTick(loc); rulerTop(); }catch(e){}
     $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')
-      +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+(b.t||'');
+      +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+leftStr(loc)+(b.t||'');
   });
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} });
@@ -3631,9 +3673,10 @@ function redrawPdf(){
 function showPdfFoot(){
   if(!pdfDoc||!curB)return;
   paintBmBtn();
+  try{ pageTick(null); if(P.pnav==='page')rulerTop(); }catch(e){}
   $('#rfoot').textContent=`${pdfPg} / ${pdfDoc.numPages}`
     +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
-    +'  ·  '+(curB.t||'');
+    +'  ·  '+leftStr(null)+(curB.t||'');
 }
 function onPdfScroll(){
   const host=$('#pdf'); if(!pdfDoc||P.pnav==='page')return;
@@ -3681,11 +3724,12 @@ function onTxtScroll(){
   paintBmBtn();
   $('#rfoot').textContent=Math.round(p*100)+'%'
     +(noMark?'  ·  기록 안 함':(stOf(curB)==='done'?'  ·  다 읽음':''))
-    +'  ·  '+(curB.t||'');
+    +'  ·  '+leftStr(null)+(curB.t||'');
 }
 
 /* 리더 껍데기 — 어떤 형식이든 공통 */
 function openShell(b){
+  setTimeout(()=>{ try{ applyRuler(); }catch(e){} },80);
   selbarOff(); clearOv(); $('#resumeBar')&&$('#resumeBar').classList.remove('on');
   $('#library').style.display='none'; $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||'';
@@ -3767,7 +3811,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
+function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} try{ $('#ruler').classList.remove('on'); document.body.classList.remove('rfocus'); }catch(e){} ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
@@ -4035,6 +4079,7 @@ function hsec(host,title,tab,arr,total,none){
 function buildHome(){
   const vis = BOOKS.filter(b=>P.fmt[fmtKey(b)]);
   const n = counts();
+  try{ paintGoal(); }catch(e){}
   $('#hRow1').innerHTML='';
 
   /* 최근 검색어 */
@@ -4342,6 +4387,156 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v47 — 읽기 자 · 집중 모드 ══════════
+   읽는 줄 몇 개만 밝게 두고 위아래를 어둡게 덮습니다 (그림을 덮는 층이라 글·형광펜은 그대로).
+   TXT·흘려보는 PDF: 띠는 제자리, 글이 띠 아래로 흘러갑니다.
+   EPUB·한 쪽씩 PDF: 쪽을 넘기면 띠가 맨 위로 돌아가고, 오른쪽 ≡ 를 끌어 내려가며 읽습니다.
+   '켬 + 막대 숨김' 은 위아래 막대까지 감춰 집중합니다 (화면 가운데를 누르면 다시 보임). */
+if(P.rulerY==null)P.rulerY=0.32; if(!P.rulerH)P.rulerH=3; if(!P.rulerD)P.rulerD=45;
+function rulerLinePx(){ return 15*(P.fs||110)/100*(P.lh||170)/100; }
+function applyRuler(){
+  const el=$('#ruler'); if(!el)return;
+  const on=!!P.ruler&&readerOn()&&KIND!=='comic';
+  el.classList.toggle('on',on);
+  document.body.classList.toggle('rfocus',on&&P.ruler===2);
+  if(on&&P.ruler===2){ $('#rbar').classList.add('hide'); $('#rfoot').classList.add('hide'); }
+  const H=Math.round(rulerLinePx()*P.rulerH+10), vh=innerHeight;
+  const y=Math.max(0,Math.min(vh-H,Math.round(P.rulerY*vh)));
+  el.style.setProperty('--ry',y+'px'); el.style.setProperty('--rh',H+'px'); el.style.setProperty('--rdim',(P.rulerD/100).toFixed(2));
+  segSet('#segRuler',P.ruler||0); $('#rulerBox').style.display=P.ruler?'':'none';
+  $('#rgRulerH').value=P.rulerH; $('#vRulerH').textContent=P.rulerH+'줄';
+  $('#rgRulerD').value=P.rulerD; $('#vRulerD').textContent=P.rulerD+'%';
+}
+function rulerTop(){ if(!P.ruler)return; const top=($('#rbar').classList.contains('hide')?16:64)/innerHeight;
+  P.rulerY=Math.max(0.02,top); applyRuler(); }
+seg('#segRuler','ruler',()=>{ if(!P.ruler){ $('#rbar').classList.remove('hide'); $('#rfoot').classList.remove('hide'); } applyRuler(); });
+$('#rgRulerH').addEventListener('input',()=>{ P.rulerH=Number($('#rgRulerH').value); savePref(); applyRuler(); });
+$('#rgRulerD').addEventListener('input',()=>{ P.rulerD=Number($('#rgRulerD').value); savePref(); applyRuler(); });
+(function(){ const h=document.querySelector('#ruler .rh'); let dy=0, on=false;
+  h.addEventListener('pointerdown',e=>{ on=true; dy=e.clientY-P.rulerY*innerHeight; try{ h.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); e.stopPropagation(); });
+  h.addEventListener('pointermove',e=>{ if(!on)return; P.rulerY=Math.max(0,Math.min(0.95,(e.clientY-dy)/innerHeight)); applyRuler(); e.preventDefault(); });
+  const up=()=>{ if(on){ on=false; savePref(); } };
+  h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+})();
+addEventListener('resize',()=>{ try{ if(P.ruler)applyRuler(); }catch(e){} });
+
+/* ══════════ v46 — 남은 시간 · 독서 목표 · 저장 공간 한도 · 내 기록 내려받기 ══════════ */
+/* 남은 시간
+   책: 이 책에 쓴 시간(DAYS 를 모두 더함) ÷ 지금 진도 × 남은 진도 — 5분 넘게, 3% 넘게 읽은 뒤부터.
+   장(EPUB): 이번에 쪽을 넘긴 간격의 가운데 값 × 이 장에 남은 쪽.  */
+var PGT={ id:'', last:0, gaps:[] };
+function pageTick(loc){
+  if(!curB)return; const now=Date.now();
+  if(PGT.id!==curB.i){ PGT={id:curB.i,last:now,gaps:[]}; return; }
+  const g=(now-PGT.last)/1000; PGT.last=now;
+  if(g>=3&&g<=300){ PGT.gaps.push(g); if(PGT.gaps.length>40)PGT.gaps.shift(); }
+}
+function bookSec(id){ let t=0; Object.values(DAYS).forEach(m=>Object.entries(m||{}).forEach(([k,v])=>{ if(k.split('|')[0]===id)t+=v; })); return t; }
+const shortDur=sec=>{ const m=Math.round(sec/60); if(m<1)return '1분 안'; if(m<60)return m+'분';
+  const h=Math.floor(m/60), r=m%60; return h+'시간'+(r&&h<10?' '+r+'분':''); };
+function leftStr(loc){
+  if(!curB||P.leftTime===0)return '';
+  const out=[];
+  if(loc&&loc.start&&loc.start.displayed&&PGT.gaps.length>=4){
+    const d=loc.start.displayed, left=Math.max(0,(d.total||0)-(d.page||0));
+    const g=PGT.gaps.slice().sort((a,b)=>a-b), med=g[g.length>>1];
+    if(left>0)out.push('이 장 '+shortDur(left*med));
+  }
+  const p=pctOf(curB), sec=bookSec(curB.i);
+  if(p>=0.03&&p<0.985&&sec>=300) out.push('책 '+shortDur(sec*(1-p)/p));
+  return out.length?out.join(' · ')+' 남음  ·  ':'';
+}
+
+/* 독서 목표 — 홈 위 카드. 누르면 올해 목표 권수를 정합니다 (0 이면 목표 없이 기록만) */
+function yearDone(y){ return Object.entries(RD).filter(([id,r])=>r&&r.f&&r.t&&new Date(r.t).getFullYear()===y&&!/#all$/.test(id)).length; }
+function daySec(k){ return Object.values(DAYS[k]||{}).reduce((a,v)=>a+v,0); }
+function streak(){
+  let n=0; const d=new Date();
+  if(daySec(dkey(d))<60)d.setDate(d.getDate()-1);          // 오늘 아직 안 읽었으면 어제부터 셉니다
+  for(;;){ if(daySec(dkey(d))>=60){ n++; d.setDate(d.getDate()-1); } else break; if(n>3650)break; }
+  return n;
+}
+function paintGoal(){
+  const el=$('#hGoal'); if(!el)return;
+  if(P.goalOff){ el.innerHTML=''; return; }
+  const y=new Date().getFullYear(), n=yearDone(y), goal=P.goal||0, st=streak(), today=daySec(dkey());
+  if(!n&&!st&&!today&&!goal){ el.innerHTML=''; return; }
+  const fr=goal?Math.min(1,n/goal):0, C=2*Math.PI*18;
+  // 지금 날짜까지 와 있어야 할 권수
+  const doy=(Date.now()-new Date(y,0,1))/86400000, pace=goal?Math.round(goal*doy/365):0;
+  el.innerHTML=`<div class="g" id="goalCard">
+    <svg class="ring" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" stroke-width="5"/>
+      <circle cx="22" cy="22" r="18" fill="none" stroke="var(--acc)" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="${(C*fr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 22 22)"/>
+      <text x="22" y="26" text-anchor="middle" font-size="12" fill="var(--tx)">${n}</text></svg>
+    <div class="tx"><b>${y}년 ${n}권</b>${goal?` / 목표 ${goal}권 <i>(지금쯤 ${pace}권${n>=pace?' · 앞서는 중':''})</i>`:' <i>· 누르면 목표를 정합니다</i>'}<br>
+      ${st?`연속 ${st}일째`:'오늘 읽어 연속을 시작해 보세요'}${today?` · 오늘 ${shortDur(today)}`:''}</div></div>`;
+  $('#goalCard').onclick=async()=>{
+    const v=await ask(`${y}년 목표 — 몇 권?`,'예) 24 · 0 이면 목표 없이 기록만',String(goal||''));
+    if(v===null)return; const k=Math.max(0,Math.min(999,parseInt(v,10)||0));
+    P.goal=k; savePref(); paintGoal(); toast(k?`올해 목표 ${k}권`:'목표 없이 기록만 보입니다');
+  };
+}
+
+/* 저장 공간 한도 — 받아둔 책의 크기와 마지막으로 연 때를 기기에 적어 둡니다 */
+var SIZES={}; try{ SIZES=JSON.parse(localStorage.getItem('ebl_sizes')||'{}'); }catch(e){ SIZES={}; }
+function sizeTouch(id,bytes){ const o=SIZES[id]||(SIZES[id]={}); if(bytes)o.b=bytes; o.t=Date.now();
+  clearTimeout(sizeTouch._t); sizeTouch._t=setTimeout(()=>{ try{ localStorage.setItem('ebl_sizes',JSON.stringify(SIZES)); }catch(e){} },800); }
+function sizeOf(id){ const o=SIZES[id]; if(o&&o.b)return o.b; const b=(BOOKS_ALL.length?BOOKS_ALL:BOOKS).find(x=>x.i===id); return b&&b.z?b.z*1048576:5*1048576; }
+function sizeTotal(){ let t=0; saved.forEach(id=>t+=sizeOf(id)); return t; }
+async function capClean(keep){
+  const cap=(P.cap||0)*1073741824; if(!cap)return 0;
+  let tot=sizeTotal(); if(tot<=cap)return 0;
+  const now=Date.now(), recent=id=>(SIZES[id]&&now-(SIZES[id].t||0)<3*86400000);
+  const lastOf=id=>Math.max((SIZES[id]&&SIZES[id].t)||0,(RD[id]&&RD[id].t)||0);
+  const cand=[...saved].filter(id=>id!==keep&&!(curB&&curB.i===id)&&!recent(id));
+  const done=cand.filter(id=>RD[id]&&RD[id].f).sort((a,b)=>lastOf(a)-lastOf(b));
+  const old=cand.filter(id=>!(RD[id]&&RD[id].f)&&now-lastOf(id)>30*86400000).sort((a,b)=>lastOf(a)-lastOf(b));
+  let n=0;
+  for(const id of done.concat(old)){
+    if(tot<=cap*0.9)break;
+    try{ await DB.del('books',id); saved.delete(id); tot-=sizeOf(id); delete SIZES[id]; n++; }catch(e){}
+  }
+  try{ localStorage.setItem('ebl_sizes',JSON.stringify(SIZES)); }catch(e){}
+  if(n){ log('저장 공간 한도로 '+n+'권을 비웠습니다'); toast(`받아둔 책이 한도를 넘어\n오래된 ${n}권의 파일을 비웠습니다 (읽은 기록은 그대로)`,4500);
+    try{ paintTabs(); }catch(e){} }
+  return n;
+}
+seg('#segCap','cap',async()=>{ const n=await capClean(); useInfo();
+  if(P.cap&&!n)toast(`한도 ${P.cap}GB — 지금은 넘지 않습니다`); });
+
+/* 내 기록 내려받기 — JSON(전부) + 마크다운(사람이 읽기 좋게). 설정(주소·토큰)은 뺍니다 */
+function dlFile(name,text,type){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type}));
+  a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+}
+function exportMd(){
+  const byId=new Map((BOOKS_ALL.length?BOOKS_ALL:BOOKS).map(b=>[b.i,b]));
+  const nm=id=>{ const b=byId.get(id); if(b)return b.t; const h=(HL[id]||[]).find(o=>o.bt); return h?h.bt:id; };
+  const day=t=>t?dkey(t):'';
+  let md=`# 우리 도서관 — 내 기록\n\n${dkey()} · ${ME.name||''}\n\n`;
+  const y=new Date().getFullYear();
+  md+=`올해 다 읽은 책 ${yearDone(y)}권 · 연속 ${streak()}일\n\n## 다 읽은 책\n\n`;
+  Object.entries(RD).filter(([,r])=>r&&r.f).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
+    const v=RV[id]; md+=`- ${day(r.t)}  ${nm(id)}${v&&v.s?'  '+starStr(v.s):''}${v&&v.t?' — '+v.t:''}  (읽은 시간 ${shortDur(bookSec(id))})\n`; });
+  md+=`\n## 읽는 중\n\n`;
+  Object.entries(RD).filter(([,r])=>r&&!r.f).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
+    md+=`- ${nm(id)}  ${Math.round((r.p||0)*100)}%  (${day(r.t)})\n`; });
+  md+=`\n## 형광펜 · 메모 · 책갈피\n`;
+  Object.entries(HL).forEach(([id,a])=>{ if(!a||!a.length)return;
+    md+=`\n### ${nm(id)}\n\n`+a.slice().sort((x,y)=>(x.pos||0)-(y.pos||0)).map(o=>{ const w=whereOf(o);
+      if(isBm(o))return `- 🔖 ${w}${o.t?' — '+o.t:''}`;
+      return `> ${String(o.t||'').replace(/\n/g,'\n> ')}\n> — ${w}`+(o.n?`\n\n${o.n}`:''); }).join('\n\n')+'\n'; });
+  return md;
+}
+$('#btnExport').onclick=()=>{
+  const st=localState(); delete st.cfg; delete st.cfgAt;                 // 주소·토큰은 넣지 않습니다
+  const stamp=dkey().replace(/-/g,'');
+  dlFile(`우리도서관_내기록_${stamp}.json`,JSON.stringify(st,null,1),'application/json');
+  setTimeout(()=>dlFile(`우리도서관_내기록_${stamp}.md`,exportMd(),'text/markdown'),600);
+  toast('파일 두 개를 내려받습니다 (JSON · 마크다운)');
+};
 
 /* ══════════ v44 — 식구 ══════════
    ① 서로의 서재  기본 끔. 켠 사람만 모임 칸에 한 줄(kind:'read', id:'read-번호') —
@@ -4868,6 +5063,7 @@ const KEYHELP=[
   ['M','형광펜·메모 목록'],
   ['C','목차'],
   ['[  ]','글자 작게 · 크게'],
+  ['R','읽기 자 켜기·끄기'],
   ['Esc','열린 판 닫기 → 한 번 더 누르면 책 닫기'],
 ];
 function readerKey(e){
@@ -4892,6 +5088,7 @@ function readerKey(e){
   else if(k==='t'||k==='T') ttsKey();
   else if(k==='m'||k==='M') $('#btnHl').click();
   else if(k==='c'||k==='C') $('#btnToc').click();
+  else if(k==='r'||k==='R'){ P.ruler=P.ruler?0:1; savePref(); applyRuler(); toast(P.ruler?'읽기 자를 켰습니다':'읽기 자를 껐습니다',1000); }
   else if(k==='['||k===']'){ P.fs=Math.max(70,Math.min(220,P.fs+(k===']'?5:-5))); savePref(); applyRead(); toast('글자 '+P.fs+'%',900); }
   else done=false;
   if(done)e.preventDefault();
@@ -6931,6 +7128,7 @@ async function useInfo(){
     if(e&&e.usage) s+=`  ·  약 ${(e.usage/1048576).toFixed(0)}MB`;
   } }catch(e){}
   el.textContent=s;
+  try{ const t=sizeTotal(); $('#capInfo').textContent=`· 지금 약 ${(t/1073741824).toFixed(2)}GB`; segSet('#segCap',P.cap||0); }catch(e){}
 }
 $('#btnClearDone').onclick=async()=>{
   const hit=[...saved].filter(i=>RD[i]&&RD[i].f);
