@@ -1186,6 +1186,7 @@
       <br>계정을 바꾸시려면 [기억 지우기] 뒤에 다시 로그인하세요.</p>
 
     <div class="sect">앱</div>
+    <p class="note" id="verLine">버전 확인 중…</p>
     <div class="btns"><button id="btnAdd">홈 화면에 추가</button></div>
     <div class="btns"><button id="btnFresh">앱 새로 고치기</button></div>
     <p class="note">고친 내용이 안 보일 때 누르세요. 저장해 둔 앱 파일을 버리고
@@ -1514,7 +1515,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v51';
+const BUILD='v52';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -3971,7 +3972,8 @@ function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} t
   pdfIO=null; pdfDoc=null; pdfBusy.clear();
   $('#pdf').innerHTML=''; $('#pdf').onscroll=null;
   $('#txt').innerHTML=''; $('#txt').onscroll=null;
-  book=null; rend=null; curB=null; paintTabs(); render(true); }
+  book=null; rend=null; curB=null; paintTabs(); render(true);
+  try{ if(UPD.pending)setTimeout(updApply,800); }catch(e){} }
 
 /* ── 설정판 ── */
 function segSet(sel,v){ $$(sel+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v))); }
@@ -7613,7 +7615,7 @@ function pgClose(){
 /* 처음 여는 것은 언제나 기본설정입니다 */
 function pgOpen(k){ PGBACK=[]; PGNOW=''; pgShow(k||'set'); }
 
-$('#btnSet').onclick=()=>pgOpen('set');
+$('#btnSet').onclick=()=>{ pgOpen('set'); try{ paintVer(); }catch(e){} };
 $('#setSave').onclick=()=>{
   const adm=$('#sAdm').value.trim();
   // 열쇠가 들어 있었는데 칸이 비었다면, 지우려는 것인지 한 번 여쭙습니다
@@ -8008,13 +8010,35 @@ markLogin(tokenLive());
   setTimeout(()=>{ famLoad(); },3200);
   setTimeout(()=>askAdd(false),4000);
 })();
+/* ══════════ v52 — 저절로 새 버전 ══════════
+   새 서비스 워커가 자리를 잡으면(controllerchange) 바로 다시 엽니다.
+   단, 책을 읽는 중·창이 떠 있음·글을 쓰는 중이면 기다렸다가 끝나면 바꿉니다. */
+var UPD={pending:0,hadCtl:false,reg:null,latest:'',told:0,t:0};
+function updSafe(){ return !curB && !document.querySelector('.sheet.on') && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||''); }
+function updApply(){ if(!UPD.pending)return;
+  if(updSafe()){ try{ saveRD.now(); saveHL.now(); saveDAYS.now(); }catch(e){}
+    try{ sessionStorage.setItem('ebl_updfrom',BUILD); }catch(e){} location.reload(); return; }
+  if(!UPD.told){ UPD.told=1; toast(curB?'새 버전이 왔습니다 — 책을 닫으면 바뀝니다':'새 버전이 왔습니다 — 하던 일을 마치면 바뀝니다',5000); }
+  clearTimeout(UPD.t); UPD.t=setTimeout(updApply,20000); }
+async function updCheck(){ try{ if(UPD.reg)await UPD.reg.update(); }catch(e){} }
+async function updLatest(){ try{ const t=await (await fetch('sw.js?'+Date.now(),{cache:'no-store'})).text();
+  const m=/ebl-(v[\w.]+)/.exec(t); UPD.latest=m?m[1]:''; }catch(e){ UPD.latest=''; } return UPD.latest; }
+async function paintVer(){ const el=$('#verLine'); if(!el)return; el.textContent=`지금 ${BUILD} · 새 버전 확인 중…`;
+  const v=await updLatest();
+  if(!v){ el.textContent=`지금 ${BUILD} · 인터넷이 안 돼 확인하지 못했습니다`; return; }
+  if(v===BUILD){ el.textContent=`지금 ${BUILD} · 최신입니다. 새 버전은 저절로 받아 바뀝니다`; return; }
+  el.textContent=`지금 ${BUILD} · 새 ${v} 를 받는 중 — 설정을 닫으면 바뀝니다`; updCheck(); }
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(r=>{ r.update();
-    r.addEventListener('updatefound',()=>{ const w=r.installing;
-      w&&w.addEventListener('statechange',()=>{
-        if(w.state==='installed'&&navigator.serviceWorker.controller)
-          toast('새 버전이 있습니다. 앱을 다시 열어주세요.',6000); }); }); }).catch(()=>{});
+  UPD.hadCtl=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!UPD.hadCtl){ UPD.hadCtl=true; return; }      // 처음 설치 — 다시 열 필요 없음
+    if(UPD.pending)return; UPD.pending=1; updApply(); });
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{ UPD.reg=r; r.update(); }).catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden)updCheck(); else if(UPD.pending&&updSafe())updApply(); });
+  setInterval(updCheck,3600000);
 }
+try{ const f=sessionStorage.getItem('ebl_updfrom'); if(f){ sessionStorage.removeItem('ebl_updfrom');
+  if(f!==BUILD)setTimeout(()=>toast(`새 버전으로 바뀌었습니다 · ${f} → ${BUILD}`,4000),1500); } }catch(e){}
 </script>
 </body>
 </html>

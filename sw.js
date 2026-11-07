@@ -3,12 +3,14 @@
    책 파일과 색인은 IndexedDB 가 따로 맡습니다. */
 
 /* 고칠 때마다 이 번호를 올리면 옛 캐시가 버려집니다 */
-const V = 'ebl-v51';
+const V = 'ebl-v52';
 const SHELL = ['./', './index.html', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-32.png'];
 
+// 설치할 때 브라우저 캐시를 건너뛰고 새로 받습니다 (cache:'reload') — 안 그러면 옛 index.html 이 다시 담김
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
