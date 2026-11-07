@@ -367,6 +367,18 @@
   #ruler .rh{position:absolute;right:6px;top:50%;transform:translateY(-50%);pointer-events:auto;touch-action:none;cursor:ns-resize;
     width:28px;height:28px;border-radius:50%;background:var(--acc);color:#0b1220;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.85}
   #hGoal{margin:0}
+  /* v53 — 번역·각주 작은 창 */
+  #rpop{position:fixed;left:12px;right:12px;bottom:calc(var(--sb) + 64px);max-width:640px;margin:0 auto;max-height:52vh;overflow:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.45);z-index:90;display:none;padding:12px 14px}
+  #rpop.on{display:block}
+  #rpop .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+  #rpop .hd b{font-size:12.5px;color:var(--dim);font-weight:600}
+  #rpop .hd button{font-size:15px;padding:4px 8px;color:var(--dim)}
+  #rpopB{font-size:15px;line-height:1.7;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+  #rpopB .src{font-size:12.5px;color:var(--dim);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #rpopB .err{color:var(--bad);font-size:13.5px}
+  #rpop .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  #rpop .acts button{height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--line);font-size:13px}
   /* v51 — 시안에 맞춘 머리 · 요약 줄 · 넓은 화면 */
   header{padding-left:max(12px,calc((100% - 1240px)/2));padding-right:max(12px,calc((100% - 1240px)/2))}
   header>.row{flex-wrap:wrap;gap:8px 12px}
@@ -865,6 +877,7 @@
   <button class="tx" id="selMemo">메모</button>
   <button class="tx" id="selCopy">복사</button>
   <button class="tx" id="selFind" title="이 책에서 찾기">찾기</button>
+  <button class="tx" id="selTr" title="번역 (구글)">번역</button>
   <div class="sep"></div>
   <button class="tx" id="selDict" title="네이버 국어사전">사전</button>
   <button class="tx" id="selNamu" title="나무위키">나무</button>
@@ -1417,6 +1430,10 @@
   </div>
 </div>
 
+<!-- v53 읽는 화면 작은 창 — 번역 · 각주 -->
+<div id="rpop" role="dialog" aria-label="번역·각주"><div class="hd"><b id="rpopT"></b><button id="rpopX" aria-label="닫기">✕</button></div>
+  <div id="rpopB"></div><div class="acts" id="rpopA"></div></div>
+
 <!-- v38 앱을 열 때 이어 읽기 -->
 <div id="resumeBar"><button id="resumeGo">📖 <b id="resumeT"></b></button><button id="resumeX" title="닫기">✕</button></div>
 
@@ -1515,7 +1532,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v52';
+const BUILD='v53';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2323,7 +2340,7 @@ async function showReader(b,buf){
       +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+leftStr(loc)+(b.t||'');
   });
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
-  rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} });
+  rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} try{ bindNotes(i); }catch(e){} });
   bindEpubSelect();
   paintHlBadge();
   // 쪽을 그릴 때·넘길 때·글자 크기를 바꿀 때 모두 다시 칠합니다
@@ -3973,6 +3990,7 @@ function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} t
   $('#pdf').innerHTML=''; $('#pdf').onscroll=null;
   $('#txt').innerHTML=''; $('#txt').onscroll=null;
   book=null; rend=null; curB=null; paintTabs(); render(true);
+  try{ rpopOff(); }catch(e){}
   try{ if(UPD.pending)setTimeout(updApply,800); }catch(e){} }
 
 /* ── 설정판 ── */
@@ -5479,7 +5497,106 @@ function selWeb(u){ const t=selWord(); if(!t)return;
 $('#selDict').onclick=()=>selWeb('https://ko.dict.naver.com/#/search?query=');
 $('#selNamu').onclick=()=>selWeb('https://namu.wiki/Go?q=');
 $('#selGoogle').onclick=()=>selWeb('https://www.google.com/search?q=');
+$('#selTr').onclick=()=>{ const t=PICK&&PICK.t?PICK.t:''; clearSel(); clearOv(); selbarOff(); if(t)showTr(t); };
 $('#selFind').onclick=()=>{ const t=selWord(); clearSel(); clearOv(); selbarOff(); openFind(t.slice(0,40)); };
+
+/* ══════════ v53 — 고른 글 번역 · 각주 작은 창 ══════════
+   번역은 우리 Apps Script 웹앱(mode=tr)이 구글 번역(LanguageApp)으로 — 키가 필요 없습니다.
+   결과는 이 기기 메모리에만 잠깐 (같은 글을 다시 물으면 바로). */
+function rpop(title,html,acts){ $('#rpopT').textContent=title; $('#rpopB').innerHTML=html; const a=$('#rpopA'); a.innerHTML='';
+  (acts||[]).forEach(([t,f])=>{ const b=document.createElement('button'); b.textContent=t; b.onclick=f; a.appendChild(b); });
+  $('#rpop').classList.add('on'); $('#rpop').scrollTop=0; }
+function rpopOff(){ $('#rpop').classList.remove('on'); }
+$('#rpopX').onclick=rpopOff;
+var TRC=new Map();
+function trTo(t){ const h=(t.match(/[가-힣]/g)||[]).length, l=(t.match(/[A-Za-z]/g)||[]).length; return h>=l&&h>0?'en':'ko'; }
+function trCut(t){ t=String(t||'').replace(/\s+/g,' ').trim(); while(t&&encodeURIComponent(t).length>6000)t=t.slice(0,Math.floor(t.length*.85)); return t; }
+async function gasGet(params,oldMsg){
+  const base=checkUrl();
+  const q=new URLSearchParams(Object.assign({ token:cfg('tok'), uid:ME.id||'' },params));
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),25000);
+  try{
+    const r=await fetch(base+(base.includes('?')?'&':'?')+q.toString(),{signal:ac.signal});
+    if(!r.ok)throw new Error('웹앱 응답 '+r.status);
+    const rd=r.body&&r.body.getReader?r.body.getReader():null; let txt='';
+    if(rd){ const dec=new TextDecoder(); let n=0;
+      for(;;){ const {done,value}=await rd.read(); if(done)break; n+=value.length; txt+=dec.decode(value,{stream:true});
+        if(n>512*1024){ try{ ac.abort(); }catch(e){} throw new Error(oldMsg); } } }
+    else txt=await r.text();
+    let d; try{ d=JSON.parse(txt); }catch(e){ throw new Error('웹앱 응답을 읽지 못했습니다'); }
+    if(d&&d.books)throw new Error(oldMsg);           // 옛 웹앱은 모르는 mode 에 색인을 통째로 줍니다
+    if(d.error)throw new Error(d.error);
+    return d;
+  } catch(e){ if(e.name==='AbortError')throw new Error('응답이 너무 늦습니다'); throw e; }
+  finally{ clearTimeout(tm); }
+}
+async function trFetch(text,to){
+  const k=to+'|'+text; if(TRC.has(k))return TRC.get(k);
+  const d=await gasGet({mode:'tr',q:text,to},'웹앱이 아직 번역을 모릅니다.\nApps Script 에 v18.15 를 붙이고\n배포 관리 → 새 버전으로 배포해 주세요');
+  if(!d.ok)throw new Error(d.error||'번역하지 못했습니다');
+  if(TRC.size>200)TRC.delete(TRC.keys().next().value);
+  TRC.set(k,d.text||''); return d.text||'';
+}
+async function showTr(raw,to,title){
+  const text=trCut(raw); if(!text)return; to=to||trTo(text);
+  const cut=text.length<String(raw).replace(/\s+/g,' ').trim().length;
+  const src=`<div class="src">${esc(text)}</div>`;
+  rpop((title||'번역')+' · '+(to==='ko'?'한국어로':'영어로')+' …',src,[]);
+  let out;
+  try{ out=await trFetch(text,to); }
+  catch(e){ rpop(title||'번역',src+`<div class="err">${esc(e.message||String(e))}</div>`,[['다시',()=>showTr(raw,to,title)],['닫기',rpopOff]]); return; }
+  rpop((title||'번역')+' · '+(to==='ko'?'한국어로':'영어로')+(cut?' (앞부분만)':''),src+esc(out),[
+    ['복사',()=>{ try{ navigator.clipboard.writeText(out); toast('번역을 복사했습니다'); }catch(e){} }],
+    [to==='ko'?'영어로':'한국어로',()=>showTr(raw,to==='ko'?'en':'ko',title)],
+    ['닫기',rpopOff]]);
+}
+/* 각주 — EPUB 안의 각주 번호(noteref · [1] · ¹ · * 등)를 누르면 그 자리로 넘어가지 않고 작은 창에 */
+const NOTE_RE=/^[\[\(（【]?\s*(\d{1,3}|[*†‡§]+|[a-z]|[ivxlc]{1,6}|주\s*\d{1,3}|[¹²³⁴⁵⁶⁷⁸⁹⁰]+)\s*[\]\)）】]?$/i;
+function noteLooks(a){
+  const et=((a.getAttribute('epub:type')||'')+' '+(a.getAttributeNS?(a.getAttributeNS('http://www.idpf.org/2007/ops','type')||''):'')+' '+(a.getAttribute('role')||'')).toLowerCase();
+  if(/noteref/.test(et))return true;
+  const t=(a.textContent||'').trim();
+  return t.length<=8&&(NOTE_RE.test(t)||!!a.closest('sup'));
+}
+function noteText(el,backHref){
+  if(!el)return '';
+  let box=el;
+  const blk=el.closest&&el.closest('aside,li,dd,[epub\\:type*="note"],[role*="note"],p,div');
+  if(blk&&(blk.textContent||'').trim().length>(el.textContent||'').trim().length+1)box=blk;
+  if(box.tagName&&/^(BODY|HTML|SECTION)$/.test(box.tagName))box=el;
+  const c=box.cloneNode(true);
+  c.querySelectorAll('a').forEach(x=>{ const h=x.getAttribute('href')||''; const tx=(x.textContent||'').trim();
+    if((backHref&&h.includes(backHref))||/^[↩↑⏎]$/.test(tx)||/backlink|doc-backlink/.test((x.getAttribute('role')||'')+(x.getAttribute('epub:type')||'')))x.remove(); });
+  return (c.textContent||'').replace(/\s+/g,' ').trim().slice(0,2000);
+}
+async function noteFind(view,href){
+  const [file,id]=href.split('#'); if(!id)return null;
+  const doc=view.document;
+  const secHref=(view.section&&view.section.href)||'';
+  if(!file){ const el=doc.getElementById(id)||doc.querySelector(`[name="${CSS.escape(id)}"]`); return {el,full:secHref+'#'+id}; }
+  let rel=file; try{ rel=decodeURIComponent(new URL(file,'http://x/'+secHref).pathname.slice(1)); }catch(e){}
+  const sec=book&&(book.spine.get(rel)||book.spine.get(file));
+  if(!sec)return {el:null,full:rel+'#'+id};
+  const cont=await sec.load(book.load.bind(book));
+  const d=cont&&(cont.ownerDocument||cont);
+  const el=d&&(d.getElementById?d.getElementById(id):null)||(cont&&cont.querySelector?cont.querySelector(`[id="${CSS.escape(id)}"]`):null);
+  return {el,full:rel+'#'+id};
+}
+function bindNotes(view){
+  const doc=view&&view.document; if(!doc||doc._notes)return; doc._notes=1;
+  doc.addEventListener('click',async e=>{
+    const a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(!a)return;
+    const href=a.getAttribute('href')||''; if(!href.includes('#')||/^[a-z]+:/i.test(href)||!noteLooks(a))return;
+    if(P.notePop===0)return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    let r=null; try{ r=await noteFind(view,href); }catch(err){}
+    const me=a.getAttribute('id')||''; const txt=r&&noteText(r.el,me?'#'+me:'');
+    const go=()=>{ rpopOff(); try{ rend.display(r?r.full:href); }catch(err){} };
+    if(!txt){ go(); return; }
+    const num=(a.textContent||'').trim();
+    rpop('각주 '+num,esc(txt),[['그 자리로',go],['번역',()=>showTr(txt,null,'각주 '+num)],['닫기',rpopOff]]);
+  },true);
+}
 
 /* 이 책에서 찾기 — TXT 는 보이는 글, EPUB 은 장마다, PDF 는 쪽마다 */
 const FIND={ gen:0, hits:[] };
