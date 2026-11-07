@@ -494,6 +494,12 @@
     padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px}
   #zipList button span:last-child{color:var(--dim);font-size:11.5px;flex:0 0 auto}
   #zipList button.all{color:var(--acc);font-weight:600}
+  #zipList button.dir span:first-child::before{content:'📁 '}
+  #zipList button.up{color:var(--acc)}
+  #zipList button.last span:first-child{color:var(--acc);font-weight:600}
+  #zipList button .st{margin-left:6px;font-size:11px;color:var(--acc)}
+  #zipList button .st.done{color:var(--dim)}
+  #zipPath{font-size:12px;color:var(--dim);margin-top:4px;word-break:break-all}
   #y24Body .yh{display:flex;gap:12px;align-items:flex-start}
   #y24Body .yh img{width:84px;border-radius:4px;flex:0 0 auto}
   #y24Body .yh b{display:block;font-size:15px;line-height:1.4}
@@ -529,6 +535,12 @@
     border-left:3px solid var(--line);padding-left:9px;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
+  .stars{display:flex;gap:6px;justify-content:center;margin-top:10px}
+  .stars button{font-size:30px;line-height:1;background:none;border:0;color:var(--line);padding:2px}
+  .stars button.on{color:#ffc93c}
+  #pbRv{font-size:12.5px;line-height:1.6;margin:2px 0 8px}
+  #pbRv .r{padding:4px 0;border-bottom:1px solid var(--line)}
+  #pbRv .r b{color:#ffc93c;font-weight:400;letter-spacing:1px}
   #resumeBar{position:fixed;left:50%;bottom:calc(var(--sb) + 64px);transform:translateX(-50%);z-index:89;
     display:none;gap:6px;max-width:92%;align-items:center}
   #resumeBar.on{display:flex}
@@ -809,6 +821,7 @@
   <div class="box">
     <h3 id="zipT">ZIP 안의 책</h3>
     <div class="note" id="zipN"></div>
+    <div id="zipPath"></div>
     <div id="zipList"></div>
     <div class="btns"><button id="zipClose" class="pri">닫기</button></div>
   </div>
@@ -868,6 +881,7 @@
     <button data-v="bm">책갈피</button>
   </div>
   <div id="hlNone"></div>
+  <div class="seg" style="margin:6px 0"><button id="hlOb">옵시디언으로 보내기</button></div>
   <div class="seg" id="hlTools" style="margin-bottom:4px">
     <button id="hlCopyAll">모두 복사</button>
     <button id="hlWipe">모두 지우기</button>
@@ -890,6 +904,7 @@
 <div class="pan" id="panBook">
   <h4><span id="pbT">책</span> <button data-close>닫기</button></h4>
   <div class="lb" id="pbS" style="font-size:12px;color:var(--dim);margin:-4px 0 4px"></div>
+  <div id="pbRv"></div>
   <div class="acts" id="pbActs"></div>
 </div>
 
@@ -1167,6 +1182,7 @@
     <div id="hlAll"></div>
     <div class="btns">
       <button id="hlAllCopy">보이는 것 복사</button>
+      <button id="hlAllOb">이 책만 옵시디언으로…</button>
       <button id="hlAllClose" class="pri">닫기</button>
     </div>
   </div>
@@ -1194,7 +1210,7 @@
 </div>
 
 <!-- v38 앱을 열 때 이어 읽기 -->
-<div id="resumeBar"><button id="resumeGo">📖 이어 읽기 · <b id="resumeT"></b></button><button id="resumeX" title="닫기">✕</button></div>
+<div id="resumeBar"><button id="resumeGo">📖 <b id="resumeT"></b></button><button id="resumeX" title="닫기">✕</button></div>
 
 <!-- v38 텍본 쓰레기 문구 -->
 <div class="sheet" id="junkSheet">
@@ -1215,6 +1231,38 @@
     <div class="note">광고 문구는 같은 줄이 수십 번 나옵니다. 맞는 것만 넣으세요.</div>
     <div id="junkCand"></div>
     <div class="btns"><button id="junkClose" class="pri">닫기</button></div>
+  </div>
+</div>
+
+<!-- v42 별점 · 한 줄 평 -->
+<div class="sheet" id="rvSheet">
+  <div class="box" style="max-width:480px">
+    <h3 id="rvT">별점 · 한 줄 평</h3>
+    <div id="rvStars" class="stars"></div>
+    <textarea id="rvText" rows="3" maxlength="300" placeholder="한 줄 평 (300자까지)" style="width:100%;margin-top:10px"></textarea>
+    <label id="rvShareL" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px">
+      <input type="checkbox" id="rvShare"> <span id="rvShareT">모임 식구에게도 보이기</span></label>
+    <div class="note" id="rvNote"></div>
+    <div class="btns"><button id="rvDel">지우기</button><button id="rvCancel">그만두기</button><button id="rvSave" class="pri">남기기</button></div>
+  </div>
+</div>
+
+<!-- v42 옵시디언으로 보내기 -->
+<div class="sheet" id="obSheet">
+  <div class="box" style="max-width:520px">
+    <h3>옵시디언으로 보내기</h3>
+    <div class="note" id="obInfo"></div>
+    <div class="seg" id="obWhich" style="margin-top:10px">
+      <button data-v="new" class="on">새로 그은 것만</button><button data-v="all">모두</button>
+    </div>
+    <div class="lb" style="margin-top:12px;font-size:12px">볼트 이름</div>
+    <input id="obVault" autocomplete="off" placeholder="Projects">
+    <div class="lb" style="margin-top:8px;font-size:12px">노트 폴더</div>
+    <input id="obDir" autocomplete="off" placeholder="05. 도서관/읽은 책">
+    <div class="note" style="margin-top:8px">같은 이름의 노트가 있으면 <b>끝에 덧붙이고</b>, 없으면 새로 만듭니다.
+      플러그인이 만든 노트(같은 폴더·같은 제목)에 그대로 붙습니다.</div>
+    <pre id="obPrev" style="max-height:28vh;overflow:auto;font-size:11.5px;white-space:pre-wrap;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px"></pre>
+    <div class="btns"><button id="obCopy">복사만</button><button id="obClose">닫기</button><button id="obGo" class="pri">옵시디언 열기</button></div>
   </div>
 </div>
 
@@ -1244,7 +1292,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v40';
+const BUILD='v42';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1681,12 +1729,15 @@ const DONE_AT = 0.985;                       // 이 이상 읽으면 '다 읽음
 
 function markRead(id,p,forceDone,forceReading){
   const r = RD[id] || (RD[id]={});
+  const wasDone=!!r.f;
   if(p!=null && !isNaN(p)) r.p = Math.max(0,Math.min(1,p));
   r.t = Date.now();
   if(forceDone) r.f=1;
   if(forceReading){ r.f=0; if(r.p>=DONE_AT) r.p=0.99; }
   else if((r.p||0) >= DONE_AT) r.f=1;
   saveRD();
+  if(r.f&&!forceReading&&NEXTVOL){ try{ nextVolOffer(id); }catch(e){} }
+  if(r.f&&!forceReading&&!wasDone&&curB&&curB.i===id){ try{ rvAsk(id); }catch(e){} }
 }
 const stOf = b => { const r=RD[b.i]; if(!r) return ''; return r.f ? 'done' : 'reading'; };
 const pctOf = b => { const r=RD[b.i]; return r&&r.p ? r.p : 0; };
@@ -2957,7 +3008,7 @@ function localState(){
            cfg:cfgBundle(), cfgAt:cfgAt(),
            rd:RD, hl:HL, del:DEL, rdel:RDEL,
            days:DAYS, wrong:WRONG, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
-           pins:P.pins||[], rq:RQ,
+           pins:P.pins||[], rq:RQ, rv:RV,
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
            rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
 }
@@ -2970,6 +3021,8 @@ function mergeState(a,b){
   [a.days,b.days].forEach(D=>Object.entries(D||{}).forEach(([d,m])=>{
     const o=out.days[d]||(out.days[d]={});
     Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
+  out.rv={};
+  [a.rv,b.rv].forEach(R=>Object.entries(R||{}).forEach(([k,v])=>{ if(!out.rv[k]||(v.at||0)>(out.rv[k].at||0))out.rv[k]=v; }));
   out.wrong={};
   [a.wrong,b.wrong].forEach(W=>Object.entries(W||{}).forEach(([k,v])=>{ if(!out.wrong[k]||(v.t||0)>(out.wrong[k].t||0))out.wrong[k]=v; }));
   if((a.smartAt||0)>=(b.smartAt||0)){ out.smart=a.smart||b.smart||[]; out.smartAt=a.smartAt||0; }
@@ -3031,6 +3084,7 @@ function applyState(s){
   if(Array.isArray(s.smart)){ P.smart=s.smart;
     try{ localStorage.setItem('ebl_smartat',String(s.smartAt||0)); }catch(e){} }
   P.pins=s.pins||[]; RQ=s.rq||[];
+  if(s.rv){ RV=s.rv; saveRV(); }
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
   try{ localStorage.setItem('ebl_rq',JSON.stringify(RQ));
        localStorage.setItem('ebl_pinsat',String(s.pinsAt||0));
@@ -3682,6 +3736,7 @@ function openPanBook(b){
     st==='done'?'다 읽음':(st==='reading'?(pc>0?Math.round(pc*100)+'% 읽음':'읽는 중'):''),
     saved.has(b.i)?'받아둠':''].filter(Boolean).join(' · ');
 
+  paintPbRv(b);
   const el=$('#pbActs'); el.innerHTML='';
   const add=(label,hint,fn,cls)=>{ const x=document.createElement('button');
     if(cls)x.className=cls;
@@ -3698,6 +3753,8 @@ function openPanBook(b){
   if(saved.has(b.i)) add('받아둔 파일 지우기','읽은 기록은 그대로 남습니다',
     async()=>{ try{ await DB.del('books',b.i); saved.delete(b.i); }catch(e){}
       toast('파일을 지웠습니다'); paintTabs(); render(true); },'warn');
+  add(rvOf(b.i)?'별점 · 한 줄 평 고치기':'별점 · 한 줄 평 남기기','',()=>openRv(b));
+  if(hlOf(b.i).length) add('형광펜·메모를 옵시디언으로','이 책에 그은 것을 노트로',()=>openOb(b));
   if(b.u) add('드라이브에서 열기','',()=>window.open(b.u,'_blank','noopener'));
   // v37.1 — 책 정보가 YES24 에서 왔으면 출처와 상품 링크 (YES24 약관)
   if(b.y&&!isWrong(b.i)) add('YES24 에서 보기','이 책의 제목·저자·표지는 YES24 에서 가져왔습니다',
@@ -4216,6 +4273,201 @@ $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
+/* ══════════ v42 — 별점 · 한 줄 평 ══════════
+   RV[책ID] = {s:별 1~5, t:한 줄 평, at:고친 때, sh:모임에 보였는지}
+   내 기록이라 읽은 기록처럼 기기끼리 맞춰집니다 (나중에 고친 쪽). 지우면 {s:0,t:'',at} 로 남겨 되살아나지 않게.
+   '모임 식구에게도 보이기' 를 고르면 모임 칸에 kind:'rv' 한 줄 (id 는 사람·책마다 하나라 고치면 그 줄이 바뀝니다). */
+var RV={}; try{ RV=JSON.parse(localStorage.getItem('ebl_rv')||'{}'); }catch(e){ RV={}; }
+function saveRV(){ try{ localStorage.setItem('ebl_rv',JSON.stringify(RV)); }catch(e){} }
+const rvOf=id=>{ const r=RV[id]; return r&&(r.s||r.t)?r:null; };
+const starStr=n=>'★'.repeat(n||0)+'☆'.repeat(5-(n||0));
+function rvFid(id){ let h=0; for(const c of String(id))h=(h*31+c.charCodeAt(0))|0; return 'rv-'+ME.id+'-'+(h>>>0).toString(36); }
+function famRvs(id){ return (FAM||[]).filter(x=>x['종류']==='rv'&&x['책ID']===id&&!x['지움']); }
+function paintPbRv(b){
+  const el=$('#pbRv'); if(!el)return;
+  const mine=rvOf(b.i), fam=famRvs(b.i).filter(x=>String(x['누가'])!==String(ME.id));
+  let h='';
+  if(mine) h+=`<div class="r"><b>${starStr(mine.s)}</b> 나${mine.t?' — '+esc(mine.t):''}</div>`;
+  fam.forEach(x=>{ h+=`<div class="r"><b>${starStr(Number(x['값'])||0)}</b> ${esc(x['이름']||'식구')}${x['내용']?' — '+esc(x['내용']):''}</div>`; });
+  el.innerHTML=h;
+}
+let RVB=null, RVS=0;
+function paintStars(){ $$('#rvStars button').forEach((x,i)=>x.classList.toggle('on',i<RVS)); }
+(function(){ const box=$('#rvStars'); for(let i=1;i<=5;i++){ const x=document.createElement('button'); x.textContent='★';
+  x.onclick=()=>{ RVS=(RVS===i?i-1:i); paintStars(); }; box.appendChild(x); } })();
+function canShare(){ return !!(ME.grp||(cfg('adm')&&VIEWG&&VIEWG!=='*')); }
+function openRv(b){
+  RVB=b; const r=RV[b.i]||{};
+  RVS=r.s||0; paintStars();
+  $('#rvT').textContent=b.t||'별점 · 한 줄 평';
+  $('#rvText').value=r.t||'';
+  const cs=canShare(); $('#rvShareL').style.display=cs?'':'none';
+  $('#rvShare').checked=cs&&!!r.sh;
+  $('#rvShareT').textContent='모임 식구에게도 보이기'+(ME.grpN?` (${ME.grpN})`:'');
+  $('#rvNote').textContent=cs?'':'모임에 들어 있지 않아 나만 봅니다.';
+  $('#rvDel').style.display=rvOf(b.i)?'':'none';
+  $('#rvSheet').classList.add('on');
+}
+async function rvSave(del){
+  const b=RVB; if(!b)return;
+  const t=del?'':$('#rvText').value.trim().slice(0,300), s=del?0:RVS, sh=!del&&$('#rvShare').checked&&canShare();
+  const was=RV[b.i]||{};
+  RV[b.i]={s,t,at:Date.now(),sh:sh?1:0}; saveRV(); syncSoon();
+  $('#rvSheet').classList.remove('on');
+  if(sh){ await famPut({kind:'rv',id:rvFid(b.i),book:b.i,title:b.t||'',text:t,val:String(s)}, ME.grp||VIEWG); }
+  else if(was.sh){ try{ await famDel(rvFid(b.i), ME.grp||VIEWG); }catch(e){} }
+  toast(del?'별점·평을 지웠습니다':(sh?'남겼습니다 · 모임에도 보입니다':'남겼습니다'));
+  try{ render(true); }catch(e){}
+}
+$('#rvSave').onclick=()=>rvSave(false);
+$('#rvDel').onclick=()=>{ if(confirm('이 책의 별점·평을 지울까요?'))rvSave(true); };
+$('#rvCancel').onclick=()=>$('#rvSheet').classList.remove('on');
+$('#rvSheet').addEventListener('click',e=>{ if(e.target.id==='rvSheet')$('#rvSheet').classList.remove('on'); });
+/* 다 읽었을 때 한 번 권합니다 (끄려면 다음 판에서 설정으로) */
+function rvAsk(id){
+  if(rvOf(id)||rvAsk.done[id])return; rvAsk.done[id]=1;
+  const b=(BOOKS.find(x=>x.i===id))||(curB&&curB.i===id?curB:null); if(!b)return;
+  setTimeout(()=>{ if(NEXTVOL&&NEXTVOL.offered)return;          // 다음 권 단추가 먼저
+    $('#resumeT').textContent='다 읽으셨네요 · 별점 남기기';
+    $('#resumeBar').classList.add('on');
+    clearTimeout(resumeOffer._t); resumeOffer._t=setTimeout(()=>$('#resumeBar').classList.remove('on'),12000);
+    $('#resumeGo').onclick=()=>{ $('#resumeBar').classList.remove('on'); openRv(b); };
+  },400);
+}
+rvAsk.done={};
+
+/* ══════════ v42 — 형광펜·메모 → 옵시디언 ══════════
+   obsidian://new?vault=…&file=폴더/제목&content=…&append=true
+   같은 이름의 노트가 있으면 끝에 덧붙이고, 없으면 새로 만듭니다. 플러그인의 노트 이름(제목에서 \/:*?"<>| 를 뺀 것)과 맞춥니다.
+   보낸 형광펜에는 ob(보낸 때)를 적어 다음에 '새로 그은 것만' 을 고를 수 있게 합니다. */
+let OBB=null, OBW='new';
+const obSafe=s=>nfc(s).replace(/[\\/:*?"<>|]/g,'').replace(/\s+/g,' ').trim().slice(0,120);
+function obItems(b){ return hlOf(b.i).filter(o=>OBW==='all'||!o.ob||(o.up||o.at||0)>o.ob)
+  .slice().sort((x,y)=>(x.pos||0)-(y.pos||0)); }
+function obText(b){
+  const a=obItems(b), r=rvOf(b.i), d=new Date();
+  const day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  let t=`\n## 우리 도서관에서 (${day})\n`;
+  const info=[b.a, b.u?`[드라이브](${b.u})`:''].filter(Boolean).join(' · ');
+  if(info)t+=info+'\n';
+  if(r)t+=`\n별점: ${starStr(r.s)}${r.t?'\n> '+r.t.replace(/\n/g,'\n> '):''}\n`;
+  if(a.length)t+='\n'+a.map(o=>{ const w=whereOf(o);
+    if(isBm(o))return `- 🔖 ${w}${o.t?' — '+o.t:''}`;
+    return `> ${String(o.t||'').replace(/\n/g,'\n> ')}\n> — ${w}`+(o.n?`\n\n${o.n}`:''); }).join('\n\n')+'\n';
+  return {t,n:a.length};
+}
+function obPaint(){
+  const b=OBB, x=obText(b), all=hlOf(b.i).length;
+  segSet('#obWhich',OBW);
+  $('#obInfo').textContent=`${b.t||''} — 형광펜·메모·책갈피 ${all}개 가운데 ${x.n}개를 보냅니다`+(OBW==='new'&&x.n<all?' (앞서 보낸 것은 뺌)':'');
+  $('#obPrev').textContent=x.t;
+}
+function openOb(b){ OBB=b; OBW='new';
+  if(!obItems(b).length) OBW='all';
+  $('#obVault').value=P.obVault||'Projects'; $('#obDir').value=P.obDir||'05. 도서관/읽은 책';
+  obPaint(); $('#obSheet').classList.add('on'); }
+$$('#obWhich button').forEach(x=>x.onclick=()=>{ OBW=x.dataset.v; obPaint(); });
+function obMark(b){ const now=Date.now(); obItems(b).forEach(o=>{ o.ob=now; }); saveHL.now(); syncSoon(); }
+$('#obGo').onclick=()=>{
+  const b=OBB; if(!b)return;
+  P.obVault=$('#obVault').value.trim()||'Projects'; P.obDir=$('#obDir').value.trim().replace(/^\/+|\/+$/g,''); savePref();
+  const x=obText(b);
+  const file=(P.obDir?P.obDir+'/':'')+obSafe(b.t||b._fn||'책');
+  const u='obsidian://new?vault='+encodeURIComponent(P.obVault)+'&file='+encodeURIComponent(file)
+        +'&content='+encodeURIComponent(x.t)+'&append=true';
+  if(u.length>60000){
+    try{ navigator.clipboard.writeText(x.t); }catch(e){}
+    location.href='obsidian://open?vault='+encodeURIComponent(P.obVault)+'&file='+encodeURIComponent(file);
+    toast('너무 길어 주소로 못 보냅니다.\n복사해 두었으니 노트 끝에 붙여넣으세요',6000);
+  } else { location.href=u; }
+  obMark(b); $('#obSheet').classList.remove('on');
+};
+$('#obCopy').onclick=()=>{ const b=OBB; if(!b)return; const x=obText(b);
+  try{ navigator.clipboard.writeText(x.t); toast('복사했습니다'); obMark(b); }catch(e){ toast('복사하지 못했습니다'); } };
+$('#obClose').onclick=()=>$('#obSheet').classList.remove('on');
+$('#obSheet').addEventListener('click',e=>{ if(e.target.id==='obSheet')$('#obSheet').classList.remove('on'); });
+$('#hlOb').onclick=()=>{ if(!curB)return; if(!hlOf(curB.i).length){ toast('아직 그은 것이 없습니다'); return; } panOff(); openOb(curB); };
+$('#hlAllOb').onclick=()=>{
+  const rows=hlAllRows(); const ids=[...new Set(rows.map(r=>r.bk))];
+  if(ids.length!==1){ toast(ids.length?'책 한 권만 보이게 걸러 주세요 (검색에 책 제목)':'보낼 것이 없습니다',4000); return; }
+  const r=rows[0]; if(!r.b){ toast('목록에 없는 책이라 보낼 수 없습니다'); return; }
+  $('#hlSheet').classList.remove('on'); openOb(r.b); };
+
+/* ══════════ v41 — 전집 ZIP 을 폴더처럼 ══════════
+   ZIP·RAR·7z 안의 책을 안쪽 폴더 그대로 둘러봅니다.
+   안쪽 책의 이름표는 '바깥ID#안쪽경로' — 그래서 권마다 읽은 기록·형광펜·책갈피가 따로 남고 기기끼리 맞춰집니다.
+   바깥 ZIP 의 읽은 기록(RD[바깥ID])에는 마지막으로 연 안쪽 책(l)을 적어, 홈의 '읽는 중' 에 뜨고 [이어 읽기] 가 됩니다.
+   한 권을 끝까지 읽으면 같은 폴더의 다음 권을 권합니다. */
+var ZIL=null, NEXTVOL=null;
+function innerSt(b,name){
+  const r=RD[b.i+'#'+name]; if(!r)return '';
+  if(r.f)return '<span class="st done">✓ 다 읽음</span>';
+  return r.p!=null?`<span class="st">${Math.round(r.p*100)}%</span>`:'<span class="st">읽는 중</span>';
+}
+function innerList(b,items,all){
+  const isArc=it=>/\.(zip|cbz)$/i.test(it.name)?0:1;            // 권 ZIP 을 먼저 (v35.1 과 같게)
+  items=items.slice().sort((x,y)=>(isArc(x)-isArc(y))||EXCOLL.compare(x.name,y.name));
+  ZIL={b,items,all,path:''};
+  // 맨 위가 폴더 하나뿐이면 그 안부터 (흔한 '작품명/01권.txt' 모양)
+  for(;;){ const segs=new Set(items.map(it=>it.name.slice(ZIL.path.length).split('/')[0]));
+    const deeper=items.every(it=>it.name.slice(ZIL.path.length).includes('/'));
+    if(segs.size===1&&deeper)ZIL.path+=[...segs][0]+'/'; else break; }
+  ZIL.root=ZIL.path;
+  // 마지막에 읽던 안쪽 책이 들어 있는 폴더부터 보여 줍니다
+  const last=RD[b.i]&&RD[b.i].l;
+  if(last&&items.some(it=>it.name===last)&&last.startsWith(ZIL.root)){ const d=last.lastIndexOf('/'); if(d>=0)ZIL.path=last.slice(0,d+1); }
+  $('#zipT').textContent=b._fn||b.t||'압축 안의 책';
+  drawInner();
+  $('#zipSheet').classList.add('on');
+}
+function drawInner(){
+  const {b,items,all,path}=ZIL, el=$('#zipList'); el.innerHTML='';
+  const here=items.filter(it=>it.name.startsWith(path));
+  const dirs=new Map(), files=[];
+  here.forEach(it=>{ const rest=it.name.slice(path.length), k=rest.indexOf('/');
+    if(k>=0){ const d=rest.slice(0,k); if(!dirs.has(d))dirs.set(d,[]); dirs.get(d).push(it); } else files.push(it); });
+  const done=items.filter(it=>RD[b.i+'#'+it.name]&&RD[b.i+'#'+it.name].f).length;
+  $('#zipN').textContent=`${items.length}권이 들어 있습니다`+(done?` · 다 읽음 ${done}권`:'')+'.';
+  $('#zipPath').textContent=path&&path!==ZIL.root?'📂 '+path.slice(ZIL.root.length).replace(/\/$/,''):'';
+  const add=(cls,l,r,go)=>{ const x=document.createElement('button'); if(cls)x.className=cls;
+    x.innerHTML=`<span>${l}</span><span>${r||''}</span>`; x.onclick=go; el.appendChild(x); return x; };
+  const last=RD[b.i]&&RD[b.i].l, li=last&&items.find(it=>it.name===last);
+  if(li){
+    add('last','📖 이어 읽기 · '+esc(li.name.split('/').pop()), innerSt(b,li.name), ()=>li.open(sibOf(li)));
+  }
+  if(path!==ZIL.root) add('up','‹ 위 폴더로','',()=>{ const p=path.slice(0,-1); ZIL.path=p.slice(0,p.lastIndexOf('/')+1); if(!ZIL.path.startsWith(ZIL.root))ZIL.path=ZIL.root; drawInner(); });
+  if(all&&path===ZIL.root) add('all',all.label,all.sub,all.go);
+  [...dirs.keys()].sort((x,y)=>EXCOLL.compare(x,y)).forEach(d=>{
+    const list=dirs.get(d), dn=list.filter(it=>RD[b.i+'#'+it.name]&&RD[b.i+'#'+it.name].f).length;
+    add('dir',esc(d),`${list.length}권${dn?` · ✓${dn}`:''}`,()=>{ ZIL.path=path+d+'/'; drawInner(); });
+  });
+  files.forEach(it=>{ add(it.name===last?'last':'', esc(it.name.split('/').pop())+innerSt(b,it.name),
+    (it.us/1048576).toFixed(1)+'MB', ()=>it.open(sibOf(it))); });
+}
+/* 같은 폴더의 책들 (다음 권을 고르는 데 씁니다) */
+function sibOf(it){
+  const d=it.name.slice(0,it.name.lastIndexOf('/')+1);
+  return ZIL.items.filter(x=>x.name.slice(0,x.name.lastIndexOf('/')+1)===d&&!/\.(zip|cbz)$/i.test(x.name)===!/\.(zip|cbz)$/i.test(it.name));
+}
+/* 안쪽 책을 열 때 — 바깥 ZIP 에 '마지막으로 연 것' 을 적고, 다음 권 후보를 기억합니다 */
+function innerMark(b,name,items){
+  const r=RD[b.i]||(RD[b.i]={}); r.l=name; r.t=Date.now(); saveRD(); syncSoon();
+  NEXTVOL=null;
+  if(items&&items.length){ const k=items.findIndex(x=>x.name===name);
+    if(k>=0&&k<items.length-1) NEXTVOL={ id:b.i+'#'+name, nx:items[k+1], items, offered:false }; }
+}
+/* 끝까지 읽으면 (markRead 가 부릅니다) */
+function nextVolOffer(id){
+  if(!NEXTVOL||NEXTVOL.offered||NEXTVOL.id!==id)return;
+  if(/\.(zip|cbz)$/i.test(NEXTVOL.nx.name))return;          // 만화 권은 만화 뷰어가 따로 넘깁니다
+  NEXTVOL.offered=true;
+  const nv=NEXTVOL;
+  $('#resumeT').textContent='다음 권 · '+nv.nx.name.split('/').pop();
+  $('#resumeBar').classList.add('on');
+  clearTimeout(resumeOffer._t); resumeOffer._t=setTimeout(()=>$('#resumeBar').classList.remove('on'),20000);
+  $('#resumeGo').onclick=()=>{ $('#resumeBar').classList.remove('on'); closeReader(); setTimeout(()=>nv.nx.open(nv.items),60); };
+}
+
 /* ══════════ v40 — 읽어주기 2: 대사 목소리 · 한자 읽기 ══════════
    한자 음은 hanja-eum.js (npm hanja 1.1.5, MIT) — 처음 필요할 때 한 번만 받습니다.
    화면의 글은 바꾸지 않습니다 (형광펜 자리를 지키려고). 읽어주기와 글 고르기 막대에서만 씁니다. */
@@ -4506,7 +4758,7 @@ function resumeOffer(){
   if($('#reader')&&$('#reader').style.display==='flex')return;
   const b=lastBook(); if(!b)return;
   if(saved.has(b.i)){ openBook(b); return; }
-  $('#resumeT').textContent=b.t||'읽던 책';
+  $('#resumeT').textContent='이어 읽기 · '+(b.t||'읽던 책');
   $('#resumeBar').classList.add('on');
   clearTimeout(resumeOffer._t); resumeOffer._t=setTimeout(()=>$('#resumeBar').classList.remove('on'),15000);
   $('#resumeGo').onclick=()=>{ $('#resumeBar').classList.remove('on'); openBook(b); };
@@ -4640,26 +4892,22 @@ async function showArc(b,src,kind,parent){
   pages.sort((x,y)=>EXCOLL.compare(x.name,y.name));
   return startComic(b,{arc:true},pages,parent);
 }
-/* RAR·7z 안의 책 고르기 */
+/* RAR·7z 안의 책 고르기 — v41 부터 폴더 나무 (innerList) */
 function arcInner(b,books){
-  books.sort((x,y)=>EXCOLL.compare(x.name,y.name));
-  $('#zipT').textContent=b._fn||b.t||'압축 안의 책';
-  $('#zipN').textContent=`${books.length}개가 들어 있습니다.`;
-  const el=$('#zipList'); el.innerHTML='';
-  books.forEach(en=>{ const x=document.createElement('button');
-    x.innerHTML=`<span>${esc(en.name.split('/').pop())}</span><span>${(en.us/1048576).toFixed(1)}MB</span>`;
-    x.onclick=async()=>{ $('#zipSheet').classList.remove('on');
-      try{ busy(true,'꺼내는 중…',en.name.split('/').pop(),0);
-        const buf=await en.blob.arrayBuffer(), ext=((en.name.match(/\.(\w+)$/)||[])[1]||'txt').toLowerCase();
-        const nm=en.name.split('/').pop();
-        const b2={ i:b.i+'#'+en.name, t:nm.replace(/\.\w+$/,''), _fn:nm, x:ext, f:b.f, z:Math.round(en.us/104857.6)/10 };
-        if(ext==='zip'||ext==='cbz'){ busy(false); return showComic(b2,memSrc(buf)); }
-        busy(true,'화면을 구성하는 중…','',1);
-        if(ext==='epub')await showReader(b2,buf); else if(ext==='pdf')await showPdf(b2,buf); else await showTxt(b2,buf);
-        busy(false);
-      }catch(e){ busy(false); toast('열지 못했습니다\n'+(e.message||e),5000); } };
-    el.appendChild(x); });
-  $('#zipSheet').classList.add('on');
+  innerList(b, books.map(en=>({ name:en.name, us:en.us, open:items=>arcOpenOne(b,en,items) })));
+}
+async function arcOpenOne(b,en,items){
+  $('#zipSheet').classList.remove('on');
+  try{ busy(true,'꺼내는 중…',en.name.split('/').pop(),0);
+    const buf=await en.blob.arrayBuffer(), ext=((en.name.match(/\.(\w+)$/)||[])[1]||'txt').toLowerCase();
+    const nm=en.name.split('/').pop();
+    const b2={ i:b.i+'#'+en.name, t:nm.replace(/\.\w+$/,''), _fn:nm, x:ext, f:b.f, z:Math.round(en.us/104857.6)/10 };
+    innerMark(b,en.name,items);
+    if(ext==='zip'||ext==='cbz'){ busy(false); return showComic(b2,memSrc(buf)); }
+    busy(true,'화면을 구성하는 중…','',1);
+    if(ext==='epub')await showReader(b2,buf); else if(ext==='pdf')await showPdf(b2,buf); else await showTxt(b2,buf);
+    busy(false);
+  }catch(e){ busy(false); toast('열지 못했습니다\n'+(e.message||e),5000); }
 }
 
 
@@ -5037,22 +5285,14 @@ function zipInner(b,z){
     z.ents.filter(e=>!e.dir).slice(0,30).forEach(en=>{ const x=document.createElement('button'); x.disabled=true;
       x.innerHTML=`<span>${esc(en.name)}</span><span>${(en.us/1048576).toFixed(1)}MB</span>`; el.appendChild(x); });
     $('#zipSheet').classList.add('on'); return; }
-  $('#zipT').textContent=b._fn||b.t||'ZIP 안의 책';
-  const el=$('#zipList'); el.innerHTML='';
   const txts=list.filter(e=>/\.(txt|md)$/i.test(e.name)), tot=txts.reduce((a,e)=>a+e.us,0);
-  $('#zipN').textContent=`${list.length}개가 들어 있습니다.`;
-  if(txts.length>1&&txts.length===list.length&&tot<40*1048576){
-    const a=document.createElement('button'); a.className='all';
-    a.innerHTML=`<span>📚 모두 이어서 한 권으로 열기</span><span>${txts.length}개 · ${(tot/1048576).toFixed(1)}MB</span>`;
-    a.onclick=()=>zipOpenAll(b,z,txts); el.appendChild(a);
-  }
-  list.forEach(en=>{ const x=document.createElement('button');
-    x.innerHTML=`<span>${esc(en.name.split('/').pop())}</span><span>${(en.us/1048576).toFixed(1)}MB</span>`;
-    x.onclick=()=>zipOpenOne(b,z,en,list); el.appendChild(x); });
-  $('#zipSheet').classList.add('on');
+  const all=(txts.length>1&&txts.length===list.length&&tot<40*1048576)
+    ? { label:`📚 모두 이어서 한 권으로 열기`, sub:`${txts.length}개 · ${(tot/1048576).toFixed(1)}MB`, go:()=>zipOpenAll(b,z,txts) } : null;
+  innerList(b, list.map(en=>({ name:en.name, us:en.us, open:items=>zipOpenOne(b,z,en,list,items) })), all);
 }
-async function zipOpenOne(b,z,en,list){
+async function zipOpenOne(b,z,en,list,items){
   $('#zipSheet').classList.remove('on');
+  innerMark(b,en.name,items);
   // 안쪽 ZIP·CBZ 는 만화로 — 이어서 볼 수 있게 같은 목록을 넘겨 둡니다
   if(/\.(zip|cbz)$/i.test(en.name)){
     const nm=en.name.split('/').pop();
