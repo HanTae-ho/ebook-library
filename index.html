@@ -1953,6 +1953,7 @@ function metaTrust(b){
   // 신뢰도가 없거나 '실패' 면 알라딘 값이 아예 없는 책 — EPUB·파일명 정보라 그대로 둡니다
   return !n||n==='실패'||n==='높음'||n==='중간';
 }
+const EDRE=/^\s*\[(큰글자도서|큰글자책|큰글씨책|큰글자|eBook|ebook|전자책|POD|오디오북|특별판|한정판|리커버|개정판)\]\s*/;
 const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
 function metaApply(){
   if(!P.meta)P.meta='sure';
@@ -1965,6 +1966,8 @@ function metaApply(){
     const setBad=SETRE.test(o.t||'')&&!!b.o&&!SETRE.test(b.o);
     const ok=metaTrust(b)&&!isWrong(b.i)&&!setBad;
     if(setBad&&P.meta!=='aladin'){ b.t=b.o; ['a','v','p','d'].forEach(k=>delete b[k]); hid++; return; }
+    // v54 — '[큰글자도서] ○○' 처럼 판(版) 머리표가 붙은 제목은 머리표만 떼어 보입니다 (파일은 보통 일반판)
+    if(P.meta!=='aladin'&&b.t&&EDRE.test(b.t)&&!(b.o&&EDRE.test(b.o)))b.t=b.t.replace(EDRE,'').trim();
     if(isWrong(b.i)){ if(b.o)b.t=b.o; ['a','v','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; return; }
     if(P.meta==='file'){
       if(b.o)b.t=b.o; delete b.v;
