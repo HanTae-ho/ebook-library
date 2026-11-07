@@ -111,6 +111,7 @@
   .tag{position:absolute;left:4px;top:4px;background:#000a;font-size:9px;
     padding:2px 5px;border-radius:4px}
   .tag.dl{color:var(--ok)} .tag.fm{color:var(--dim);left:auto;right:4px}
+  .tag.fm.alt{color:#8ec8ff;font-weight:700}
   .tag.done{color:#ffd479;left:auto;right:4px;top:auto;bottom:4px}
   /* 표지 아래 읽은 진도 */
   .pbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:#0006}
@@ -1122,6 +1123,9 @@
     <div class="seg" id="segRev" style="margin-top:6px">
       <button data-v="0">기본 방향</button><button data-v="1">거꾸로</button>
     </div>
+    <div class="seg" id="segMerge" style="margin-top:6px" title="EPUB·PDF 처럼 같은 책이 여러 파일이면 한 장으로">
+      <button data-v="1">같은 책 하나로 묶기</button><button data-v="0">파일마다 따로</button>
+    </div>
     <div class="seg" style="margin-top:6px"><button id="smartSave">⚡ 지금 목록을 서가로 저장</button></div></div>
   <div class="grp"><div class="lb">책 정보 <span style="opacity:.7">· 제목 · 표지 · 저자 · 분류</span></div>
     <div class="seg" id="segMeta">
@@ -1532,7 +1536,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v53';
+const BUILD='v54';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1885,6 +1889,7 @@ async function fetchIndex(){
   await DB.put('kv','index',d); apply(d); log('색인 '+d.count+'권');
 }
 function apply(d){
+  { const seen=new Set(); d.books=(d.books||[]).filter(b=>{ if(!b||!b.i)return true; if(seen.has(b.i))return false; seen.add(b.i); return true; }); }  // v54 — 같은 파일은 한 번만
   BOOKS_ALL=d.books||[]; BOOKS=kidFilter(BOOKS_ALL); UPDATED=d.updated||'';
   /* ★ 목록이 바뀌면 만들어 둔 정렬 순서를 버립니다.
      (v31 까지는 안 버려서, 기기에 둔 목록 → 새 목록으로 바뀔 때
@@ -1892,7 +1897,36 @@ function apply(d){
   Object.keys(ORD).forEach(k=>delete ORD[k]);
   BOOKS.forEach(b=>{ if(b.a)b.a=b.a.replace(/\s*\([^)]*\)/g,'').trim(); });
   metaApply();
+  try{ buildGroups(); }catch(e){ GRP=[]; }
 }
+/* ══════════ v54 — 같은 책 하나로 묶기 ══════════
+   제목(파일 이름 쪽 제목의 알맹이)이 같고 저자가 어긋나지 않으면 한 묶음.
+   카드는 묶음에서 한 권만 — 최근에 읽은 파일 → 받아둔 파일 → EPUB → PDF → 그 밖 순서로 고릅니다.
+   읽은 기록은 파일마다 따로 (RD[파일ID]). 폴더 보기·받아둔 책 칸은 묶지 않습니다. */
+var GRP=[], DUPN=0;
+function gkT(b){ return String((b.o||(b._0&&b._0.t)||b.t||'')).normalize('NFC').replace(/\(.*?\)|\[.*?\]|【.*?】/g,'').replace(/[^0-9A-Za-z가-힣]/g,'').toLowerCase(); }
+function gkA(b){ return String((b._0&&b._0.a)||b.a||'').normalize('NFC').replace(/\(.*?\)|\[.*?\]/g,'').replace(/(지음|저|옮김|역|글|그림|편저?|외)\b/g,'').replace(/[^0-9A-Za-z가-힣]/g,'').toLowerCase(); }
+function buildGroups(){
+  const by=new Map();
+  BOOKS.forEach(b=>{ b._dup=0; b._alt=null; const k=gkT(b); if(k.length<2)return; let a=by.get(k); if(!a)by.set(k,a=[]); a.push(b); });
+  GRP=[];
+  by.forEach(arr=>{ if(arr.length<2)return;
+    const cl=[];   // 저자가 맞는 것끼리 (한쪽이 비었거나 한쪽이 다른 쪽을 품으면 같은 사람)
+    arr.forEach(b=>{ const a=gkA(b); const c=cl.find(c=>!a||!c.a||c.a.includes(a)||a.includes(c.a)); if(c){ c.m.push(b); if(!c.a)c.a=a; } else cl.push({a,m:[b]}); });
+    cl.forEach(c=>{ if(c.m.length>1)GRP.push(c.m); }); });
+  markDups();
+}
+const FMTRANK={epub:0,pdf:1,txt:2};
+function markDups(){
+  DUPN=0;
+  GRP.forEach(g=>{
+    let rep=null, best=-1;
+    g.forEach(b=>{ const r=RD[b.i]; const t=r&&r.t?r.t:0; if(t>best){ best=t; rep=b; } });
+    if(!best||best<=0){ rep=g.find(b=>saved.has(b.i))||g.slice().sort((x,y)=>((FMTRANK[(x.x||'').toLowerCase()]??5)-(FMTRANK[(y.x||'').toLowerCase()]??5)))[0]; }
+    g.forEach(b=>{ b._dup=b===rep?0:1; b._alt=null; });
+    rep._alt=g.filter(b=>b!==rep); DUPN+=g.length-1; });
+}
+const dupHide=b=>P.merge!==0&&b._dup===1;
 
 /* ══════════ 책 정보 — 믿을 만한 것만 보여주기 (v34.2) ══════════
    색인의 제목·표지·저자·분류는 Apps Script 가 알라딘(·국중도)에서 찾아 붙입니다.
@@ -1919,6 +1953,7 @@ function metaTrust(b){
   // 신뢰도가 없거나 '실패' 면 알라딘 값이 아예 없는 책 — EPUB·파일명 정보라 그대로 둡니다
   return !n||n==='실패'||n==='높음'||n==='중간';
 }
+const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
 function metaApply(){
   if(!P.meta)P.meta='sure';
   let hid=0;
@@ -1926,7 +1961,10 @@ function metaApply(){
     if(!b._0){ const o={}; META_KEYS.forEach(k=>{ if(b[k]!=null)o[k]=b[k]; }); b._0=o; }
     const o=b._0;
     META_KEYS.forEach(k=>{ if(k in o)b[k]=o[k]; else delete b[k]; });   // 원래대로 되돌린 뒤
-    const ok=metaTrust(b)&&!isWrong(b.i);
+    // v54 — 낱권 파일에 '[세트] ○○ + ○○' 처럼 묶음 상품이 짝지어진 경우: 믿지 않고 파일 이름 제목으로
+    const setBad=SETRE.test(o.t||'')&&!!b.o&&!SETRE.test(b.o);
+    const ok=metaTrust(b)&&!isWrong(b.i)&&!setBad;
+    if(setBad&&P.meta!=='aladin'){ b.t=b.o; ['a','v','p','d'].forEach(k=>delete b[k]); hid++; return; }
     if(isWrong(b.i)){ if(b.o)b.t=b.o; ['a','v','p','d','c','b','m','s'].forEach(k=>delete b[k]); hid++; return; }
     if(P.meta==='file'){
       if(b.o)b.t=b.o; delete b.v;
@@ -2040,6 +2078,7 @@ let SEL='';
 /* ── 목록 ── */
 function match(b){
   if(!P.fmt[fmtKey(b)]) return false;
+  if(dupHide(b)&&TAB!=='saved') return false;                  // v54 — 같은 책은 한 장만
   if(TAB==='recent'  && !RD[b.i])            return false;   // 한 번이라도 연 책
   if(TAB==='reading' && stOf(b)!=='reading') return false;
   if(TAB==='done'    && stOf(b)!=='done')    return false;
@@ -2057,6 +2096,7 @@ function match(b){
   return (P.cat==='f'? folderOf(b) : (b[P.cat]||'')) === SEL;
 }
 function filter0(){
+  try{ markDups(); }catch(e){}
   const k=norm($('#q').value), out=[];
   // 최근·읽는 중·다 읽음 칸은 최근 읽은 순, 새로 담긴 책은 담긴 순
   const s = TAB==='new' ? 'g'
@@ -2092,7 +2132,7 @@ function render(reset){
              saved:'받아둔 책', new:'새로 담긴 책' };
   stat((PIN?PIN+'  ·  ':(TAB?TN[TAB]+'  ·  ':''))
     +`${rows.length.toLocaleString()}권`
-    +(TAB||PIN?'':` / ${BOOKS.length.toLocaleString()}권`)
+    +(TAB||PIN?'':` / ${(BOOKS.length-(P.merge!==0?DUPN:0)).toLocaleString()}권`)
     +(UPDATED?`  ·  갱신 ${UPDATED}`:'')+`  ·  ${BUILD}`);
   const o=$('#more'); if(o)o.remove();
   const f=document.createDocumentFragment();
@@ -2128,7 +2168,9 @@ function card(b){
   else w.innerHTML=phHtml(b);
   if(saved.has(b.i))w.insertAdjacentHTML('beforeend','<div class="tag dl">저장됨</div>');
   const x=(b.x||'').toUpperCase();
-  if(x&&x!=='EPUB')w.insertAdjacentHTML('beforeend',`<div class="tag fm">${x}</div>`);
+  const alt=(P.merge!==0&&b._alt&&b._alt.length)?[...new Set([b,...b._alt].map(y=>(y.x||'?').toUpperCase()))]:null;
+  if(alt)w.insertAdjacentHTML('beforeend',`<div class="tag fm alt" title="같은 책 ${b._alt.length+1}개 — 길게 눌러 고르기">${alt.length>1?alt.join('·'):(b._alt.length+1)+'개'}</div>`);
+  else if(x&&x!=='EPUB')w.insertAdjacentHTML('beforeend',`<div class="tag fm">${x}</div>`);
   const st=stOf(b), pc=pctOf(b);
   if(st==='done'){ w.classList.add('fin');
     w.insertAdjacentHTML('beforeend','<div class="tag done">다 읽음</div>'); }
@@ -4025,7 +4067,9 @@ function openPanBook(b){
     x.innerHTML=esc(label)+(hint?`<span class="h">${esc(hint)}</span>`:'');
     x.onclick=()=>{ panOff(); fn(); }; el.appendChild(x); };
 
-  add(st?'이어서 읽기':'읽기','',()=>openBook(b));
+  add(st?'이어서 읽기':'읽기',(b._alt&&b._alt.length&&P.merge!==0)?(b.x||'').toUpperCase():'',()=>openBook(b));
+  if(P.merge!==0&&b._alt&&b._alt.length) b._alt.forEach(y=>{ const ys=stOf(y), yp=pctOf(y);
+    add((y.x||'?').toUpperCase()+' 로 읽기',[y.f,y.z?Math.round(y.z)+'MB':'',ys==='done'?'다 읽음':(ys==='reading'&&yp>0?Math.round(yp*100)+'%':'')].filter(Boolean).join(' · '),()=>openBook(y)); });
   if(st!=='done') add('다 읽음으로 표시','',()=>{ markRead(b.i,1,true);
     toast('다 읽음으로 표시했습니다'); paintTabs(); render(true); });
   else add('읽는 중으로 되돌리기','',()=>{ markRead(b.i,null,false,true);
@@ -4091,8 +4135,10 @@ $('#pgGo').onclick=()=>{ if(KIND!=='pdf'||!pdfDoc)return;
 /* ── 상태 탭 ── */
 function counts(){
   const n={ '':0, recent:0, reading:0, done:0, saved:0, new:0 };
+  try{ markDups(); }catch(e){}
   BOOKS.forEach(b=>{
     if(!P.fmt[fmtKey(b)]) return;
+    if(dupHide(b)){ if(saved.has(b.i))n.saved++; return; }
     n['']++;
     if(RD[b.i])n.recent++;
     const s=stOf(b); if(s)n[s]++;
@@ -4246,7 +4292,8 @@ function hsec(host,title,tab,arr,total,none,cnt){
   host.appendChild(d);
 }
 function buildHome(){
-  const vis = BOOKS.filter(b=>P.fmt[fmtKey(b)]);
+  try{ markDups(); }catch(e){}
+  const vis = BOOKS.filter(b=>P.fmt[fmtKey(b)]&&!dupHide(b));
   const n = counts();
   try{ paintGoal(); }catch(e){}
   $('#hRow1').innerHTML='';
@@ -6900,7 +6947,8 @@ function paintSmartMgr(){
 }
 { const op=$('#hPinEdit').onclick; $('#hPinEdit').onclick=()=>{ op(); paintSmartMgr(); }; }
 seg('#segRev','rev',()=>render(true));
-{ const ov=$('#btnView').onclick; $('#btnView').onclick=()=>{ ov(); segSet('#segRev',P.rev||0); }; }
+{ const ov=$('#btnView').onclick; $('#btnView').onclick=()=>{ ov(); segSet('#segRev',P.rev||0); segSet('#segMerge',P.merge===0?0:1); }; }
+seg('#segMerge','merge',()=>{ try{ paintTabs(); render(true); if($('#home').style.display!=='none')buildHome(); }catch(e){} });
 
 /* ══════════ v32 — 보기 설정 더하기 · 목차 ══════════ */
 seg('#segFw','fw',applyRead);
