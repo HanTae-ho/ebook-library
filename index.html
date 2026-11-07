@@ -294,6 +294,22 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  .hk-off{display:none !important}
+  #homeList{margin-top:8px;max-height:58vh;overflow:auto}
+  #homeList .hr{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--line)}
+  #homeList .hr.off .nm{color:var(--dim);text-decoration:line-through}
+  #homeList .hr .nm{flex:1 1 auto;font-size:14px;min-width:0}
+  #homeList .hr .nm small{display:block;color:var(--dim);font-size:11.5px}
+  #homeList .hr button.mv{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);font-size:15px}
+  #homeList .hr button.mv:disabled{opacity:.3}
+  #homeList .hr select{height:36px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--tx);padding:0 6px}
+  #homeList .hr .sw{position:relative;width:46px;height:28px;flex:0 0 auto}
+  #homeList .hr .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+  #homeList .hr .sw span{position:absolute;inset:0;border-radius:14px;background:var(--line);pointer-events:none;transition:.15s}
+  #homeList .hr .sw span::after{content:'';position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.15s}
+  #homeList .hr .sw input:checked+span{background:var(--acc)}
+  #homeList .hr .sw input:checked+span::after{left:21px}
+  #homeList .hr.drag{opacity:.4}
   /* v48 — 도서관 홈 */
   #hBanner .bn{position:relative;border-radius:18px;overflow:hidden;padding:26px 28px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;margin:10px 0 4px;color:#fff}
   #hBanner .bn .tg{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:11px;background:rgba(255,255,255,.16)}
@@ -677,14 +693,17 @@
     <div id="hRank"></div>
     <div id="hPicks"></div>
     <div id="hRow2"></div>
+    <div id="hSaved"></div>
+    <div id="hDone"></div>
     <div id="hBoard"></div>
 
-    <div class="hlinks">
+    <div class="hlinks" id="hLinks">
       <button data-go="">전체 둘러보기 <span id="lkAll"></span></button>
       <button id="lkHl">모은 형광펜 · 책갈피 <span id="lkHlN"></span></button>
       <button id="lkCal">독서 달력 <span id="lkCalN"></span></button>
     </div>
 
+    <div class="hlinks" id="hCustom"><button id="lkHome">홈 꾸미기 ›</button></div>
     <div id="hstat"></div>
   </div>
 
@@ -1039,6 +1058,8 @@
       <button data-v="sure">확실한 것만</button><button data-v="aladin">찾은 정보 그대로</button><button data-v="file">파일 이름</button>
     </div>
     <div id="metaNote" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:6px"></div></div>
+  <div class="grp"><div class="lb">홈</div>
+    <div class="seg"><button id="homeOpen2">홈 꾸미기 — 칸 켜고 끄기 · 순서 · 크기</button></div></div>
   <div class="grp"><div class="lb">앱을 열 때</div>
     <div class="seg" id="segResume">
       <button data-v="0">홈부터</button><button data-v="1">읽던 책 이어서</button>
@@ -1395,6 +1416,21 @@
   </div>
 </div>
 
+<!-- v49 홈 꾸미기 -->
+<div class="sheet" id="homeSheet">
+  <div class="box" style="max-width:560px">
+    <h3>홈 꾸미기</h3>
+    <div class="note" id="homeNote">이 기기의 홈만 바뀝니다. 켜고 끄기·↑↓·크기를 고르면 바로 홈에 반영됩니다.</div>
+    <div id="homeList"></div>
+    <div class="btns" style="flex-wrap:wrap">
+      <button id="homeReset">처음 모양으로</button>
+      <button id="homeFam" style="display:none">식구 기본 홈 따르기</button>
+      <button id="homeSetFam" style="display:none">지금 모양을 식구 기본 홈으로</button>
+      <button id="homeClose" class="pri">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="pinSheet">
   <div class="box">
     <h3>내 서가 고르기</h3>
@@ -1421,7 +1457,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v48';
+const BUILD='v49';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -4113,7 +4149,7 @@ function buildFam(){
 
 /* 홈의 표지 줄 하나 — 제목(권수) + 모두 보기 + 표지 12권 */
 const HN=12;
-function hsec(host,title,tab,arr,total,none){
+function hsec(host,title,tab,arr,total,none,cnt){
   const d=document.createElement('div'); d.className='hs';
   const hh=document.createElement('div'); hh.className='hh';
   const t=document.createElement('b');
@@ -4123,7 +4159,7 @@ function hsec(host,title,tab,arr,total,none){
     m.onclick=()=>goList(tab); hh.appendChild(m); }
   d.appendChild(hh);
   if(total){ const s=document.createElement('div'); s.className='hscr';
-    d.appendChild(s); hcards(s,arr.slice(0,HN)); }
+    d.appendChild(s); hcards(s,arr.slice(0,cnt||HN)); }
   else if(none){ const e=document.createElement('div'); e.className='hnone';
     e.textContent=none; d.appendChild(e); }
   host.appendChild(d);
@@ -4150,7 +4186,7 @@ function buildHome(){
   hsec($('#hRow1'), '이어 읽기', 'reading',
     byRead(vis.filter(b=>stOf(b)==='reading')), n.reading,
     BOOKS.length ? '아직 읽는 중인 책이 없습니다. 아래에서 한 권 골라 보세요.'
-      : '책 목록이 이 기기에 없습니다. ⚙ → 관리 → [목록 새로 받기] 를 눌러주세요.');
+      : '책 목록이 이 기기에 없습니다. ⚙ → 관리 → [목록 새로 받기] 를 눌러주세요.', homeSize('reading'));
 
   /* 내 서가 */
   const pe=$('#hPin'); pe.innerHTML='';
@@ -4188,13 +4224,15 @@ function buildHome(){
   /* 나머지 표지 줄 */
   const r2=$('#hRow2'); r2.innerHTML='';
   hsec(r2, '최근 본 책', 'recent', byRead(vis.filter(b=>RD[b.i])), n.recent,
-    '아직 열어본 책이 없습니다.');
-  hsec(r2, '받아둔 책', 'saved', byRead(vis.filter(b=>saved.has(b.i))), n.saved,
-    '받아둔 책이 없습니다. 책을 열면 그 기기에 자동으로 담깁니다.');
-  hsec(r2, '다 읽은 책', 'done', byRead(vis.filter(b=>stOf(b)==='done')), n.done,
-    '아직 다 읽은 책이 없습니다.');
+    '아직 열어본 책이 없습니다.', homeSize('recent'));
+  $('#hSaved').innerHTML=''; $('#hDone').innerHTML='';
+  hsec($('#hSaved'), '받아둔 책', 'saved', byRead(vis.filter(b=>saved.has(b.i))), n.saved,
+    '받아둔 책이 없습니다. 책을 열면 그 기기에 자동으로 담깁니다.', homeSize('saved'));
+  hsec($('#hDone'), '다 읽은 책', 'done', byRead(vis.filter(b=>stOf(b)==='done')), n.done,
+    '아직 다 읽은 책이 없습니다.', homeSize('done'));
   // v48 — '새로 담긴 책' 은 위의 분야 태그 칸(#hNewB)으로 옮겼습니다
   try{ paintLibHome(vis,n); }catch(e){ log('도서관 홈 그리기 실패: '+(e.message||e)); }
+  try{ applyHomeLayout(); }catch(e){ log('홈 배치 실패: '+(e.message||e)); }
 
   $('#lkAll').textContent = n[''].toLocaleString()+'권 ›';
   paintLkHl(); paintLkCal(); paintSmartHome();
@@ -4440,6 +4478,89 @@ $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
 
+/* ══════════ v49 — 홈 꾸미기 ══════════
+   P.home = {order:[칸], hide:{칸:1}, size:{칸:값}} — 이 기기만 (P 는 동기화하지 않습니다).
+   아직 꾸민 적이 없으면 팀장님이 정한 '식구 기본 홈'(모임 칸 kind:'homedef') → 없으면 처음 모양. */
+var HK=[
+  {k:'q',      id:'hqWrap',  n:'최근 검색어'},
+  {k:'goal',   id:'hGoal',   n:'독서 목표'},
+  {k:'banner', id:'hBanner', n:'이달의 특집'},
+  {k:'reading',id:'hRow1',   n:'이어 읽기',     sz:[12,24], u:'권'},
+  {k:'pin',    id:'hsPin',   n:'내 서가'},
+  {k:'today',  id:'hsToday', n:'오늘의 책',     sz:[1,3,6], u:'권'},
+  {k:'new',    id:'hNewB',   n:'새로 담긴 책',   sz:[12,24,36], u:'권'},
+  {k:'themes', id:'hThemes', n:'테마 서가',     sz:[1,3,5], u:'칸'},
+  {k:'rank',   id:'hRank',   n:'우리집 순위',    sz:[3,5,10], u:'위', h:'많이 읽은 책 · 별점 높은 책'},
+  {k:'picks',  id:'hPicks',  n:'분야별 다섯 권', sz:[2,4,6], u:'분야'},
+  {k:'recent', id:'hRow2',   n:'최근 본 책',     sz:[12,24], u:'권'},
+  {k:'saved',  id:'hSaved',  n:'받아둔 책',     sz:[12,24], u:'권'},
+  {k:'done',   id:'hDone',   n:'다 읽은 책',     sz:[12,24], u:'권'},
+  {k:'board',  id:'hBoard',  n:'알림판'},
+  {k:'links',  id:'hLinks',  n:'바로가기', h:'전체 둘러보기 · 모은 형광펜 · 독서 달력'}
+];
+var HK_DEF_SIZE={reading:12,today:3,new:12,themes:3,rank:5,picks:4,recent:12,saved:12,done:12};
+function famHomeDef(){ const rows=(FAM||[]).filter(x=>x['종류']==='homedef'&&!x['지움']).sort((a,b)=>Number(b['언제'])-Number(a['언제']));
+  if(!rows.length)return null; try{ return JSON.parse(rows[0]['값']||'null'); }catch(e){ return null; } }
+function homeCfg(){
+  const base=P.home||famHomeDef()||{};
+  const known=HK.map(x=>x.k);
+  let order=(base.order||[]).filter(k=>known.includes(k));
+  known.forEach(k=>{ if(!order.includes(k)){ const at=known.indexOf(k); // 새로 생긴 칸은 처음 모양의 자리 근처에
+    let pos=order.length; for(let j=at-1;j>=0;j--){ const p=order.indexOf(known[j]); if(p>=0){ pos=p+1; break; } } order.splice(pos,0,k); } });
+  return { order, hide:Object.assign({},base.hide||{}), size:Object.assign({},HK_DEF_SIZE,base.size||{}) };
+}
+function homeSize(k){ try{ return homeCfg().size[k]||HK_DEF_SIZE[k]||12; }catch(e){ return HK_DEF_SIZE[k]||12; } }
+function applyHomeLayout(){
+  const home=$('#home'), c=homeCfg(), tail=$('#hCustom');
+  c.order.forEach(k=>{ const h=HK.find(x=>x.k===k), el=h&&$('#'+h.id); if(!el)return;
+    home.insertBefore(el,tail); el.classList.toggle('hk-off',!!c.hide[k]); });
+}
+function homeSave(c){ P.home={order:c.order,hide:c.hide,size:c.size}; savePref(); try{ buildHome(); }catch(e){} paintHomeSheet(); }
+function paintHomeSheet(){
+  const c=homeCfg(), L=$('#homeList'); L.innerHTML='';
+  const fd=famHomeDef();
+  $('#homeNote').textContent=(P.home?'이 기기의 홈만 바뀝니다.':(fd?'지금은 팀장님이 정한 식구 기본 홈입니다. 바꾸면 이 기기만 따로 갑니다.':'이 기기의 홈만 바뀝니다.'))
+    +' 켜고 끄기 · ↑↓ · 크기를 고르면 바로 반영됩니다.';
+  $('#homeFam').style.display=fd&&P.home?'':'none';
+  $('#homeSetFam').style.display=isOwner()&&(ME.grp||(VIEWG&&VIEWG!=='*'))?'':'none';
+  c.order.forEach((k,idx)=>{
+    const h=HK.find(x=>x.k===k); if(!h)return;
+    const r=document.createElement('div'); r.className='hr'+(c.hide[k]?' off':''); r.draggable=true; r.dataset.k=k;
+    r.innerHTML=`<span class="nm">${esc(h.n)}${h.h?`<small>${esc(h.h)}</small>`:''}</span>`;
+    if(h.sz){ const sel=document.createElement('select'); sel.setAttribute('aria-label',h.n+' 크기');
+      h.sz.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v+h.u; if(Number(c.size[k])===v)o.selected=true; sel.appendChild(o); });
+      sel.onchange=()=>{ c.size[k]=Number(sel.value); homeSave(c); }; r.appendChild(sel); }
+    const up=document.createElement('button'); up.className='mv'; up.textContent='↑'; up.setAttribute('aria-label',h.n+' 위로'); up.disabled=idx===0;
+    up.onclick=()=>{ c.order.splice(idx,1); c.order.splice(idx-1,0,k); homeSave(c); };
+    const dn=document.createElement('button'); dn.className='mv'; dn.textContent='↓'; dn.setAttribute('aria-label',h.n+' 아래로'); dn.disabled=idx===c.order.length-1;
+    dn.onclick=()=>{ c.order.splice(idx,1); c.order.splice(idx+1,0,k); homeSave(c); };
+    const sw=document.createElement('label'); sw.className='sw';
+    sw.innerHTML=`<input type="checkbox" aria-label="${esc(h.n)} 보이기"${c.hide[k]?'':' checked'}><span></span>`;
+    sw.querySelector('input').onchange=e=>{ if(e.target.checked)delete c.hide[k]; else c.hide[k]=1; homeSave(c); };
+    r.append(up,dn,sw);
+    // PC: 끌어서 옮기기
+    r.addEventListener('dragstart',e=>{ r.classList.add('drag'); try{ e.dataTransfer.setData('text/plain',k); }catch(x){} });
+    r.addEventListener('dragend',()=>r.classList.remove('drag'));
+    r.addEventListener('dragover',e=>e.preventDefault());
+    r.addEventListener('drop',e=>{ e.preventDefault(); let from=''; try{ from=e.dataTransfer.getData('text/plain'); }catch(x){}
+      if(!from||from===k)return; const a=c.order.indexOf(from); c.order.splice(a,1); c.order.splice(c.order.indexOf(k),0,from); homeSave(c); });
+    L.appendChild(r);
+  });
+}
+function openHomeSheet(){ panOff(); paintHomeSheet(); $('#homeSheet').classList.add('on'); }
+$('#lkHome').onclick=openHomeSheet;
+$('#homeOpen2').onclick=openHomeSheet;
+$('#homeClose').onclick=()=>$('#homeSheet').classList.remove('on');
+$('#homeSheet').addEventListener('click',e=>{ if(e.target.id==='homeSheet')$('#homeSheet').classList.remove('on'); });
+$('#homeReset').onclick=()=>{ if(!confirm('홈을 처음 모양으로 되돌립니다.'))return;
+  P.home={order:HK.map(x=>x.k),hide:{},size:Object.assign({},HK_DEF_SIZE)}; savePref(); try{ buildHome(); }catch(e){} paintHomeSheet(); };
+$('#homeFam').onclick=()=>{ delete P.home; savePref(); try{ buildHome(); }catch(e){} paintHomeSheet(); toast('식구 기본 홈을 따릅니다'); };
+$('#homeSetFam').onclick=async()=>{
+  const c=homeCfg();
+  if(!confirm('지금 이 홈 모양을 식구 기본 홈으로 정합니다.\n아직 꾸민 적이 없는 식구 기기에 적용됩니다 (이미 꾸민 사람은 그대로).'))return;
+  if(await famPut({kind:'homedef',id:'homedef',val:JSON.stringify({order:c.order,hide:c.hide,size:c.size})},ME.grp||VIEWG)) toast('식구 기본 홈으로 정했습니다');
+};
+
 /* ══════════ v48 — 도서관 홈 ══════════
    위에서부터: 빠른 줄(목표) · 이달의 특집 · 이어 읽기 · 내 서가 · 오늘의 책 3권 · 새로 담긴 책(분야 태그) ·
    테마 서가 · 우리집 많이 읽은 책 / 별점 높은 책 · 분야별 다섯 권 · 최근 본·받아둔·다 읽은 · 알림판.
@@ -4461,7 +4582,7 @@ function pickDistinct(pool,n,salt){
     const b=pool[h%pool.length]; if(!seen.has(b.i)){ seen.add(b.i); out.push(b); } }
   return out; }
 function paintToday3(pool){
-  const te=$('#hToday'), arr=pickDistinct(pool,3,todayN+1);
+  const te=$('#hToday'), arr=pickDistinct(pool,homeSize('today'),todayN+1);
   if(!arr.length)return false;
   te.innerHTML=''; te.onclick=null;
   arr.forEach(b=>{
@@ -4551,13 +4672,13 @@ function paintLibHome(vis,n){
     ['',...cats].forEach(c=>{ const x=document.createElement('button'); x.textContent=c||'전체'; if(c===HCHIP)x.className='on';
       x.onclick=()=>{ HCHIP=c; paintLibHome(vis,n); }; ch.appendChild(x); });
     const more=document.createElement('button'); more.textContent='모두 보기 ›'; more.onclick=()=>goList('new'); d.querySelector('.hh').appendChild(more);
-    hcards(d.querySelector('.hscr'),list.slice(0,HN));
+    hcards(d.querySelector('.hscr'),list.slice(0,homeSize('new')));
     nb.appendChild(d);
   }
   /* 테마 서가 — 특집이 아닌 서가 셋 */
   const th=$('#hThemes'); th.innerHTML='';
   const fo=featShelf();
-  ((typeof shelves==='function')?shelves():[]).filter(o=>!fo||o.id!==fo.id).slice(-3).reverse().forEach(o=>{
+  ((typeof shelves==='function')?shelves():[]).filter(o=>!fo||o.id!==fo.id).slice(-homeSize('themes')).reverse().forEach(o=>{
     const books=shelfBooks(o.id).map(x=>bookOf(x['책ID'])).filter(Boolean); if(!books.length)return;
     const d=document.createElement('div'); d.className='hbox';
     d.innerHTML=`<div class="hh"><b>${esc(o['제목']||'')}</b></div><div class="sub">${esc(nameOf(o['누가'])||'')}가 꾸민 서가 · ${books.length}권</div><div class="hscr"></div>`;
@@ -4570,7 +4691,7 @@ function paintLibHome(vis,n){
   famOf('read').filter(x=>!x['지움']).forEach(x=>{ let v={}; try{ v=JSON.parse(x['값']||'{}'); }catch(e){}
     const who=String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가']));
     [...(v.r||[]),...(v.d||[])].forEach(e=>{ const t=tally.get(e.i)||{n:0,w:[]}; t.n++; if(!t.w.includes(who))t.w.push(who); tally.set(e.i,t); }); });
-  const top=[...tally.entries()].map(([i,t])=>({b:bookOf(i),t})).filter(x=>x.b).sort((a,b)=>b.t.n-a.t.n).slice(0,5);
+  const top=[...tally.entries()].map(([i,t])=>({b:bookOf(i),t})).filter(x=>x.b).sort((a,b)=>b.t.n-a.t.n).slice(0,homeSize('rank'));
   const rv=[];
   famOf('rv').filter(x=>!x['지움']&&Number(x['값'])>=4).forEach(x=>{ const b=bookOf(x['책ID']); if(b)rv.push({b,s:Number(x['값']),who:String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가'])),say:x['내용']||'',at:Number(x['언제'])||0}); });
   Object.entries(RV).forEach(([i,r])=>{ if(r&&r.s>=4&&!r.sh){ const b=bookOf(i); if(b)rv.push({b,s:r.s,who:'나',say:r.t||'',at:r.at||0}); } });
@@ -4583,7 +4704,7 @@ function paintLibHome(vis,n){
         li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
       w.appendChild(c); }
     if(rv.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>별점 높은 책</h4>';
-      rv.slice(0,5).forEach(x=>{ const li=document.createElement('div'); li.className='li';
+      rv.slice(0,homeSize('rank')).forEach(x=>{ const li=document.createElement('div'); li.className='li';
         li.innerHTML=`<span style="min-width:0;flex:1"><span class="t" style="display:block">${esc(x.b.t)}</span><span class="w">${esc(x.who)}${x.say?' — '+esc(x.say):''}</span></span><span class="st" aria-label="별 ${x.s}개">${starStr(x.s)}</span>`;
         li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
       w.appendChild(c); }
@@ -4593,7 +4714,7 @@ function paintLibHome(vis,n){
   const pk=$('#hPicks'); pk.innerHTML='';
   const unread=vis.filter(b=>!RD[b.i]&&b.b&&b.t);
   const cc={}; unread.forEach(b=>cc[b.b]=(cc[b.b]||0)+1);
-  const big=Object.keys(cc).filter(k=>cc[k]>=5).sort((a,b)=>cc[b]-cc[a]).slice(0,4);
+  const big=Object.keys(cc).filter(k=>cc[k]>=5).sort((a,b)=>cc[b]-cc[a]).slice(0,homeSize('picks'));
   if(big.length){
     const hh=document.createElement('div'); hh.className='hh'; hh.innerHTML='<b>분야별 오늘의 다섯 권</b>'; pk.appendChild(hh);
     const w=document.createElement('div'); w.className='hpk';
