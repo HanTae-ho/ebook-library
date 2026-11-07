@@ -294,6 +294,52 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  /* v48 — 도서관 홈 */
+  #hBanner .bn{position:relative;border-radius:18px;overflow:hidden;padding:26px 28px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;margin:10px 0 4px;color:#fff}
+  #hBanner .bn .tg{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:11px;background:rgba(255,255,255,.16)}
+  #hBanner .bn h2{margin:10px 0 6px;font-size:26px;line-height:1.25;letter-spacing:-.4px}
+  #hBanner .bn p{margin:0;color:rgba(255,255,255,.86);font-size:13.5px;max-width:460px}
+  #hBanner .bn .go{margin-top:14px;display:inline-flex;align-items:center;height:42px;padding:0 18px;border-radius:21px;background:#fff;color:#111418;font-weight:700;border:0}
+  #hBanner .bn .cvs{display:flex;gap:10px;align-items:flex-end}
+  #hBanner .bn .cvs .cv{width:82px;aspect-ratio:.7;border-radius:5px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.35);background:#2a3038}
+  #hBanner .bn .cvs .cv:nth-child(2){width:96px}
+  #hBanner .bn .cvs img{width:100%;height:100%;object-fit:cover}
+  #hBanner .bn .ed{position:absolute;right:14px;top:12px;background:rgba(0,0,0,.25);color:#fff;border:0;border-radius:14px;padding:5px 10px;font-size:12px}
+  #hBanner .hint{margin:10px 0 2px;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--dim);display:flex;gap:10px;align-items:center;justify-content:space-between}
+  #hToday.h3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+  #hToday .tc{display:flex;gap:14px;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);cursor:pointer;min-width:0}
+  #hToday .tc .cvw{width:86px;flex:0 0 auto}
+  #hToday .tc .m{min-width:0;display:flex;flex-direction:column;gap:4px}
+  #hToday .tc .ct{font-size:11.5px;color:var(--acc);font-weight:700}
+  #hToday .tc .ti{font-size:15px;font-weight:800;line-height:1.35}
+  #hToday .tc .au{font-size:12.5px;color:var(--dim)}
+  #hToday .tc .in{font-size:12.5px;color:#b9c1cc;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #hToday .tc .src{font-size:10.5px;color:var(--dim);margin-top:auto}
+  .hchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px}
+  .hchips button{height:34px;min-width:44px;padding:0 12px;border-radius:17px;border:1px solid var(--line);font-size:12.5px;color:#b9c1cc}
+  .hchips button.on{border-color:var(--acc);color:var(--acc);background:rgba(110,168,254,.14)}
+  .hbox{padding:16px;border-radius:16px;background:#161a20;border:1px solid var(--line);margin:12px 0}
+  .hbox .sub{font-size:12px;color:var(--dim);margin-top:-6px;margin-bottom:8px}
+  .h2c{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:12px 0}
+  .h2c .col{padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+  .h2c h4{margin:0 0 8px;font-size:15px}
+  .h2c .li{display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .h2c .li .n{width:22px;text-align:center;font-weight:800;font-size:17px;color:var(--dim)}
+  .h2c .li .n.top{color:var(--acc)}
+  .h2c .li .t{font-weight:700;font-size:13.5px}
+  .h2c .li .w{font-size:12px;color:var(--dim)}
+  .h2c .st{color:#ffc93c;letter-spacing:1px;font-size:12.5px;margin-left:auto;flex:0 0 auto}
+  .hpk{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+  .hpk .col{padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+  .hpk .col b{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+  .hpk .col b button{font-size:12px;color:var(--acc);font-weight:400}
+  .hpk ol{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.95;color:#b9c1cc}
+  .hpk li{cursor:pointer}
+  #hBoard .nt{padding:10px 12px;border-radius:10px;background:#1f2630;font-size:13.5px;margin-top:8px;display:flex;gap:8px;justify-content:space-between}
+  #hBoard .nt b{color:var(--acc)}
+  #hBoard .nt button{color:var(--dim);font-size:12px;flex:0 0 auto}
+  #hBoard .row{display:flex;gap:8px;margin-top:10px}
+  #hBoard .row input{flex:1 1 auto;min-width:0}
   #ruler{position:fixed;left:0;right:0;top:0;bottom:0;pointer-events:none;display:none;z-index:24}
   #ruler.on{display:block}
   #ruler .rt,#ruler .rb{position:absolute;left:0;right:0;background:rgba(0,0,0,var(--rdim,.45))}
@@ -613,6 +659,7 @@
     <div class="hs" id="hqWrap"><div class="hrow" id="hq"></div></div>
 
     <div id="hGoal"></div>
+    <div id="hBanner"></div>
     <div id="hRow1"></div>
 
     <div class="hs" id="hsPin">
@@ -622,10 +669,15 @@
 
     <div class="hs" id="hsToday">
       <div class="hh"><b>오늘의 책</b><button id="hToday2">다른 책 ›</button></div>
-      <div class="hone" id="hToday"></div>
+      <div class="h3" id="hToday"></div>
     </div>
 
+    <div id="hNewB"></div>
+    <div id="hThemes"></div>
+    <div id="hRank"></div>
+    <div id="hPicks"></div>
     <div id="hRow2"></div>
+    <div id="hBoard"></div>
 
     <div class="hlinks">
       <button data-go="">전체 둘러보기 <span id="lkAll"></span></button>
@@ -1369,7 +1421,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v47';
+const BUILD='v48';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -4116,7 +4168,8 @@ function buildHome(){
   const pool = vis.filter(b=>!RD[b.i]&&b.t);
   const tb = pickToday(pool);
   const te=$('#hToday');
-  if(tb){
+  if(tb&&paintToday3(pool)){ $('#hsToday').style.display=''; }
+  else if(tb){
     te.innerHTML='';
     const w=document.createElement('div'); w.className='cvw';
     if(tb.v){ const im=document.createElement('img'); im.loading='lazy'; im.src=tb.v;
@@ -4140,9 +4193,8 @@ function buildHome(){
     '받아둔 책이 없습니다. 책을 열면 그 기기에 자동으로 담깁니다.');
   hsec(r2, '다 읽은 책', 'done', byRead(vis.filter(b=>stOf(b)==='done')), n.done,
     '아직 다 읽은 책이 없습니다.');
-  // '새로 담긴 책'은 색인에 담긴 날이 없으면 줄째로 감춥니다
-  if(n.new) hsec(r2, '새로 담긴 책', 'new',
-    vis.filter(b=>b.g).sort((x,y)=>String(y.g).localeCompare(String(x.g))), n.new, '');
+  // v48 — '새로 담긴 책' 은 위의 분야 태그 칸(#hNewB)으로 옮겼습니다
+  try{ paintLibHome(vis,n); }catch(e){ log('도서관 홈 그리기 실패: '+(e.message||e)); }
 
   $('#lkAll').textContent = n[''].toLocaleString()+'권 ›';
   paintLkHl(); paintLkCal(); paintSmartHome();
@@ -4387,6 +4439,200 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v48 — 도서관 홈 ══════════
+   위에서부터: 빠른 줄(목표) · 이달의 특집 · 이어 읽기 · 내 서가 · 오늘의 책 3권 · 새로 담긴 책(분야 태그) ·
+   테마 서가 · 우리집 많이 읽은 책 / 별점 높은 책 · 분야별 다섯 권 · 최근 본·받아둔·다 읽은 · 알림판.
+   특집은 팀장님이 서가 하나에 {feat:1, d:'한 줄 소개'} 를 붙인 것. 알림판은 모임 칸 kind:'note'.
+   오늘의 책 소개는 YES24 를 그때그때 (기기 메모리에만, 쌓지 않음 — YES24 약관). */
+const TINTRO=new Map();
+function cvBox(b){ const w=document.createElement('div'); w.className='cvw';
+  const ok=b.v&&!(typeof isWrong==='function'&&isWrong(b.i));
+  if(ok){ const im=document.createElement('img'); im.loading='lazy'; im.src=b.v; im.alt='';
+    im.onerror=()=>{ im.remove(); w.insertAdjacentHTML('afterbegin',phHtml(b)); }; w.appendChild(im); }
+  else w.innerHTML=phHtml(b);
+  return w; }
+function pickDistinct(pool,n,salt){
+  const out=[], seen=new Set(); if(!pool.length)return out;
+  const d=new Date(), seed=d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+  for(let j=0;out.length<n&&j<n*8;j++){
+    let h=(seed+(salt||0)*104729+j*7919)>>>0;
+    h=(h^(h>>>15))*2246822507>>>0; h=(h^(h>>>13))*3266489909>>>0; h=(h^(h>>>16))>>>0;
+    const b=pool[h%pool.length]; if(!seen.has(b.i)){ seen.add(b.i); out.push(b); } }
+  return out; }
+function paintToday3(pool){
+  const te=$('#hToday'), arr=pickDistinct(pool,3,todayN+1);
+  if(!arr.length)return false;
+  te.innerHTML=''; te.onclick=null;
+  arr.forEach(b=>{
+    const c=document.createElement('div'); c.className='tc';
+    c.appendChild(cvBox(b));
+    const m=document.createElement('div'); m.className='m';
+    m.innerHTML=`<span class="ct">${esc(b.s||b.m||b.b||(b.x||'').toUpperCase())}</span><span class="ti">${esc(b.t)}</span>`
+      +`<span class="au">${esc(b.a||'')}</span><span class="in"></span><span class="src"></span>`;
+    c.appendChild(m); c.onclick=()=>openPanBook(b); te.appendChild(c);
+    const inEl=m.querySelector('.in'), srEl=m.querySelector('.src');
+    const show=x=>{ if(!x){ inEl.textContent=''; return; } inEl.textContent=x.t; srEl.innerHTML='자료: YES24'; };
+    if(TINTRO.has(b.i)) show(TINTRO.get(b.i));
+    else if(cfg('url')&&kindOf(b)!=='comic'&&navigator.onLine!==false){
+      inEl.textContent='책 소개를 불러오는 중…';
+      y24Fetch(b).then(d=>{ const it=d&&d.item; const raw=it&&(it.intro||it.summary);
+        const t=raw?String(raw).replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim().slice(0,160):'';
+        const v=t?{t}:null; TINTRO.set(b.i,v); show(v); })
+      .catch(()=>{ TINTRO.set(b.i,null); show(null); });
+    }
+  });
+  return true;
+}
+function featShelf(){ const sh=(typeof shelves==='function')?shelves():[];
+  return sh.filter(o=>unpackVal(o['값']).feat).sort((a,b)=>Number(b['언제'])-Number(a['언제']))[0]||null; }
+const BTINT=['linear-gradient(135deg,#27486b,#1b2f45)','linear-gradient(135deg,#3d5a2f,#243a1d)','linear-gradient(135deg,#5a3a5f,#35213a)','linear-gradient(135deg,#6a4a2a,#3d2a17)'];
+function paintBanner(){
+  const el=$('#hBanner'); if(!el)return; el.innerHTML='';
+  const o=featShelf(), own=isOwner(), sh=(typeof shelves==='function')?shelves():[];
+  if(!o){
+    if(own&&sh.length){ el.innerHTML='<div class="hint"><span>서가 하나를 <b>이달의 특집</b>으로 걸면 식구 모두의 홈 맨 위에 크게 뜹니다.</span><button class="pri" id="featPick">특집 고르기</button></div>';
+      $('#featPick').onclick=pickFeat; }
+    return; }
+  const v=unpackVal(o['값']), books=shelfBooks(o.id).map(x=>bookOf(x['책ID'])).filter(Boolean);
+  let hsh=0; for(const c of String(o.id))hsh=(hsh*31+c.charCodeAt(0))|0;
+  const d=document.createElement('div'); d.className='bn'; d.style.background=BTINT[Math.abs(hsh)%BTINT.length];
+  d.innerHTML=`<div style="flex:1 1 300px;min-width:0"><span class="tg">${esc(v.tag||'이달의 특집')}</span>`
+    +`<h2>${esc(o['제목']||'')}</h2><p>${esc(v.d||'')}</p>`
+    +`<button class="go">서가 열기 · ${books.length}권</button>`
+    +`<span style="margin-left:10px;font-size:12.5px;color:rgba(255,255,255,.8)">${esc(nameOf(o['누가'])||'')}가 꾸민 서가</span></div><div class="cvs"></div>`
+    +(own?'<button class="ed">특집 바꾸기</button>':'');
+  const cv=d.querySelector('.cvs');
+  books.slice(0,4).forEach(b=>{ const x=document.createElement('div'); x.className='cv';
+    if(b.v){ const im=document.createElement('img'); im.src=b.v; im.alt=''; im.onerror=()=>{ im.remove(); x.innerHTML=phHtml(b); }; x.appendChild(im); }
+    else x.innerHTML=phHtml(b);
+    cv.appendChild(x); });
+  d.querySelector('.go').onclick=()=>goShelf(o);
+  if(own)d.querySelector('.ed').onclick=pickFeat;
+  el.appendChild(d);
+}
+/* 팀장님: 특집으로 걸 서가 고르기 + 한 줄 소개 */
+async function pickFeat(){
+  const sh=shelves(); if(!sh.length){ toast('먼저 서가를 만들어 주세요'); return; }
+  const el=$('#pbActs'); el.innerHTML='';
+  $('#pbT').textContent='이달의 특집으로 걸 서가'; $('#pbS').textContent='하나만 걸립니다. 지금 것은 내려갑니다'; $('#pbRv').innerHTML='';
+  const cur=featShelf();
+  sh.forEach(o=>{ const x=document.createElement('button');
+    x.innerHTML=(cur&&cur.id===o.id?'✓ ':'')+esc(o['제목']||'')+`<span class="h">${shelfBooks(o.id).length}권</span>`;
+    x.onclick=async()=>{ panOff();
+      const v=unpackVal(o['값']);
+      const desc=await ask('한 줄 소개','예) 중독을 겪은 사람과 곁에 있는 사람이 함께 읽을 책',v.d||''); if(desc===null)return;
+      const tag=await ask('작은 꼬리표','예) 11월 특집 · 겨울방학',v.tag||'이달의 특집'); if(tag===null)return;
+      if(cur&&cur.id!==o.id){ const cv=unpackVal(cur['값']); delete cv.feat;
+        await famPut({kind:'shelf',id:cur.id,title:cur['제목'],val:packVal(cv)},grpOf(cur)||curGrp()); }
+      const ok=await famPut({kind:'shelf',id:o.id,title:o['제목'],val:packVal(Object.assign(v,{feat:1,d:desc.trim(),tag:tag.trim()||'이달의 특집'}))},grpOf(o)||curGrp());
+      if(ok){ toast('특집으로 걸었습니다'); render(true); } };
+    el.appendChild(x); });
+  if(cur){ const x=document.createElement('button'); x.className='warn'; x.textContent='특집 내리기';
+    x.onclick=async()=>{ panOff(); const cv=unpackVal(cur['값']); delete cv.feat;
+      if(await famPut({kind:'shelf',id:cur.id,title:cur['제목'],val:packVal(cv)},grpOf(cur)||curGrp())){ toast('특집을 내렸습니다'); render(true); } };
+    el.appendChild(x); }
+  pan('#panBook',true);
+}
+let HCHIP='';
+function paintLibHome(vis,n){
+  paintBanner();
+  /* 새로 담긴 책 — 분야 태그 */
+  const nb=$('#hNewB'); nb.innerHTML='';
+  const fresh=vis.filter(b=>b.g).sort((x,y)=>String(y.g).localeCompare(String(x.g))).slice(0,300);
+  if(fresh.length){
+    const cnt={}; fresh.slice(0,120).forEach(b=>{ if(b.b)cnt[b.b]=(cnt[b.b]||0)+1; });
+    const cats=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).slice(0,6);
+    if(HCHIP&&!cats.includes(HCHIP))HCHIP='';
+    const list=fresh.filter(b=>!HCHIP||b.b===HCHIP);
+    const d=document.createElement('div'); d.className='hs';
+    d.innerHTML='<div class="hh"><b>새로 담긴 책</b></div><div class="hchips"></div><div class="hscr"></div>';
+    const ch=d.querySelector('.hchips');
+    ['',...cats].forEach(c=>{ const x=document.createElement('button'); x.textContent=c||'전체'; if(c===HCHIP)x.className='on';
+      x.onclick=()=>{ HCHIP=c; paintLibHome(vis,n); }; ch.appendChild(x); });
+    const more=document.createElement('button'); more.textContent='모두 보기 ›'; more.onclick=()=>goList('new'); d.querySelector('.hh').appendChild(more);
+    hcards(d.querySelector('.hscr'),list.slice(0,HN));
+    nb.appendChild(d);
+  }
+  /* 테마 서가 — 특집이 아닌 서가 셋 */
+  const th=$('#hThemes'); th.innerHTML='';
+  const fo=featShelf();
+  ((typeof shelves==='function')?shelves():[]).filter(o=>!fo||o.id!==fo.id).slice(-3).reverse().forEach(o=>{
+    const books=shelfBooks(o.id).map(x=>bookOf(x['책ID'])).filter(Boolean); if(!books.length)return;
+    const d=document.createElement('div'); d.className='hbox';
+    d.innerHTML=`<div class="hh"><b>${esc(o['제목']||'')}</b></div><div class="sub">${esc(nameOf(o['누가'])||'')}가 꾸민 서가 · ${books.length}권</div><div class="hscr"></div>`;
+    const more=document.createElement('button'); more.textContent='모두 보기 ›'; more.onclick=()=>goShelf(o); d.querySelector('.hh').appendChild(more);
+    hcards(d.querySelector('.hscr'),books.slice(0,HN)); th.appendChild(d);
+  });
+  /* 우리집 많이 읽은 책 · 별점 높은 책 */
+  const rk=$('#hRank'); rk.innerHTML='';
+  const tally=new Map();
+  famOf('read').filter(x=>!x['지움']).forEach(x=>{ let v={}; try{ v=JSON.parse(x['값']||'{}'); }catch(e){}
+    const who=String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가']));
+    [...(v.r||[]),...(v.d||[])].forEach(e=>{ const t=tally.get(e.i)||{n:0,w:[]}; t.n++; if(!t.w.includes(who))t.w.push(who); tally.set(e.i,t); }); });
+  const top=[...tally.entries()].map(([i,t])=>({b:bookOf(i),t})).filter(x=>x.b).sort((a,b)=>b.t.n-a.t.n).slice(0,5);
+  const rv=[];
+  famOf('rv').filter(x=>!x['지움']&&Number(x['값'])>=4).forEach(x=>{ const b=bookOf(x['책ID']); if(b)rv.push({b,s:Number(x['값']),who:String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가'])),say:x['내용']||'',at:Number(x['언제'])||0}); });
+  Object.entries(RV).forEach(([i,r])=>{ if(r&&r.s>=4&&!r.sh){ const b=bookOf(i); if(b)rv.push({b,s:r.s,who:'나',say:r.t||'',at:r.at||0}); } });
+  rv.sort((a,b)=>b.s-a.s||b.at-a.at);
+  if(top.length||rv.length){
+    const w=document.createElement('div'); w.className='h2c';
+    if(top.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>우리집에서 많이 읽은 책</h4>';
+      top.forEach((x,k)=>{ const li=document.createElement('div'); li.className='li';
+        li.innerHTML=`<span class="n${k<3?' top':''}">${k+1}</span><span style="min-width:0"><span class="t" style="display:block">${esc(x.b.t)}</span><span class="w">${esc(x.t.w.join(' · '))}</span></span>`;
+        li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
+      w.appendChild(c); }
+    if(rv.length){ const c=document.createElement('div'); c.className='col'; c.innerHTML='<h4>별점 높은 책</h4>';
+      rv.slice(0,5).forEach(x=>{ const li=document.createElement('div'); li.className='li';
+        li.innerHTML=`<span style="min-width:0;flex:1"><span class="t" style="display:block">${esc(x.b.t)}</span><span class="w">${esc(x.who)}${x.say?' — '+esc(x.say):''}</span></span><span class="st" aria-label="별 ${x.s}개">${starStr(x.s)}</span>`;
+        li.onclick=()=>openPanBook(x.b); c.appendChild(li); });
+      w.appendChild(c); }
+    rk.appendChild(w);
+  }
+  /* 분야별 오늘의 다섯 권 — 안 읽은 책에서 */
+  const pk=$('#hPicks'); pk.innerHTML='';
+  const unread=vis.filter(b=>!RD[b.i]&&b.b&&b.t);
+  const cc={}; unread.forEach(b=>cc[b.b]=(cc[b.b]||0)+1);
+  const big=Object.keys(cc).filter(k=>cc[k]>=5).sort((a,b)=>cc[b]-cc[a]).slice(0,4);
+  if(big.length){
+    const hh=document.createElement('div'); hh.className='hh'; hh.innerHTML='<b>분야별 오늘의 다섯 권</b>'; pk.appendChild(hh);
+    const w=document.createElement('div'); w.className='hpk';
+    big.forEach((c,ci)=>{ const col=document.createElement('div'); col.className='col';
+      col.innerHTML=`<b>${esc(c)}<button>더 보기</button></b><ol></ol>`;
+      col.querySelector('button').onclick=()=>goList('',c);
+      const ol=col.querySelector('ol');
+      pickDistinct(unread.filter(b=>b.b===c),5,ci+11+todayN).forEach(b=>{ const li=document.createElement('li'); li.textContent=b.t; li.onclick=()=>openPanBook(b); ol.appendChild(li); });
+      w.appendChild(col); });
+    pk.appendChild(w);
+  }
+  paintBoard();
+}
+/* 알림판 — 팀장님 공지(kind:'note') + 나에게 온 권하기 한마디 */
+function paintBoard(){
+  const el=$('#hBoard'); if(!el)return; el.innerHTML='';
+  const notes=famOf('note').filter(x=>!x['지움']).sort((a,b)=>Number(b['언제'])-Number(a['언제'])).slice(0,3);
+  const recs=famOf('rec').filter(x=>x['대상']===ME.id&&x['내용']).sort((a,b)=>Number(b['언제'])-Number(a['언제'])).slice(0,2);
+  const own=isOwner(), hasG=!!(ME.grp||(own&&VIEWG&&VIEWG!=='*'));
+  if(!notes.length&&!recs.length&&!(own&&hasG)&&!hasG)return;
+  const d=document.createElement('div'); d.className='hbox';
+  d.innerHTML='<div class="hh"><b>알림판</b><button id="brReq">이 책 넣어주세요 ›</button></div>';
+  notes.forEach(x=>{ const r=document.createElement('div'); r.className='nt';
+    r.innerHTML=`<span><b>${esc(x['이름']||nameOf(x['누가']))}</b> · ${esc(x['내용']||'')}</span>`;
+    if(own){ const b=document.createElement('button'); b.textContent='내리기';
+      b.onclick=async()=>{ if(await famDel(x.id||x['id'],grpOf(x)||curGrp()))render(true); }; r.appendChild(b); }
+    d.appendChild(r); });
+  recs.forEach(x=>{ const r=document.createElement('div'); r.className='nt';
+    r.innerHTML=`<span><b>${esc(x['이름']||nameOf(x['누가']))}</b> → 나 · “${esc(x['내용'])}” <i style="color:var(--dim);font-style:normal">${esc(x['제목']||'')}</i></span>`;
+    d.appendChild(r); });
+  if(!notes.length&&!recs.length) d.insertAdjacentHTML('beforeend','<div class="hnone" style="margin-top:6px">아직 알림이 없습니다.</div>');
+  if(own&&hasG){ const r=document.createElement('div'); r.className='row';
+    r.innerHTML='<label for="noteIn" style="position:absolute;left:-9999px">공지 한 줄</label><input id="noteIn" placeholder="식구에게 알릴 한 줄 (예: 겨울방학 서가를 열었습니다)" maxlength="120" autocomplete="off"><button class="pri" id="noteGo">올리기</button>';
+    d.appendChild(r); }
+  el.appendChild(d);
+  $('#brReq').onclick=()=>$('#lkReq').onclick();
+  const ng=$('#noteGo'); if(ng)ng.onclick=async()=>{ const t=$('#noteIn').value.trim(); if(!t)return;
+    if(await famPut({kind:'note',text:t},ME.grp||VIEWG)){ toast('알림판에 올렸습니다'); render(true); } };
+}
 
 /* ══════════ v47 — 읽기 자 · 집중 모드 ══════════
    읽는 줄 몇 개만 밝게 두고 위아래를 어둡게 덮습니다 (그림을 덮는 층이라 글·형광펜은 그대로).
