@@ -524,6 +524,15 @@
     border-left:3px solid var(--line);padding-left:9px;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
+  #resumeBar{position:fixed;left:50%;bottom:calc(var(--sb) + 64px);transform:translateX(-50%);z-index:89;
+    display:none;gap:6px;max-width:92%;align-items:center}
+  #resumeBar.on{display:flex}
+  #resumeBar button{background:var(--acc);color:#0b1220;border:0;border-radius:22px;padding:11px 16px;
+    font-size:14px;font-weight:600;box-shadow:0 6px 20px #0006;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:76vw}
+  #resumeBar #resumeX{background:#222831f2;color:var(--tx);padding:11px 13px}
+  #junkList .row,#junkCand .row{display:flex;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px}
+  #junkList .row span,#junkCand .row span{flex:1;word-break:break-all}
+  #junkCand .row i{font-style:normal;color:var(--dim);font-size:11.5px}
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
     font-size:13px;z-index:90;display:none;max-width:88%;text-align:center;white-space:pre-wrap;color:var(--tx)}
@@ -700,6 +709,8 @@
 
   <div class="grp k-text"><div class="lb"><span>글자 크기</span><span id="vFs"></span></div>
     <input type="range" id="rgFs" min="70" max="220" step="5"></div>
+  <div class="grp k-text"><div class="lb"><span>자간</span><span id="vLs"></span></div>
+    <input type="range" id="rgLs" min="-5" max="20" step="1"></div>
   <div class="grp k-text"><div class="lb"><span>줄 간격</span><span id="vLh"></span></div>
     <input type="range" id="rgLh" min="120" max="240" step="5"></div>
   <div class="grp k-text"><div class="lb"><span>좌우 여백</span><span id="vPd"></span></div>
@@ -718,6 +729,11 @@
     <div class="seg" id="segClean">
       <button data-v="0">원문 그대로</button><button data-v="1">끊긴 줄 잇기</button>
     </div></div>
+  <div class="grp k-txt"><div class="lb">텍본 쓰레기 문구 <span style="opacity:.7">· 화면에서만 지웁니다</span></div>
+    <div class="seg" id="segJunk">
+      <button data-v="0">그대로</button><button data-v="1">지우기</button>
+    </div>
+    <div class="seg" style="margin-top:6px"><button id="junkOpen">지울 문구 고르기 <span id="junkN"></span></button></div></div>
   <div class="grp k-epub"><div class="lb">넘기는 방법</div>
     <div class="seg" id="segNav">
       <button data-v="tap">좌우 탭</button><button data-v="swipe">밀어서</button><button data-v="both">둘 다</button>
@@ -861,9 +877,14 @@
     <div class="seg" style="margin-top:6px"><button id="smartSave">⚡ 지금 목록을 서가로 저장</button></div></div>
   <div class="grp"><div class="lb">책 정보 <span style="opacity:.7">· 제목 · 표지 · 저자 · 분류</span></div>
     <div class="seg" id="segMeta">
-      <button data-v="sure">확실한 것만</button><button data-v="aladin">알라딘 그대로</button><button data-v="file">파일 이름</button>
+      <button data-v="sure">확실한 것만</button><button data-v="aladin">찾은 정보 그대로</button><button data-v="file">파일 이름</button>
     </div>
     <div id="metaNote" style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:6px"></div></div>
+  <div class="grp"><div class="lb">앱을 열 때</div>
+    <div class="seg" id="segResume">
+      <button data-v="0">홈부터</button><button data-v="1">읽던 책 이어서</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:6px">받아둔 책은 바로 열고, 아니면 아래에 [이어 읽기] 단추를 띄웁니다.</div></div>
   <div class="grp"><div class="lb">분류 기준</div>
     <div class="seg" id="segCat">
       <button data-v="tree">계층</button><button data-v="b">대분류</button>
@@ -1127,6 +1148,31 @@
   </div>
 </div>
 
+<!-- v38 앱을 열 때 이어 읽기 -->
+<div id="resumeBar"><button id="resumeGo">📖 이어 읽기 · <b id="resumeT"></b></button><button id="resumeX" title="닫기">✕</button></div>
+
+<!-- v38 텍본 쓰레기 문구 -->
+<div class="sheet" id="junkSheet">
+  <div class="box" style="max-width:560px">
+    <h3>텍본 쓰레기 문구</h3>
+    <div class="note">화면에서만 지웁니다. 원본 파일과 형광펜 자리는 그대로입니다.</div>
+    <div class="note" id="junkStat" style="margin-top:6px"></div>
+    <h4 style="margin:14px 0 6px">처음부터 지우는 것</h4>
+    <div class="note">· 사이트 주소만 있는 줄 (http… · www… · ○○.com 같은)<br>
+      · ★☆◆■▶ 같은 기호로 감싼 안내 줄 가운데 텍본·공유·배포·다운·업로드·출처·제공이 든 것</div>
+    <h4 style="margin:14px 0 6px">내가 넣은 문구 <span style="opacity:.7;font-weight:400">· 모든 TXT 에 씁니다</span></h4>
+    <div id="junkList"></div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <input id="junkIn" placeholder="지울 글 그대로, 또는 /모양/ (그 모양이 든 줄 통째로)" autocomplete="off" style="flex:1">
+      <button id="junkAdd">넣기</button>
+    </div>
+    <h4 style="margin:14px 0 6px">이 책에서 자주 되풀이되는 줄</h4>
+    <div class="note">광고 문구는 같은 줄이 수십 번 나옵니다. 맞는 것만 넣으세요.</div>
+    <div id="junkCand"></div>
+    <div class="btns"><button id="junkClose" class="pri">닫기</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="pinSheet">
   <div class="box">
     <h3>내 서가 고르기</h3>
@@ -1153,7 +1199,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v37.1';
+const BUILD='v38';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1464,9 +1510,9 @@ async function boot(){
   }
   try{ (await DB.keys('books')||[]).forEach(k=>saved.add(k)); }catch(e){}
   let c=null; try{ c=await DB.get('kv','index'); }catch(e){ log('저장소를 열지 못했습니다: '+(e.message||e)); }
-  if(c){ apply(c); render(true); log('저장된 색인 ('+BOOKS.length+'권)'); }
+  if(c){ apply(c); render(true); log('저장된 색인 ('+BOOKS.length+'권)'); setTimeout(resumeOffer,300); }
   else{ stat('처음이라 서재를 받아옵니다. 30초쯤 걸립니다…');
-    try{ await fetchIndex(); render(true); }
+    try{ await fetchIndex(); render(true); setTimeout(resumeOffer,300); }
     catch(e){
       // 화면 글은 창에 가려 안 보일 때가 있어, 기록에도 반드시 남깁니다
       log('★ 목록을 못 받았습니다: '+(e.message||e));
@@ -1883,6 +1929,7 @@ function paperCss(){
     'line-height':(P.lh/100)+' !important' };
   if(fam) body['font-family']=fam+' !important';
   const txt={ color:c.fg+' !important', 'line-height':(P.lh/100)+' !important' };
+  if(P.ls){ body['letter-spacing']=(P.ls/100)+'em !important'; txt['letter-spacing']=(P.ls/100)+'em !important'; }
   if(fam) txt['font-family']=fam+' !important';
   if(P.fw){ body['font-weight']=P.fw+' !important'; txt['font-weight']=P.fw+' !important'; }
   return { 'html, body':{background:c.bg+' !important'}, body,
@@ -1902,12 +1949,16 @@ function applyRead(){
     (KIND==='epub'&&P.nav!=='swipe')?'block':'none';
   // TXT 도 글자 설정을 그대로 따릅니다
   const tb=$('#txt .body');
-  if(tb){ tb.style.fontSize=(15*P.fs/100).toFixed(1)+'px';
+  // v38 — 글자 크기·자간·줄 간격을 바꿔도 읽던 자리(비율)를 지킵니다
+  const th=$('#txt'), tmax0=th?th.scrollHeight-th.clientHeight:0, tpos=tmax0>0?th.scrollTop/tmax0:-1;
+  if(tb){ tb.style.letterSpacing=P.ls?(P.ls/100)+'em':'';
+    tb.style.fontSize=(15*P.fs/100).toFixed(1)+'px';
     tb.style.lineHeight=(P.lh/100);
     tb.style.fontFamily=P.font==='sans'
       ? '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
       : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : '';
-    tb.style.fontWeight=P.fw?String(P.fw):''; }
+    tb.style.fontWeight=P.fw?String(P.fw):'';
+    if(KIND==='txt'&&tpos>=0){ const m1=th.scrollHeight-th.clientHeight; if(m1>0)th.scrollTop=tpos*m1; } }
   $('#vZoom').textContent=P.zoom+'%'; $('#rgZoom').value=P.zoom;
   segSet('#segPnav',P.pnav);
   if(rend){ rend.themes.register('paper',paperCss()); rend.themes.select('paper');
@@ -1920,9 +1971,10 @@ function applyRead(){
       setTimeout(paintEpubHl,160); }); }, 120);
   }
   $('#vFs').textContent=P.fs+'%'; $('#vLh').textContent=(P.lh/100).toFixed(2);
+  $('#vLs').textContent=P.ls?(P.ls>0?'+':'')+(P.ls/100).toFixed(2)+'em':'보통'; $('#rgLs').value=P.ls||0;
   $('#vPd').textContent=P.pd+'%'; $('#vPv').textContent=P.pv+'px'; $('#vTap').textContent=P.tap+'%';
   segSet('#segTheme',P.theme); segSet('#segFont',P.font); segSet('#segNav',P.nav);
-  segSet('#segFw',P.fw||''); segSet('#segFoot',P.nofoot||0); segSet('#segClean',P.tclean||0);
+  segSet('#segFw',P.fw||''); segSet('#segFoot',P.nofoot||0); segSet('#segClean',P.tclean||0); segSet('#segJunk',P.junk||0); segSet('#segResume',P.resume||0); paintJunkN();
   $('#rgFs').value=P.fs; $('#rgLh').value=P.lh; $('#rgPd').value=P.pd;
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
 }
@@ -2560,7 +2612,57 @@ function txtClean(s){
     return m.replace(/[\s\S]/g,c=>(c==='\n'&&k++<2)?'\n':'\u200B'); });
   return s;
 }
-function txtShown(){ return P.tclean ? (TXTC||(TXTC=txtClean(TXTRAW))) : TXTRAW; }
+/* v38 — 텍본 쓰레기 문구. 줄 잇기와 같은 약속: 글자 수를 한 자도 바꾸지 않습니다.
+   지울 글자는 보이지 않는 글자(U+200B)로 바꿔, 형광펜 자리(c.s~c.e)가 그대로 맞습니다. */
+var TXTJN=0;
+const JUNK_URL=/^[\s\u3000\u200B\-=*_~·•<>\[\]()【】『』「」|]*(?:https?:\/\/|www\.)\S+|^[\s\u3000\u200B\-=*_~·•<>\[\]()【】『』「」|]*[\w.-]+\.(?:com|net|org|kr|co\.kr|me|io|tv|info|xyz|link|site|club)(?:\/\S*)?[\s\u3000\u200B\-=*_~·•<>\[\]()【】『』「」|]*$/i;
+const JUNK_BANNER=/^[\s\u3000]*[★☆◆◇■□▶▷●○◈※♣♠♥♡]{1,}.{0,60}(?:텍본|텍스트본|공유|배포|다운|업로드|출처|제공|무료|토렌트|웹하드).{0,60}[★☆◆◇■□◀◁●○◈※♣♠♥♡]*[\s\u3000]*$/;
+function junkPats(){
+  return (P.jpat||[]).map(t=>{ const m=/^\/(.+)\/([a-z]*)$/.exec(t);
+    if(m){ try{ return {re:new RegExp(m[1],m[2].replace(/g/g,''))}; }catch(e){ return null; } }
+    return t?{lit:nfc(t)}:null; }).filter(Boolean);
+}
+const zw=n=>'\u200B'.repeat(n);
+function txtJunk(s){
+  const pats=junkPats(); let n=0, out='', off=0;
+  const lines=s.split('\n');
+  lines.forEach((ln,k)=>{
+    const t=ln.replace(/[\r\u200B]/g,'');
+    let kill=false;
+    if(t.trim()){
+      if(JUNK_URL.test(t)||JUNK_BANNER.test(t)) kill=true;
+      else if(pats.some(p=>p.re&&p.re.test(t))) kill=true;
+    }
+    if(kill){ out+=zw(ln.length); n++; }
+    else{
+      let v=ln;
+      pats.forEach(p=>{ if(p.lit&&v.includes(p.lit)){ v=v.split(p.lit).join(zw(p.lit.length)); n++; } });
+      out+=v;
+    }
+    if(k<lines.length-1) out+='\n';
+  });
+  return {s:out,n};
+}
+function txtShown(){
+  if(!P.tclean&&!P.junk){ TXTJN=0; return TXTRAW; }
+  if(TXTC) return TXTC;
+  let t=TXTRAW; TXTJN=0;
+  if(P.junk){ const r=txtJunk(t); t=r.s; TXTJN=r.n; }
+  if(P.tclean) t=txtClean(t);
+  return (TXTC=t);
+}
+/* 이 책에서 되풀이되는 줄 — 광고 후보 */
+function junkCands(){
+  const cnt=new Map();
+  TXTRAW.split('\n').forEach(ln=>{ const t=ln.replace(/[\r\u200B]/g,'').trim();
+    if(t.length<4||t.length>80)return;
+    if(!/[가-힣A-Za-z]/.test(t))return;
+    if(typeof TOC_RE!=='undefined'&&TOC_RE.test(t))return;     // 목차 같은 줄은 뺍니다
+    cnt.set(t,(cnt.get(t)||0)+1); });
+  const have=new Set((P.jpat||[]).map(nfc));
+  return [...cnt.entries()].filter(([t,c])=>c>=5&&!have.has(nfc(t)))
+    .sort((a,b)=>b[1]-a[1]).slice(0,12);
+}
 function paintTxtHl(){
   const el=$('#txt .body'); if(!el||!curB)return;
   const T=txtShown();
@@ -3415,7 +3517,7 @@ function onTxtScroll(){
 
 /* 리더 껍데기 — 어떤 형식이든 공통 */
 function openShell(b){
-  selbarOff(); clearOv();
+  selbarOff(); clearOv(); $('#resumeBar')&&$('#resumeBar').classList.remove('on');
   $('#library').style.display='none'; $('#reader').style.display='flex';
   $('#rtitle').textContent=b.t||'';
   $('#page').style.display = KIND==='epub'?'block':'none';
@@ -3578,7 +3680,7 @@ seg('#segMode','mode',()=>render(true));
 seg('#segSize','size',()=>render(true));
 seg('#segSort','sort',()=>render(true));
 seg('#segCat','cat',()=>{ SEL=''; PATH=[]; buildChips(); render(true); });
-['#rgFs:fs','#rgLh:lh','#rgPd:pd','#rgPv:pv','#rgTap:tap'].forEach(x=>{
+['#rgFs:fs','#rgLs:ls','#rgLh:lh','#rgPd:pd','#rgPv:pv','#rgTap:tap'].forEach(x=>{
   const [sel,key]=x.split(':');
   $(sel).addEventListener('input',()=>{ P[key]=Number($(sel).value); savePref(); applyRead(); });
 });
@@ -4064,6 +4166,77 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v38 — 텍본 쓰레기 문구 · 이어 읽기 ══════════ */
+function txtRepaint(msg){
+  if(KIND!=='txt'){ return; }
+  const h=$('#txt'), m0=h.scrollHeight-h.clientHeight, p=m0>0?h.scrollTop/m0:0;
+  TXTC=''; paintTxtHl(); TOCS=null;
+  const m1=h.scrollHeight-h.clientHeight; h.scrollTop=p*m1;
+  paintJunkN();
+  if(msg)toast(msg);
+}
+function paintJunkN(){
+  const el=$('#junkN'); if(!el)return;
+  if(KIND==='txt'&&P.junk){ txtShown(); el.textContent=TXTJN?`· 이 책에서 ${TXTJN}곳 ›`:'›'; }
+  else el.textContent=(P.jpat&&P.jpat.length)?`· 넣은 문구 ${P.jpat.length}개 ›`:'›';
+}
+seg('#segJunk','junk',()=>{ txtRepaint(P.junk?'쓰레기 문구를 지우고 보여 드립니다\n(원본 파일은 그대로입니다)':'원문 그대로 보여 드립니다'); });
+function paintJunkSheet(){
+  if(KIND==='txt'&&P.junk){ txtShown(); $('#junkStat').textContent=`이 책에서 지운 곳: ${TXTJN}곳`; }
+  else $('#junkStat').textContent=P.junk?'':'지금은 [그대로] 입니다. 설정판에서 [지우기] 를 고르면 적용됩니다.';
+  const L=$('#junkList'); L.innerHTML='';
+  const a=P.jpat||[];
+  if(!a.length){ L.innerHTML='<div class="note">아직 없습니다.</div>'; }
+  a.forEach((t,i)=>{ const r=document.createElement('div'); r.className='row';
+    r.innerHTML=`<span>${esc(t)}</span>`; const x=document.createElement('button'); x.textContent='빼기';
+    x.onclick=()=>{ P.jpat.splice(i,1); savePref(); paintJunkSheet(); txtRepaint(); };
+    r.append(x); L.append(r); });
+  const C=$('#junkCand'); C.innerHTML='';
+  if(KIND!=='txt'){ C.innerHTML='<div class="note">TXT 책을 연 상태에서 보입니다.</div>'; return; }
+  const cs=junkCands();
+  if(!cs.length){ C.innerHTML='<div class="note">되풀이되는 줄이 없습니다.</div>'; return; }
+  cs.forEach(([t,c])=>{ const r=document.createElement('div'); r.className='row';
+    r.innerHTML=`<span>${esc(t)} <i>${c}번</i></span>`; const b=document.createElement('button'); b.textContent='넣기';
+    b.onclick=()=>junkAddText(t);
+    r.append(b); C.append(r); });
+}
+function junkAddText(t){
+  t=String(t||'').trim(); if(!t)return;
+  if(/^\/.+\/[a-z]*$/.test(t)){ try{ const m=/^\/(.+)\/([a-z]*)$/.exec(t); new RegExp(m[1],m[2]); }
+    catch(e){ toast('모양(/…/)이 바르지 않습니다\n'+e.message); return; } }
+  else if(t.length<2){ toast('두 글자 이상 넣어 주세요'); return; }
+  P.jpat=(P.jpat||[]).filter(x=>x!==t); P.jpat.push(t);
+  if(!P.junk){ P.junk=1; segSet('#segJunk',1); }
+  savePref(); txtRepaint(); paintJunkSheet();
+}
+$('#junkOpen').onclick=()=>{ panOff(); paintJunkSheet(); $('#junkSheet').classList.add('on'); };
+$('#junkClose').onclick=()=>$('#junkSheet').classList.remove('on');
+$('#junkSheet').addEventListener('click',e=>{ if(e.target.id==='junkSheet')$('#junkSheet').classList.remove('on'); });
+$('#junkAdd').onclick=()=>{ junkAddText($('#junkIn').value); $('#junkIn').value=''; };
+$('#junkIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#junkAdd').onclick(); } });
+
+/* 앱을 열 때 읽던 책 이어서 — 받아둔 책은 바로, 아니면 단추로 (구글 로그인 창은 손으로 눌러야 뜹니다) */
+seg('#segResume','resume');
+function lastBook(){
+  const byId=new Map(BOOKS.map(b=>[b.i,b]));
+  let best=null, bt=0;
+  Object.entries(RD).forEach(([id,r])=>{ if(!r||r.f||!r.t||r.t<=bt)return;
+    const b=byId.get(id); if(!b||!kindOf(b))return; best=b; bt=r.t; });
+  return best;
+}
+function resumeOffer(){
+  if(!P.resume||resumeOffer.done)return; resumeOffer.done=true;
+  if(location.hash.length>1||/[?&](inv|i|s)=/.test(location.search))return;   // 초대·공유 링크로 열었으면 건드리지 않습니다
+  if($('#reader')&&$('#reader').style.display==='flex')return;
+  const b=lastBook(); if(!b)return;
+  if(saved.has(b.i)){ openBook(b); return; }
+  $('#resumeT').textContent=b.t||'읽던 책';
+  $('#resumeBar').classList.add('on');
+  clearTimeout(resumeOffer._t); resumeOffer._t=setTimeout(()=>$('#resumeBar').classList.remove('on'),15000);
+  $('#resumeGo').onclick=()=>{ $('#resumeBar').classList.remove('on'); openBook(b); };
+}
+$('#resumeX').onclick=()=>$('#resumeBar').classList.remove('on');
 
 /* ══════════ v37 — 책 소개 (YES24) ══════════
    앱이 YES24 에 직접 묻지 않습니다 — 키를 앱에 넣으면 안 되기 때문입니다 (YES24 약관).
