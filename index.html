@@ -294,6 +294,15 @@
     padding:10px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
   .mate:last-child{border-bottom:none}
   #mateList{margin-top:6px}
+  #hRead .rd{padding:8px 0;border-bottom:1px solid var(--line)}
+  #hRead .rd .nm{font-weight:600;font-size:13px}
+  #hRead .rd .bk{display:inline-block;margin:4px 6px 0 0;padding:4px 9px;border-radius:14px;border:1px solid var(--line);font-size:12px;cursor:pointer}
+  #hRead .rd .bk.dn{opacity:.6}
+  #hRead .tog{padding:8px 0;font-size:12.5px;color:var(--acc)}
+  #hStat table{width:100%;border-collapse:collapse;font-size:13px}
+  #hStat td,#hStat th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+  #hStat td:first-child,#hStat th:first-child{text-align:left}
+  .mate .seen{font-style:normal;color:var(--dim);font-size:11px;margin-left:4px}
   #grpList{margin-top:6px}
   #grpList .it{display:flex;justify-content:space-between;align-items:center;gap:8px;
     padding:11px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
@@ -616,6 +625,16 @@
         <div class="hrow" id="hShelf"></div>
         <div class="hnone" id="hShelfNone">아직 만든 칸이 없습니다.
           자주 권하실 책을 묶어두면 그 모임원 모두의 홈에 뜹니다.</div>
+      </div>
+
+      <div class="hs" id="hsRead">
+        <div class="hh"><b>식구들이 읽는 책</b><button id="shrBtn"></button></div>
+        <div id="hRead"></div>
+        <div class="hnone" id="hReadNone"></div>
+      </div>
+      <div class="hs" id="hsStat" style="display:none">
+        <div class="hh"><b id="hStatT">우리집 통계</b></div>
+        <div id="hStat"></div>
       </div>
 
       <div id="hRec"></div>
@@ -1075,6 +1094,24 @@
   </div>
 </div>
 
+<!-- v44 아이 칸 -->
+<div class="sheet" id="kidSheet">
+  <div class="box" style="max-width:520px">
+    <h3 id="kidT">아이 칸</h3>
+    <p class="note" style="margin-top:0">이 사람의 기기에서만 보이는 책을 줄입니다. 집 안에서 쓰는 가벼운 울타리입니다
+      (기기를 잘 아는 사람이 일부러 풀 수는 있습니다).</p>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="kidAdult"> 성인물 가리기
+      <span class="note" style="margin:0">(19금·성인·R-18 같은 말이 든 책)</span></label>
+    <div class="sect" style="margin-top:12px">보이는 분류 <span class="note" id="kidCatN" style="margin:0"></span></div>
+    <div class="seg" style="margin:6px 0"><button id="kidAll">모두</button><button id="kidNone">모두 끄기</button></div>
+    <div id="kidCats" style="max-height:34vh;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px"></div>
+    <label style="margin-top:10px;display:block">더 가릴 낱말 <span class="note" style="margin:0">(쉼표로)</span></label>
+    <input id="kidWords" autocomplete="off" placeholder="예) 공포, 잔혹">
+    <div class="note" id="kidNote"></div>
+    <div class="btns"><button id="kidOff">아이 칸 풀기</button><button id="kidCancel">그만두기</button><button id="kidSave" class="pri">저장</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="askSheet">
   <div class="box">
     <h3 id="askT">입력</h3>
@@ -1292,7 +1329,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v43';
+const BUILD='v44';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1645,7 +1682,7 @@ async function fetchIndex(){
   await DB.put('kv','index',d); apply(d); log('색인 '+d.count+'권');
 }
 function apply(d){
-  BOOKS=d.books||[]; UPDATED=d.updated||'';
+  BOOKS_ALL=d.books||[]; BOOKS=kidFilter(BOOKS_ALL); UPDATED=d.updated||'';
   /* ★ 목록이 바뀌면 만들어 둔 정렬 순서를 버립니다.
      (v31 까지는 안 버려서, 기기에 둔 목록 → 새 목록으로 바뀔 때
       옛 순서표가 새 목록에 덮여 엉뚱한 순서로 보이고 새 책이 빠지기도 했습니다) */
@@ -2850,6 +2887,8 @@ async function famLoad(){
       saveGroups(); paintSeg(); }
     if(d.me&&d.me!=='*'){ setMyGroup(d.me,d.gname||ME.grpN); paintSeg(); }
     log('모임 칸 '+FAM.length+'줄'+(d.me&&d.me!=='*'?' ('+(d.gname||'')+')':''));
+    try{ kidSync(); }catch(e){}
+    try{ readPush(false); }catch(e){}
   }catch(e){ log('모임 칸 못 받음: '+(e.message||e)); }
   return FAM;
 }
@@ -3028,6 +3067,8 @@ function localState(){
            days:DAYS, wrong:WRONG, smart:P.smart||[], smartAt:Number(localStorage.getItem('ebl_smartat')||0),
            pins:P.pins||[], rq:RQ, rv:RV,
            jp:P.jpat||[], jpAt:Number(localStorage.getItem('ebl_jpatat')||0),
+           shr:P.shareRead?1:0, shrAt:Number(localStorage.getItem('ebl_shrat')||0),
+           mates:MATES, matesAt:Number(localStorage.getItem('ebl_matesat')||0),
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
            rqAt:Number(localStorage.getItem('ebl_rqat')||0) };
 }
@@ -3041,6 +3082,8 @@ function mergeState(a,b){
     const o=out.days[d]||(out.days[d]={});
     Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
   if((a.jpAt||0)>=(b.jpAt||0)){ out.jp=a.jp; out.jpAt=a.jpAt||0; } else { out.jp=b.jp; out.jpAt=b.jpAt||0; }
+  if((a.shrAt||0)>=(b.shrAt||0)){ out.shr=a.shr; out.shrAt=a.shrAt||0; } else { out.shr=b.shr; out.shrAt=b.shrAt||0; }
+  if((a.matesAt||0)>=(b.matesAt||0)){ out.mates=a.mates; out.matesAt=a.matesAt||0; } else { out.mates=b.mates; out.matesAt=b.matesAt||0; }
   out.rv={};
   [a.rv,b.rv].forEach(R=>Object.entries(R||{}).forEach(([k,v])=>{ if(!out.rv[k]||(v.at||0)>(out.rv[k].at||0))out.rv[k]=v; }));
   out.wrong={};
@@ -3105,6 +3148,10 @@ function applyState(s){
     try{ localStorage.setItem('ebl_smartat',String(s.smartAt||0)); }catch(e){} }
   P.pins=s.pins||[]; RQ=s.rq||[];
   if(s.rv){ RV=s.rv; saveRV(); }
+  if(s.shrAt&&s.shrAt>Number(localStorage.getItem('ebl_shrat')||0)){ P.shareRead=s.shr?1:0;
+    try{ localStorage.setItem('ebl_shrat',String(s.shrAt)); }catch(e){} }
+  if(Array.isArray(s.mates)&&(s.matesAt||0)>Number(localStorage.getItem('ebl_matesat')||0)){ MATES=s.mates;
+    try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES)); localStorage.setItem('ebl_matesat',String(s.matesAt)); }catch(e){} }
   if(Array.isArray(s.jp)&&(s.jpAt||0)>Number(localStorage.getItem('ebl_jpatat')||0)){
     P.jpat=s.jp; try{ localStorage.setItem('ebl_jpatat',String(s.jpAt)); }catch(e){} TXTC=''; }
   saveRD.now(); saveHL.now(); saveDEL(); savePref();
@@ -3720,7 +3767,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
+function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
@@ -3958,6 +4005,7 @@ function buildFam(){
   }
 
   $('#hRecNone').style.display = $('#hRec').children.length?'none':'block';
+  try{ paintFamRead(); }catch(e){ log('식구 서재 그리기 실패: '+(e.message||e)); }
 
   const rq=famOf('req').length;
   $('#lkReqN').textContent = (isOwner()&&rq) ? rq+'건 ›' : '›';
@@ -4294,6 +4342,162 @@ function paintReq(){
 $$('#home [data-go]').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $$('.hlinks button').forEach(x=>x.onclick=()=>goList(x.dataset.go));
 $('#hToday2').onclick=e=>{ e.stopPropagation(); todayN++; buildHome(); };
+
+/* ══════════ v44 — 식구 ══════════
+   ① 서로의 서재  기본 끔. 켠 사람만 모임 칸에 한 줄(kind:'read', id:'read-번호') —
+                  지금 읽는 책 8권 + 최근 60일에 다 읽은 책 6권 (책ID·진도·다 읽음) + 올해·이달 다 읽은 권수.
+                  제목은 실어 보내지 않습니다 — 같은 색인을 쓰니 받는 쪽이 책ID로 찾습니다. 끄면 그 줄을 지웁니다.
+   ② 우리집 통계  켠 사람들의 권수로.
+   ③ 명단        팀장님 기기끼리 동기화 (saveMates) · 마지막 활동은 모임 칸에 남긴 가장 최근 줄로.
+   ④ 아이 칸     팀장님이 모임 칸에 kind:'kid', 대상=그 사람, 값={c:[보이는 대분류]|null, a:성인물 가리기, w:[낱말]}.
+                  그 사람 기기가 받아 목록(BOOKS)을 거릅니다. 폴더 탭은 '색인' 으로만. */
+var BOOKS_ALL=[], KIDR=null;
+try{ KIDR=JSON.parse(localStorage.getItem('ebl_kid')||'null'); }catch(e){ KIDR=null; }
+function kidRule(){ return KIDR&&(KIDR.a||KIDR.c||(KIDR.w&&KIDR.w.length))?KIDR:null; }
+const ADULT_RE=/19금|\(19\)|\[19\]|19\+|18\+|R-?18|성인|에로|야설|미성년자\s*구독\s*불가|청소년\s*이용\s*불가|\bBL\b|\bGL\b/i;
+function kidOk(b,r){
+  if(r.c&&r.c.length&&!r.c.includes(b.b||'(분류 없음)'))return false;
+  const txt=[b.t,b._fn,b.o,b.c,b.b,b.m,b.s,b.f].filter(Boolean).join(' ');
+  if(r.a&&ADULT_RE.test(txt))return false;
+  if(r.w&&r.w.some(w=>w&&txt.includes(w)))return false;
+  return true;
+}
+function kidFilter(list){ const r=kidRule(); return r?list.filter(b=>kidOk(b,r)):list; }
+/* 모임 칸에서 나에게 걸린 아이 칸을 찾아 적용 */
+function kidSync(){
+  const rows=(FAM||[]).filter(x=>x['종류']==='kid'&&String(x['대상'])===String(ME.id)&&!x['지움'])
+    .sort((a,b)=>Number(b['언제'])-Number(a['언제']));
+  let r=null; if(rows.length){ try{ r=JSON.parse(rows[0]['값']||'null'); }catch(e){ r=null; } }
+  if(JSON.stringify(r)===JSON.stringify(KIDR))return;
+  KIDR=r; try{ localStorage.setItem('ebl_kid',JSON.stringify(r)); }catch(e){}
+  if(BOOKS_ALL.length){ BOOKS=kidFilter(BOOKS_ALL); Object.keys(ORD).forEach(k=>delete ORD[k]); metaApply(); LASTEX=null;
+    try{ render(true); }catch(e){} }
+  log(r?'아이 칸이 걸렸습니다':'아이 칸이 풀렸습니다');
+}
+const kidOf=id=>{ const rows=(FAM||[]).filter(x=>x['종류']==='kid'&&String(x['대상'])===String(id)&&!x['지움'])
+  .sort((a,b)=>Number(b['언제'])-Number(a['언제'])); if(!rows.length)return null;
+  try{ return JSON.parse(rows[0]['값']||'null'); }catch(e){ return null; } };
+function lastSeen(id){
+  const t=Math.max(0,...(FAM||[]).filter(x=>String(x['누가'])===String(id)).map(x=>Number(x['언제'])||0));
+  if(!t)return '';
+  const d=Math.floor((Date.now()-t)/86400000);
+  return d<=0?'오늘 활동':d===1?'어제 활동':d+'일 전 활동';
+}
+/* ── 아이 칸 설정 (팀장님) ── */
+let KIDM=null;
+function openKid(m){
+  if(!m.grp){ toast('먼저 이 사람을 모임에 넣어 주세요.\n아이 칸은 그 모임 칸에 적어 둡니다',4500); return; }
+  KIDM=m; const r=kidOf(m.id)||{};
+  $('#kidT').textContent=`아이 칸 — ${m.name}`;
+  $('#kidAdult').checked=r.a!=null?!!r.a:true;
+  $('#kidWords').value=(r.w||[]).join(', ');
+  const cnt={}; BOOKS_ALL.forEach(b=>{ const k=b.b||'(분류 없음)'; cnt[k]=(cnt[k]||0)+1; });
+  const el=$('#kidCats'); el.innerHTML='';
+  Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).forEach(k=>{
+    const l=document.createElement('label'); l.style.cssText='display:flex;gap:6px;align-items:center';
+    l.innerHTML=`<input type="checkbox" value="${esc(k)}"${!r.c||r.c.includes(k)?' checked':''}> <span>${esc(k)} <i class="seen">${cnt[k].toLocaleString()}</i></span>`;
+    el.appendChild(l); });
+  kidCount(); $('#kidOff').style.display=kidOf(m.id)?'':'none';
+  $('#kidNote').textContent='저장하면 그 사람이 앱을 다시 열거나 목록을 새로 받을 때 걸립니다.';
+  $('#kidSheet').classList.add('on');
+}
+function kidPicked(){ return [...$$('#kidCats input')].filter(x=>x.checked).map(x=>x.value); }
+function kidCount(){ const all=$$('#kidCats input').length, n=kidPicked().length;
+  $('#kidCatN').textContent=n===all?'(모두)':`(${n} / ${all})`; }
+$('#kidCats').addEventListener('change',kidCount);
+$('#kidAll').onclick=()=>{ $$('#kidCats input').forEach(x=>x.checked=true); kidCount(); };
+$('#kidNone').onclick=()=>{ $$('#kidCats input').forEach(x=>x.checked=false); kidCount(); };
+$('#kidCancel').onclick=()=>$('#kidSheet').classList.remove('on');
+$('#kidSave').onclick=async()=>{
+  const m=KIDM; if(!m)return;
+  const all=$$('#kidCats input').length, c=kidPicked();
+  if(!c.length){ toast('보이는 분류를 하나 이상 고르세요'); return; }
+  const r={ c:c.length===all?null:c, a:$('#kidAdult').checked?1:0,
+            w:$('#kidWords').value.split(/[,，]/).map(x=>x.trim()).filter(Boolean).slice(0,30) };
+  const ok=await famPut({kind:'kid',id:'kid-'+m.id,to:m.id,title:m.name,val:JSON.stringify(r)}, m.grp);
+  if(ok){ $('#kidSheet').classList.remove('on'); paintMates(); toast(`'${m.name}' 에게 아이 칸을 걸었습니다`); }
+};
+$('#kidOff').onclick=async()=>{
+  const m=KIDM; if(!m)return;
+  if(!confirm(`'${m.name}' 의 아이 칸을 풉니다.`))return;
+  if(await famDel('kid-'+m.id, m.grp)){ $('#kidSheet').classList.remove('on'); paintMates(); toast('아이 칸을 풀었습니다'); }
+};
+
+/* ── 서로의 서재 ── */
+function readSnapshot(){
+  const now=Date.now(), y=new Date().getFullYear(), mo=new Date().getMonth();
+  const have=new Set(BOOKS_ALL.map(b=>b.i));
+  const ent=Object.entries(RD).filter(([id,r])=>r&&r.t&&have.has(id));
+  const reading=ent.filter(([,r])=>!r.f).sort((a,b)=>b[1].t-a[1].t).slice(0,8);
+  const done=ent.filter(([,r])=>r.f&&now-r.t<60*86400000).sort((a,b)=>b[1].t-a[1].t).slice(0,6);
+  const inY=ent.filter(([,r])=>r.f&&new Date(r.t).getFullYear()===y);
+  const inM=inY.filter(([,r])=>new Date(r.t).getMonth()===mo);
+  const pack=([id,r])=>({i:id,p:Math.round((r.p||0)*100),f:r.f?1:0,d:Math.floor(r.t/86400000)});
+  return { r:reading.map(pack), d:done.map(pack), y, n:inY.length, m:inM.length };
+}
+let READ_SENT='', READ_AT=0;
+async function readPush(force){
+  const g=ME.grp||(cfg('adm')&&VIEWG&&VIEWG!=='*'?VIEWG:'');
+  if(!g||!cfg('url'))return;
+  if(!P.shareRead){ return; }
+  const v=JSON.stringify(readSnapshot());
+  if(!force&&(v===READ_SENT||Date.now()-READ_AT<180000))return;
+  READ_SENT=v; READ_AT=Date.now();
+  await famPut({kind:'read',id:'read-'+ME.id,val:v}, g);
+}
+async function shareToggle(){
+  const g=ME.grp||(cfg('adm')&&VIEWG&&VIEWG!=='*'?VIEWG:'');
+  if(!g){ toast('모임에 들어 있어야 식구에게 보일 수 있습니다'); return; }
+  if(!P.shareRead){
+    if(!confirm('내가 읽는 책 (제목과 진도)과 올해 읽은 권수를\n같은 모임 식구에게 보입니다.\n\n언제든 끌 수 있습니다. 켤까요?'))return;
+    P.shareRead=1; savePref(); localStorage.setItem('ebl_shrat',String(Date.now())); syncSoon();
+    await readPush(true); toast('식구에게 보이기를 켰습니다');
+  } else {
+    P.shareRead=0; savePref(); localStorage.setItem('ebl_shrat',String(Date.now())); syncSoon();
+    await famDel('read-'+ME.id, g); READ_SENT=''; toast('껐습니다. 식구 화면에서 사라집니다');
+  }
+  paintFamRead();
+}
+function paintFamRead(){
+  const btn=$('#shrBtn'); if(!btn)return;
+  btn.textContent=P.shareRead?'내 것 보이는 중 · 끄기':'내 것도 보이기';
+  btn.onclick=shareToggle;
+  const rows=famOf('read').filter(x=>!x['지움']);
+  const el=$('#hRead'); el.innerHTML='';
+  const people=rows.map(x=>{ let v={}; try{ v=JSON.parse(x['값']||'{}'); }catch(e){}
+    return {id:String(x['누가']), name:String(x['누가'])===String(ME.id)?'나':(x['이름']||nameOf(x['누가'])), v, at:Number(x['언제'])||0}; })
+    .sort((a,b)=>(a.name==='나')-(b.name==='나')||b.at-a.at);
+  // 같이 읽는 중 — 두 사람 이상이 읽는 중인 책
+  const cnt={}; people.forEach(p=>(p.v.r||[]).forEach(e=>{ (cnt[e.i]=cnt[e.i]||[]).push(p.name+' '+e.p+'%'); }));
+  const both=Object.entries(cnt).filter(([,a])=>a.length>1);
+  if(both.length){ const d=document.createElement('div'); d.className='rd';
+    d.innerHTML='<div class="nm">👥 같이 읽는 중</div>';
+    both.forEach(([id,a])=>{ const b=bookOf(id); if(!b)return; const s=document.createElement('span'); s.className='bk';
+      s.textContent=`${b.t}  ·  ${a.join(' · ')}`; s.onclick=()=>openPanBook(b); d.appendChild(s); });
+    el.appendChild(d); }
+  people.forEach(p=>{
+    const d=document.createElement('div'); d.className='rd';
+    d.innerHTML=`<div class="nm">${esc(p.name)}</div>`;
+    const add=(e,dn)=>{ const b=bookOf(e.i); if(!b)return; const s=document.createElement('span'); s.className='bk'+(dn?' dn':'');
+      s.textContent=b.t+(dn?' ✓':` ${e.p}%`); s.onclick=()=>openPanBook(b); d.appendChild(s); };
+    (p.v.r||[]).forEach(e=>add(e,0)); (p.v.d||[]).forEach(e=>add(e,1));
+    if(d.children.length===1)d.insertAdjacentHTML('beforeend','<div class="seen" style="font-size:12px;color:var(--dim)">지금 읽는 책이 없습니다</div>');
+    el.appendChild(d);
+  });
+  $('#hReadNone').textContent=people.length?'':(P.shareRead?'아직 보이기를 켠 식구가 없습니다.':'보이기는 기본으로 꺼져 있습니다. 켠 사람의 읽는 책만 여기 보입니다.');
+  // 통계
+  const st=$('#hsStat'), y=new Date().getFullYear();
+  const ps=people.filter(p=>p.v.y===y);
+  st.style.display=ps.length?'':'none';
+  if(ps.length){
+    $('#hStatT').textContent=`우리집 통계 · ${y}년`;
+    const tot=ps.reduce((a,p)=>a+(p.v.n||0),0);
+    $('#hStat').innerHTML='<table><tr><th>누구</th><th>올해 다 읽음</th><th>이번 달</th><th>읽는 중</th></tr>'
+      +ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.v.n||0}권</td><td>${p.v.m||0}권</td><td>${(p.v.r||[]).length}권</td></tr>`).join('')
+      +`<tr><td><b>모두</b></td><td><b>${tot}권</b></td><td></td><td></td></tr></table>`
+      +'<div class="note">보이기를 켠 사람만 셉니다.</div>';
+  }
+}
 
 /* ══════════ v42 — 별점 · 한 줄 평 ══════════
    RV[책ID] = {s:별 1~5, t:한 줄 평, at:고친 때, sh:모임에 보였는지}
@@ -6136,6 +6340,7 @@ function expRender(){
   buildExp(false);
 }
 async function buildExp(inter){
+  if(kidRule()&&P.exp==='live')P.exp='index';      // v44 — 아이 칸이면 드라이브를 바로 보지 않고 거른 목록으로
   const seq=++EXSEQ;
   EXNOTE='';
   if(P.exp==='live'){
@@ -6826,7 +7031,8 @@ if(!ME.name) setMe('나');
 
 /* 팀장님 기기에만 두는 명단 — 누구에게 링크를 보냈는지 */
 let MATES=[]; try{ MATES=JSON.parse(localStorage.getItem('ebl_mates')||'[]'); }catch(e){}
-const saveMates=()=>{ try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES)); }catch(e){} };
+const saveMates=()=>{ try{ localStorage.setItem('ebl_mates',JSON.stringify(MATES));
+  localStorage.setItem('ebl_matesat',String(Date.now())); }catch(e){} try{ syncSoon(); }catch(e){} };   // v44 — 명단도 팀장님 기기끼리 맞춤
 function addMate(name,grp){
   const m={ id:newId(), name:name, at:Date.now(), grp:grp||'' };
   MATES.push(m); saveMates(); return m;
@@ -6885,14 +7091,19 @@ function paintMates(){
     const off=!!CUT[m.id];
     const d=document.createElement('div'); d.className='mate'+(off?' off':'');
     const gn=m.grp?grpName(m.grp):'';
+    const kr=kidOf(m.id), seen=lastSeen(m.id);
     d.innerHTML=`<span>${esc(m.name)}`
       +(gn?` <i style="font-style:normal;color:var(--dim);font-size:11px">${esc(gn)}</i>`:'')
+      +(kr?' <i class="seen">🧒 아이 칸</i>':'')
+      +(seen?` <i class="seen">· ${esc(seen)}</i>`:'')
       +`${off?' <b>⛔ 끊김</b>':''}</span>`;
     const wrap=document.createElement('span'); wrap.className='b';
     if(!off){
       const send=document.createElement('button'); send.textContent='링크 다시 보내기';
       send.onclick=()=>openInvite(m); wrap.appendChild(send);
     }
+    if(!off){ const kb=document.createElement('button'); kb.textContent='아이 칸';
+      kb.onclick=()=>openKid(m); wrap.appendChild(kb); }
     const cut=document.createElement('button');
     cut.textContent=off?'풀기':'차단'; if(!off)cut.className='warn';
     cut.onclick=async()=>{
