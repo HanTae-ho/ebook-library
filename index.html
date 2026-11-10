@@ -1536,7 +1536,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v54.3';
+const BUILD='v54.5';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1970,7 +1970,9 @@ function metaTrust(b){
 const SERW=/(시리즈|세계문학|문학전집|전집|문고|총서|명시|클래식|클라우드|선집|컬렉션|에디션|라이브러리|민음사|문학동네|열린책들|을유|펭귄|창비|우리시대|살면서|꼭 읽어야|필독|베스트셀러|특별판|개정판|합본|세트|완역|원서|영한대역|오디오북|큰글자)/;
 function authorLike(s){ s=String(s||'').trim(); if(!s||s.length>30||/[\d()（）:!?~]/.test(s)||SERW.test(s))return false;
   const tk=s.replace(/\s*(외|등|지음|저|역|옮김|글|그림|편저?|엮음|공저)\s*$/,'').split(/[\s,·]+/).filter(Boolean);
-  if(!tk.length||tk.length>4)return false; if(/[가-힣]/.test(s))return tk.every(t=>t.length<=6); return /^[A-Za-z.\-' ]+$/.test(s); }
+  if(!tk.length||tk.length>4)return false;
+  if(tk.some(t=>t.length>=3&&/(에서|까지|으로|부터|에게|하는|하기|하라|한다|합니다|입니다|이다|위한|대한|처럼|보다|없이|있는|없는|라는|이라는|하다|되는|되다)$/.test(t)))return false;   // 부제
+  if(/[가-힣]/.test(s))return tk.every(t=>t.length<=6); return /^[A-Za-z.\-' ]+$/.test(s); }
 function seriesLike(s){ s=String(s||'').trim(); return /\d{2,}\s*$/.test(s)||/^\D{0,20}\s\d{2,}\b/.test(s)||SERW.test(s); }
 function tidyName(b){
   const fromFile=b.o?b.t===b.o:!(b.n==='높음'||b.n==='중간');
@@ -1980,7 +1982,7 @@ function tidyName(b){
   const parts=t.split(/\s+[-–—]\s+/).map(x=>x.trim()).filter(Boolean);
   if(parts.length>=2){ const keep=parts.filter(x=>!(seriesLike(x)&&!authorLike(x)));
     if(keep.length){ if(keep.length>=2&&authorLike(keep[keep.length-1])&&!authorLike(keep[0])){ if(!b.a)b.a=keep[keep.length-1]; t=keep.slice(0,-1).join(' - '); }
-      else if(keep.length>=2&&authorLike(keep[0])&&!authorLike(keep[keep.length-1])){ if(!b.a)b.a=keep[0]; t=keep.slice(1).join(' - '); }
+      else if(keep.length>=2&&/\s/.test(keep[0])&&authorLike(keep[0])&&!authorLike(keep[keep.length-1])){ if(!b.a)b.a=keep[0]; t=keep.slice(1).join(' - '); }
       else t=keep.join(' - '); } }
   if((m=t.match(/^(.*\S)\s*-\s*([^-]+)$/))&&seriesLike(m[2])&&!authorLike(m[2]))t=m[1];
   if(t&&t!==b.t)b.t=t;
@@ -2299,7 +2301,7 @@ async function openBook(b){
 }
 /* ══════════ 책이 사는 곳 ══════════
    지금은 구글 드라이브 하나뿐입니다. 나중에 NAS(WebDAV) 를 붙일 자리입니다.
-   책에 s 가 없으면 드라이브로 봅니다 — 그래야 지금까지의 읽은 곳·형광펜이 그대로 이어집니다.
+   책에 src 가 없으면 드라이브로 봅니다 — 그래야 지금까지의 읽은 곳·형광펜이 그대로 이어집니다.
    다른 곳의 책은 이름표를 'dav:/폴더/책.epub' 처럼 붙여 드라이브 ID 와 겹치지 않게 합니다.
    open(b, 끊는신호) 은 fetch 응답(Response)을 돌려주기만 하면 됩니다. 받는 과정 표시는 getBook 이 합니다. */
 const SRC={
@@ -2317,11 +2319,13 @@ const SRC={
       return res; } }
   /* dav:{ name:'NAS', async open(b,sig){ ... WebDAV 주소 + b.p 로 받기 ... } }   ← 나중에 */
 };
-const srcOf=b=>SRC[(b&&b.s)||'drive'];
+/* v54.4 — 사는 곳은 b.src 로 봅니다. 예전엔 b.s 였는데 s 는 색인의 '소분류' 칸이라,
+   소분류가 붙은 책(예: 심리/정신분석)을 '모르는 곳'으로 알고 못 열었습니다 */
+const srcOf=b=>SRC[(b&&b.src)||'drive'];
 async function getBook(b){
   const hit=await DB.get('books',b.i); if(hit){ sizeTouch(b.i); return hit; }
   const src=srcOf(b);
-  if(!src)throw new Error('이 책이 있는 곳('+b.s+')은 아직 열 수 없습니다');
+  if(!src)throw new Error('이 책이 있는 곳('+b.src+')은 아직 열 수 없습니다');
   abort=new AbortController();
   const res=await src.open(b,abort.signal);
   const total=Number(res.headers.get('content-length')||0)||(b.z?b.z*1048576:0);

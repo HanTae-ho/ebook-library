@@ -3,7 +3,7 @@
    책 파일과 색인은 IndexedDB 가 따로 맡습니다. */
 
 /* 고칠 때마다 이 번호를 올리면 옛 캐시가 버려집니다 */
-const V = 'ebl-v54.3';
+const V = 'ebl-v54.5';
 const SHELL = ['./', './index.html', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-32.png'];
 
@@ -32,11 +32,13 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
   // 앱 껍데기: 캐시 우선, 없으면 네트워크
+  if (u.origin === location.origin && /sw\.js$/.test(u.pathname)) return;   // 버전 확인은 늘 네트워크로
   if (u.origin === location.origin) {
     e.respondWith(
       caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
         const copy = res.clone();
-        caches.open(V).then(c => c.put(e.request, copy)).catch(() => {});
+        // 버전 확인용 'sw.js?시각' 같은 주소는 담지 않습니다 (볼 때마다 쌓임)
+        if (!u.search && !/sw\.js$/.test(u.pathname)) caches.open(V).then(c => c.put(e.request, copy)).catch(() => {});
         return res;
       }).catch(() => caches.match('./index.html')))
     );
