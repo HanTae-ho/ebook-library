@@ -188,8 +188,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v54.5';   // ← 이것
-const BUILD = 'v54.5';   // ← index.html 의 이것도 같이
+const V = 'ebl-v55';   // ← 이것
+const BUILD = 'v55';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
@@ -232,6 +232,10 @@ v18 의 `doAladin_` 는 이름만 그대로이고 속은 YES24 다 (ISBN 조회 
 분류는 YES24 에 없어서 그 ISBN 으로 국중도 KDC 를 묻는다 (국중도 키가 있을 때만).
 '못 찾은 책 다시 물어보기' 는 이제 지우지 않는다 — 더 나은 결과가 나올 때만 바꾼다.
 YES24 에 제목·저자·표지 저장을 확인받았다 (답은 따로 보관). 거두라고 하면 `Y24_STORE=false`.
+
+**★ 새 목록 저절로 받기 (v55).** `idxCheck` — `mode=ping` 의 `updated` 가 `UPDATED` 와 다를 때만 `fetchIndex`. 한 시간에 한 번
+(`ebl_idxchk`), 책 읽는 중·창이 떠 있으면 `IDX.pending` 으로 미뤘다가 `closeReader` 뒤에. `P.idxAuto` 1/2/0 (2 = 와이파이만 — iOS 는
+연결 종류를 알려 주지 않아 1 과 같게 돈다).
 
 **★ 책이 사는 곳은 `b.src` (v54.4).** `b.s` 는 색인의 소분류 칸이다 — 저장소 갈래로 쓰면 소분류가 붙은 책을 못 연다.
 

@@ -1237,8 +1237,11 @@
 
     <div class="sect">목록</div>
     <div class="btns"><button id="btnSync2">목록 새로 받기</button></div>
-    <p class="note">Apps Script 에서 BUILD_INDEX() 를 돌리신 뒤 누르시면
-      새로 담긴 책이 들어옵니다.</p>
+    <div class="seg" id="segIdx" style="margin-top:6px">
+      <button data-v="1">새 목록 저절로 받기</button><button data-v="2">와이파이일 때만</button><button data-v="0">직접 누를 때만</button>
+    </div>
+    <p class="note" id="idxNote">드라이브에 책을 넣으면 다음 날 새벽에 목록이 새로 만들어집니다.
+      앱을 열 때 새 목록이 있으면 뒤에서 받아옵니다 (한 시간에 한 번만 확인).</p>
 
     <div class="sect">모임 칸<span id="famInfo"></span></div>
     <div class="btns"><button id="btnFam">모임 칸 확인</button></div>
@@ -1536,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v54.5';
+const BUILD='v55';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -4090,6 +4093,7 @@ function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} t
   $('#txt').innerHTML=''; $('#txt').onscroll=null;
   book=null; rend=null; curB=null; paintTabs(); render(true);
   try{ rpopOff(); }catch(e){}
+  try{ if(IDX.pending)setTimeout(()=>idxCheck(true),1500); }catch(e){}
   try{ if(UPD.pending)setTimeout(updApply,800); }catch(e){} }
 
 /* ── 설정판 ── */
@@ -7837,7 +7841,7 @@ function pgClose(){
 /* 처음 여는 것은 언제나 기본설정입니다 */
 function pgOpen(k){ PGBACK=[]; PGNOW=''; pgShow(k||'set'); }
 
-$('#btnSet').onclick=()=>{ pgOpen('set'); try{ paintVer(); }catch(e){} };
+$('#btnSet').onclick=()=>{ pgOpen('set'); try{ paintVer(); }catch(e){} try{ segSet('#segIdx',P.idxAuto==null?1:P.idxAuto); }catch(e){} };
 $('#setSave').onclick=()=>{
   const adm=$('#sAdm').value.trim();
   // 열쇠가 들어 있었는데 칸이 비었다면, 지우려는 것인지 한 번 여쭙습니다
@@ -7852,6 +7856,39 @@ $('#setSave').onclick=()=>{
   setCfg('url',url); setCfg('tok',$('#sTok').value.trim());
   setCfg('cid',$('#sCid').value.trim()); setCfg('fol',$('#sFol').value.trim());
   setCfg('adm',adm); stampCfg(); location.reload(); };
+/* ══════════ v55 — 새 목록 저절로 받기 ══════════
+   서버에 '색인이 언제 만들어졌나'(mode=ping, 몇십 바이트)만 묻고, 지금 것과 다를 때만 색인(13MB)을 받습니다.
+   P.idxAuto: 1 저절로(처음 값) · 2 와이파이일 때만 · 0 직접. 확인은 한 시간에 한 번, 책 읽는 중엔 닫은 뒤에. */
+var IDX={busy:0,pending:0};
+function idxCell(){ const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  return !!(c&&(c.saveData||c.type==='cellular')); }
+async function idxCheck(force){
+  const mode=P.idxAuto==null?1:P.idxAuto;
+  if(!mode||IDX.busy||!cfg('url')||!cfg('tok')||!BOOKS.length||!navigator.onLine)return;
+  if(mode===2&&idxCell())return;
+  if(curB){ IDX.pending=1; return; }
+  const last=Number(localStorage.getItem('ebl_idxchk')||0);
+  if(!force&&Date.now()-last<3600000)return;
+  IDX.busy=1;
+  try{
+    try{ localStorage.setItem('ebl_idxchk',String(Date.now())); }catch(e){}
+    const d=await gasGet({mode:'ping'},'웹앱이 응답하지 않습니다');
+    IDX.pending=0;
+    if(!d||!d.updated||d.updated===UPDATED)return;
+    if(curB||document.querySelector('.sheet.on')){ IDX.pending=1; try{ localStorage.removeItem('ebl_idxchk'); }catch(e){} return; }
+    const before=new Set(BOOKS_ALL.map(b=>b.i)), nb=BOOKS_ALL.length;
+    log('새 색인이 있습니다 ('+d.updated+') — 받는 중');
+    await fetchIndex();
+    let add=0; BOOKS_ALL.forEach(b=>{ if(!before.has(b.i))add++; });
+    try{ buildChips(); paintTabs(); render(true); }catch(e){}
+    toast(add?`새 책 ${add.toLocaleString()}권이 들어왔습니다`:(BOOKS_ALL.length<nb?`목록을 새로 받았습니다 · ${(nb-BOOKS_ALL.length).toLocaleString()}권 빠짐`:'책 정보를 새로 받았습니다'),4000);
+  }catch(e){ log('새 목록 확인 실패: '+(e.message||e)); }
+  finally{ IDX.busy=0; }
+}
+seg('#segIdx','idxAuto',()=>{ if(P.idxAuto)idxCheck(true); });
+try{ segSet('#segIdx',P.idxAuto==null?1:P.idxAuto); }catch(e){}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden)setTimeout(()=>idxCheck(),2500); });
+setTimeout(()=>idxCheck(),8000);
 $('#btnSync2').onclick=async()=>{ try{ toast('목록을 새로 받는 중…'); await fetchIndex();
   buildChips(); render(true); toast('갱신했습니다'); }catch(e){ toast(e.message,5000); } };
 /* ── 저장 공간 ──
