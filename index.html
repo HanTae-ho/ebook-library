@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.1';
+const BUILD='v55.2';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2003,16 +2003,24 @@ function nameNums(t){ const o={}; t=String(t||'').normalize('NFC'); (t.match(/\d
   const R={I:1,II:2,III:3,IV:4,V:5,VI:6,VII:7,VIII:8,IX:9,X:10,'Ⅰ':1,'Ⅱ':2,'Ⅲ':3,'Ⅳ':4,'Ⅴ':5};
   (t.match(/(?:^|[\s(])(I{1,3}|IV|VI{0,3}|IX|X|[ⅠⅡⅢⅣⅤ])(?=$|[\s).,])/g)||[]).forEach(x=>{ const k=x.replace(/[\s(]/g,''); if(R[k])o[String(R[k])]=1; });
   return o; }
+/* v55.2 — Apps Script v18.27 nameOff_ 와 같은 판정 */
+const NAME_SEP=/\s+[-–—]\s*|\s*[-–—]\s+|\s*[:;]\s+|\s+[:;]\s*/;
+const nameC=t=>coreT(t).replace(/0+(?=\d)/g,'');
 function nameHit(x,y){ if(x===y)return true; if(y.includes(x))return x.length>=3;
-  if(x.includes(y))return (y.length>=4&&x.endsWith(y))||y.length>=x.length*0.6; return dice(x,y)>=0.5; }
-/* v55.1 — Apps Script v18.26 nameOff_ 와 같은 판정 (조각 가운데 하나라도 맞으면 같은 책 · 권 번호는 찾은 제목에 있을 때만 따짐) */
+  if(x.includes(y)){ if((y.length>=4&&x.endsWith(y))||y.length>=x.length*0.6)return true;
+    return y.length>=3&&x.startsWith(y)&&/^[a-z0-9]+$/.test(x.slice(y.length)); }
+  if(dice(x,y)>=0.5)return true; const a=x.replace(/\d/g,''), b=y.replace(/\d/g,'');
+  return a.length>=3&&b.length>=3&&dice(a,b)>=0.5; }
 function nameOff(matched,file){
-  const whole=String(matched||''), y=coreT(file); if(coreT(whole).length<2||y.length<2)return false;
-  const parts=whole.split(/\s+-\s+|\s*:\s+|\s+:\s*/).map(x=>x.trim()).filter(Boolean);
-  if(parts.length>1&&!volOf(whole)&&parts.some(x=>coreT(x)===y))return false;
-  const V={}; [whole,...parts].forEach(x=>{ const v=volOf(x); if(v)V[v]=1; });
-  if(Object.keys(V).length){ const N=nameNums(file); if(!Object.keys(V).some(v=>N[v]))return true; }
-  return ![...parts.map(coreT),coreT(whole)].filter(x=>x.length>=2).some(x=>nameHit(x,y));
+  const whole=String(matched||''), y=nameC(file); if(nameC(whole).length<2||y.length<2)return false;
+  const parts=whole.split(NAME_SEP).map(x=>x.trim()).filter(Boolean);
+  const V={}; let subVol=false;
+  parts.forEach((x,k)=>{ const v=volOf(x); if(!v)return; if(k===0)V[v]=1;
+    else if(Number(v)<=12&&coreT(x).replace(/\d/g,'').length<=6){ V[v]=1; subVol=true; } });
+  if(!subVol&&parts.slice(1).some(x=>nameC(x)===y))return false;
+  const vs=Object.keys(V);
+  if(vs.length&&!(vs.length===1&&vs[0]==='1'&&!volOf(file))){ const N=nameNums(file); if(!vs.some(v=>N[v]))return true; }
+  return ![...parts.map(nameC),nameC(whole)].filter(x=>x.length>=2).some(x=>nameHit(x,y));
 }
 const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
 function metaApply(){
