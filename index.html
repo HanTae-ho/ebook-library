@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55';
+const BUILD='v55.1';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1926,7 +1926,7 @@ function buildGroups(){
   BOOKS.forEach(b=>{ const o=b._0||b, n=String(o.n||b.n||'');
     if(b._sb||b.r||isWrong(b.i)||!(n==='높음'||n==='중간'))return;
     [o.y||b.y?'y'+(o.y||b.y):'', (o.k||b.k)&&String(o.k||b.k).length>=10?'k'+String(o.k||b.k).replace(/[^0-9X]/gi,''):''].forEach(k=>{
-      if(!k)return; const f=idk.get(k); if(f)join(f,b); else idk.set(k,b); }); });
+      if(!k)return; k+='|'+volOf(b.o||''); const f=idk.get(k); if(f)join(f,b); else idk.set(k,b); }); });
   const g=new Map(); BOOKS.forEach(b=>{ const r=up(b); let a=g.get(r); if(!a)g.set(r,a=[]); a.push(b); });
   GRP=[]; g.forEach(a=>{ if(a.length>1)GRP.push(a); });
   markDups();
@@ -1996,16 +1996,23 @@ const EDRE=/^\s*\[(큰글자도서|큰글자책|큰글씨책|큰글자|eBook|ebo
    ② 권 번호가 다름                                   예) '5분 뚝딱 철학 (생각의 역사)' ↔ '5분 뚝딱 철학 : 생각의 역사 2'
    (029·010 처럼 0 으로 시작하는 숫자는 시리즈 번호라 권 번호로 보지 않습니다) */
 function coreT(s){ return String(s||'').normalize('NFC').replace(/\(.*?\)|\[.*?\]|【.*?】/g,' ').replace(/[^0-9A-Za-z가-힣]/g,'').toLowerCase(); }
-function volOf(s){ const m=String(s||'').normalize('NFC').replace(/\(.*?\)|\[.*?\]|【.*?】/g,' ').replace(/\d+\s*[-~]\s*\d+\s*(화|권|부)?\s*(完|완결|완)?\s*$/,'').replace(/[\s._\-–:]+$/,'').match(/(\d{1,3})\s*(권|부|편|화)?\s*$/); return m&&!/^0\d/.test(m[1])?String(Number(m[1])):''; }
+function volOf(s){ const m=String(s||'').normalize('NFC').replace(/\(.*?\)|\[.*?\]|【.*?】/g,' ').replace(/\d+\s*[-~]\s*\d+\s*(화|권|부)?\s*(完|완결|완)?\s*$/,'').replace(/[\s._\-–:]+$/,'').match(/(\d{1,3})\s*(권|부|편|화)?\s*$/); return m&&(!/^0\d/.test(m[1])||m[2])?String(Number(m[1])):''; }
 function dice(a,b){ const g=s=>{ const m=new Map(); for(let i=0;i<s.length-1;i++){ const k=s.slice(i,i+2); m.set(k,(m.get(k)||0)+1); } return m; };
   const A=g(a), B=g(b); let n=0, ta=0, tb=0; A.forEach(v=>ta+=v); B.forEach(v=>tb+=v); A.forEach((v,k)=>{ n+=Math.min(v,B.get(k)||0); }); return ta+tb?2*n/(ta+tb):0; }
+function nameNums(t){ const o={}; t=String(t||'').normalize('NFC'); (t.match(/\d+/g)||[]).forEach(x=>o[String(Number(x))]=1);
+  const R={I:1,II:2,III:3,IV:4,V:5,VI:6,VII:7,VIII:8,IX:9,X:10,'Ⅰ':1,'Ⅱ':2,'Ⅲ':3,'Ⅳ':4,'Ⅴ':5};
+  (t.match(/(?:^|[\s(])(I{1,3}|IV|VI{0,3}|IX|X|[ⅠⅡⅢⅣⅤ])(?=$|[\s).,])/g)||[]).forEach(x=>{ const k=x.replace(/[\s(]/g,''); if(R[k])o[String(R[k])]=1; });
+  return o; }
+function nameHit(x,y){ if(x===y)return true; if(y.includes(x))return x.length>=3;
+  if(x.includes(y))return (y.length>=4&&x.endsWith(y))||y.length>=x.length*0.6; return dice(x,y)>=0.5; }
+/* v55.1 — Apps Script v18.26 nameOff_ 와 같은 판정 (조각 가운데 하나라도 맞으면 같은 책 · 권 번호는 찾은 제목에 있을 때만 따짐) */
 function nameOff(matched,file){
-  const main=String(matched||'').split(/\s+-\s+/)[0], core=main.split(/\s*:\s+|\s+:\s*/)[0];
-  const x=coreT(core), y=coreT(file); if(x.length<2||y.length<2)return false;
-  if(volOf(main)!==volOf(file))return true;
-  if(y.includes(x))return false;                                  // 파일 이름이 그 제목을 통째로 품음
-  if(x.includes(y))return y.length<x.length*0.6;                  // 짝 제목이 훨씬 김 — '리어 왕' ↔ '리어왕에게 배우는 경영'
-  return dice(x,y)<0.5;
+  const whole=String(matched||''), y=coreT(file); if(coreT(whole).length<2||y.length<2)return false;
+  const parts=whole.split(/\s+-\s+|\s*:\s+|\s+:\s*/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>1&&!volOf(whole)&&parts.some(x=>coreT(x)===y))return false;
+  const V={}; [whole,...parts].forEach(x=>{ const v=volOf(x); if(v)V[v]=1; });
+  if(Object.keys(V).length){ const N=nameNums(file); if(!Object.keys(V).some(v=>N[v]))return true; }
+  return ![...parts.map(coreT),coreT(whole)].filter(x=>x.length>=2).some(x=>nameHit(x,y));
 }
 const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
 function metaApply(){
@@ -2034,6 +2041,8 @@ function metaApply(){
   });
   metaApply.hid=hid;
   if(P.meta!=='aladin')BOOKS.forEach(b=>{ try{ tidyName(b); }catch(e){} });
+  // v55.1 — 찾은 제목에 권 번호가 없는데 파일은 '장미의 이름 2' 면 번호를 붙여 보입니다
+  if(P.meta!=='aladin')BOOKS.forEach(b=>{ try{ if(b.o&&b.t&&b.t!==b.o&&!b._sb){ const v=volOf(b.o); if(v&&!volOf(b.t)&&!nameNums(b.t)[v])b.t=b.t+' '+v; } }catch(e){} });
   // 찾기는 보이는 것 + 원래 것 + 원제 + 검색용(h) 모두로
   HAY=BOOKS.map(b=>norm([b.t,b.o,b._0&&b._0.t,b.h,b.a,b._0&&b._0.a,b.p,b.c].filter(Boolean).join('|')));
   Object.keys(ORD).forEach(k=>delete ORD[k]);

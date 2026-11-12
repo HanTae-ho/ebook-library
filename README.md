@@ -188,8 +188,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v55';   // ← 이것
-const BUILD = 'v55';   // ← index.html 의 이것도 같이
+const V = 'ebl-v55.1';   // ← 이것
+const BUILD = 'v55.1';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
