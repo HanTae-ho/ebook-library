@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.3';
+const BUILD='v55.4';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2436,6 +2436,51 @@ function applyRead(){
   try{ if(P.ruler)applyRuler(); }catch(e){}
 }
 let EPLOC=null;     // EPUB 에서 지금 펼친 쪽의 처음·끝 (책갈피가 씁니다)
+/* v55.4 — EPUB 진도
+   epub.js 는 책 전체 '위치표'(locations)가 있어야 % 를 셉니다. 예전엔 위치표를 만들지 않아 늘 0% 였습니다.
+   ① 위치표가 있으면 그것으로 정확하게  ② 없으면 장 순서로 어림: (지금 장 번호 + 장 안 쪽 비율) ÷ 전체 장 수
+   위치표는 책을 연 뒤 뒤에서 만들고, 기기 저장소(kv 'loc:책ID')에 남겨 다음부터는 바로 씁니다 (최근 80권까지) */
+const LOC_KEEP=80;
+function epPct(loc){
+  const s=loc&&loc.start; if(!s) return null;
+  if(loc.atEnd) return 1;
+  try{ if(book&&book.locations&&book.locations.length()>0&&s.cfi){
+    const v=book.locations.percentageFromCfi(s.cfi); if(v!=null&&!isNaN(v)) return Math.max(0,Math.min(1,v)); } }catch(e){}
+  let n=0; try{ n=(book&&book.spine&&(book.spine.length||(book.spine.spineItems||[]).length))||0; }catch(e){}
+  if(!n||s.index==null) return null;
+  const d=s.displayed||{}, inCh=d.total>0?Math.max(0,(d.page||1)-1)/d.total:0;
+  return Math.max(0,Math.min(1,(s.index+inCh)/n));
+}
+function epFoot(b,loc,p){
+  if(curB!==b) return;
+  const st=stOf(b);
+  $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')
+    +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+leftStr(loc)+(b.t||'');
+}
+async function epLocations(b,bk){
+  const live=()=>book===bk&&curB===b&&rend;
+  try{
+    await bk.ready; if(!live()) return;
+    let sv=null; try{ sv=await DB.get('kv','loc:'+b.i); }catch(e){}
+    if(!live()) return;
+    if(sv&&sv.v===1&&sv.l){ bk.locations.load(sv.l); }
+    else{
+      await new Promise(r=>setTimeout(r,1500));        // 첫 쪽을 먼저 그린 뒤에
+      if(!live()) return;
+      await bk.locations.generate(1600);
+      if(!live()) return;
+      const saved=bk.locations.save();
+      DB.put('kv','loc:'+b.i,{v:1,l:saved,t:Date.now()}).catch(()=>{});
+      try{ let q=JSON.parse(localStorage.getItem('ebl_locs')||'[]').filter(x=>x!==b.i); q.push(b.i);
+        while(q.length>LOC_KEEP){ const old=q.shift(); DB.del('kv','loc:'+old).catch(()=>{}); }
+        localStorage.setItem('ebl_locs',JSON.stringify(q)); }catch(e){}
+    }
+    const loc=EPLOC; if(!live()||!loc||!loc.start) return;
+    const p=epPct(loc);
+    if(!noMark&&p!=null) markRead(b.i,p,loc.atEnd);
+    epFoot(b,loc,p);
+  }catch(e){ try{ log('위치표 만들기 실패: '+(e.message||e)); }catch(_){} }
+}
 async function showReader(b,buf){
   curB=b; noMark=false; KIND='epub'; EPLOC=null;
   openShell(b);
@@ -2444,21 +2489,21 @@ async function showReader(b,buf){
   try{ book.coverUrl().then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{}); }catch(e){}
   applyRead();
   const cfi=localStorage.getItem('ebl_pos_'+b.i);
-  try{ await rend.display(cfi||undefined); }catch(e){ await rend.display(); }
-  markRead(b.i,null);            // 연 것만으로 '읽는 중'에 들어갑니다
+  const myBook=book;
   rend.on('relocated',loc=>{
     EPLOC=loc; paintBmBtn();
     if(TTS.on&&!TTS.turning&&TTS.playing&&KIND==='epub')ttsManualTurn();
-    const p=loc?.start?.percentage;
+    const p=epPct(loc);
     if(!noMark){
       if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
       markRead(b.i, p, loc&&loc.atEnd);
     }
-    const st=stOf(b);
     try{ pageTick(loc); rulerTop(); }catch(e){}
-    $('#rfoot').textContent=(p!=null?Math.round(p*100)+'%  ·  ':'')
-      +(noMark?'기록 안 함  ·  ':(st==='done'?'다 읽음  ·  ':''))+leftStr(loc)+(b.t||'');
+    epFoot(b,loc,p);
   });
+  try{ await rend.display(cfi||undefined); }catch(e){ await rend.display(); }
+  markRead(b.i,null);            // 연 것만으로 '읽는 중'에 들어갑니다
+  epLocations(b,myBook);         // v55.4 — 뒤에서 위치표를 만들어 정확한 % 로 바꿉니다
   // 책 안쪽(iframe)에만 붙입니다. 바깥 문서는 아래에서 한 번만 붙여둡니다.
   rend.on('rendered',(s,i)=>{ try{ bindGestures(i.document); bindDrawEpub(i); }catch(e){} try{ bindNotes(i); }catch(e){} });
   bindEpubSelect();
@@ -7472,7 +7517,7 @@ async function hereNow(){
          if(r){ const n=r.startContainer;
                 t=String(n.textContent||'').slice(r.startOffset||0).replace(/\s+/g,' ').trim().slice(0,60); } }
     catch(e){}
-    return {w:'epub', c:cfi, pos:EPLOC.start.percentage||pctOf(curB), t};
+    return {w:'epub', c:cfi, pos:epPct(EPLOC)||pctOf(curB), t};
   }
   if(KIND==='pdf'&&pdfDoc){
     return {w:'pdf', c:{p:pdfPg}, pos:pdfPg/pdfDoc.numPages, t:''};
