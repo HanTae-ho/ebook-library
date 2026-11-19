@@ -188,8 +188,8 @@ const DEF={ url:'', tok:'', cid:'...(공개돼도 되는 값)', fol:'', adm:'' }
 **★ sw.js 의 V 를 반드시 올려라.**
 
 ```js
-const V = 'ebl-v55.4';   // ← 이것
-const BUILD = 'v55.4';   // ← index.html 의 이것도 같이
+const V = 'ebl-v55.5';   // ← 이것
+const BUILD = 'v55.5';   // ← index.html 의 이것도 같이
 ```
 
 안 올리면 **아무리 고쳐도 옛 화면이 그대로 나온다.**
@@ -232,6 +232,8 @@ v18 의 `doAladin_` 는 이름만 그대로이고 속은 YES24 다 (ISBN 조회 
 분류는 YES24 에 없어서 그 ISBN 으로 국중도 KDC 를 묻는다 (국중도 키가 있을 때만).
 '못 찾은 책 다시 물어보기' 는 이제 지우지 않는다 — 더 나은 결과가 나올 때만 바꾼다.
 YES24 에 제목·저자·표지 저장을 확인받았다 (답은 따로 보관). 거두라고 하면 `Y24_STORE=false`.
+
+**★ 기기끼리 이어 읽기 (v55.5).** 읽은 기록 `RD[id]` 에 `c`(EPUB 위치 CFI)·`cp`(만화 쪽)·`pt`(실제로 쪽을 넘긴 시각)를 둡니다. 책을 열기만 해도 `t` 가 새로 찍히므로 `mergeState` 는 진도·위치·다 읽음(`p f c cp pt`)을 `pt` 가 나중인 쪽에서 가져옵니다 (예전 기록은 `t`). 앱이 다시 보일 때도 1분이 지났으면 맞춥니다. 펜슬 필기(PDF)는 앱 전용 칸 `ebl-ink.json` 에 책마다 `{at,d}` — `inkSync` 가 `syncNow` 끝에 돌고, 바뀐 것이 없으면 받지도 올리지도 않습니다 (`ebl_inkat`·`ebl_inksent`·`ebl_inkmt`).
 
 **★ EPUB 진도 (v55.4).** epub.js 의 `loc.start.percentage` 는 위치표(`book.locations`)가 있어야 채워집니다 — 예전엔 만들지 않아 늘 0% 였습니다. `epPct(loc)` 가 위치표가 있으면 `percentageFromCfi`, 없으면 (장 번호 + 장 안 쪽 비율) ÷ 장 수로 어림합니다. `epLocations` 가 책을 연 1.5초 뒤 `locations.generate(1600)` 으로 만들어 IndexedDB `kv` 의 `loc:책ID` 에 저장 (최근 80권, 목록은 localStorage `ebl_locs`). 진도·책갈피 위치는 모두 `epPct` 를 씁니다.
 

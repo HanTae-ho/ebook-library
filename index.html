@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.4';
+const BUILD='v55.5';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2078,16 +2078,17 @@ const saveRD = (()=>{
   return f;
 })();
 addEventListener('pagehide',()=>saveRD.now());
-addEventListener('visibilitychange',()=>{ if(document.hidden){ saveRD.now(); syncSoon(); } });
+addEventListener('visibilitychange',()=>{ if(document.hidden){ saveRD.now(); syncSoon(); }
+  else if(Date.now()-(typeof SYNCAT==='number'?SYNCAT:0)>60000){ try{ syncSoon(); }catch(e){} } });   // v55.5 — 다른 기기에서 읽고 돌아왔을 때
 const DONE_AT = 0.985;                       // 이 이상 읽으면 '다 읽음'
 
 function markRead(id,p,forceDone,forceReading){
   const r = RD[id] || (RD[id]={});
   const wasDone=!!r.f;
-  if(p!=null && !isNaN(p)) r.p = Math.max(0,Math.min(1,p));
+  if(p!=null && !isNaN(p)){ const np=Math.max(0,Math.min(1,p)); if(np!==r.p||forceDone||forceReading) r.pt=Date.now(); r.p=np; }
   r.t = Date.now();
-  if(forceDone) r.f=1;
-  if(forceReading){ r.f=0; if(r.p>=DONE_AT) r.p=0.99; }
+  if(forceDone){ r.f=1; r.pt=Date.now(); }
+  if(forceReading){ r.f=0; r.pt=Date.now(); if(r.p>=DONE_AT) r.p=0.99; }
   else if((r.p||0) >= DONE_AT) r.f=1;
   saveRD();
   if(r.f&&!forceReading&&NEXTVOL){ try{ nextVolOffer(id); }catch(e){} }
@@ -2488,14 +2489,15 @@ async function showReader(b,buf){
   rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
   try{ book.coverUrl().then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{}); }catch(e){}
   applyRead();
-  const cfi=localStorage.getItem('ebl_pos_'+b.i);
+  const cfi=(RD[b.i]&&RD[b.i].c)||localStorage.getItem('ebl_pos_'+b.i);   // v55.5 — 다른 기기에서 읽던 자리
   const myBook=book;
   rend.on('relocated',loc=>{
     EPLOC=loc; paintBmBtn();
     if(TTS.on&&!TTS.turning&&TTS.playing&&KIND==='epub')ttsManualTurn();
     const p=epPct(loc);
     if(!noMark){
-      if(loc?.start?.cfi)localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
+      if(loc?.start?.cfi){ localStorage.setItem('ebl_pos_'+b.i,loc.start.cfi);
+        const r=RD[b.i]||(RD[b.i]={}); if(r.c!==loc.start.cfi){ r.c=loc.start.cfi; r.pt=Date.now(); } }
       markRead(b.i, p, loc&&loc.atEnd);
     }
     try{ pageTick(loc); rulerTop(); }catch(e){}
@@ -3477,8 +3479,11 @@ function mergeState(a,b){
   const ids=new Set([...Object.keys(a.rd||{}),...Object.keys(b.rd||{})]);
   ids.forEach(id=>{
     const x=(a.rd||{})[id], y=(b.rd||{})[id];
-    const pick = !x ? y : !y ? x : ((y.t||0)>(x.t||0) ? y : x);
+    let pick = !x ? y : !y ? x : ((y.t||0)>(x.t||0) ? y : x);
     if(!pick)return;
+    /* v55.5 — 책을 열기만 해도 t 는 새로 찍힙니다. 진도·위치·다 읽음은 실제로 쪽을 넘긴 시각(pt)이 나중인 쪽에서 */
+    if(x&&y){ const prog=(y.pt||0)>(x.pt||0)?y:(x.pt||0)>(y.pt||0)?x:pick;
+      if(prog!==pick){ pick=Object.assign({},pick); ['p','f','c','cp','pt'].forEach(k=>{ if(prog[k]===undefined)delete pick[k]; else pick[k]=prog[k]; }); } }
     const gone=out.rdel[id]||0;
     if(gone && gone>=(pick.t||0))return;      // 지운 뒤로 안 읽었으면 되살리지 않습니다
     out.rd[id]=pick;
@@ -3578,6 +3583,7 @@ async function syncNow(inter){
     const merged=mergeState(remote,localState());
     applyState(merged);
     await putState(f,merged,at);
+    try{ await inkSync(at); }catch(e){ log('필기 맞추기 실패: '+(e.message||e)); }
     SYNCAT=Date.now(); localStorage.setItem('ebl_syncat',String(SYNCAT));
     paintSync();
     if(readerOn()){ paintHlBadge(); if(KIND==='epub')paintEpubHl();
@@ -3614,11 +3620,56 @@ const PENW=[0,0.0016,0.0030,0.0058];      // 쪽 너비에 대한 비율
 
 const saveINK=(()=>{ let t=null;
   const flush=()=>{ t=null; if(!inkKey)return;
-    DB.put('kv','ink:'+inkKey,INK).catch(e=>{
+    const k=inkKey; DB.put('kv','ink:'+k,INK).then(()=>inkStamp(k)).catch(e=>{
       log('필기 저장 실패: '+(e.message||e));
       toast('필기를 저장하지 못했습니다\n'+(e.message||e),4500); }); };
   const f=()=>{ if(!t)t=setTimeout(flush,600); }; f.now=()=>{ if(t)clearTimeout(t); flush(); };
   return f; })();
+/* v55.5 — 펜슬 필기 기기끼리 맞추기
+   필기는 크기가 커서 읽은 기록과 따로 드라이브 앱 전용 칸의 'ebl-ink.json' 에 책마다 {at, d} 로 둡니다.
+   책 하나 안에서는 나중에 쓴 기기가 이깁니다 (두 기기에서 같은 책에 동시에 쓰면 먼저 쓴 쪽이 사라질 수 있음).
+   ebl_inkat = 이 기기에서 책마다 마지막으로 쓴 시각 · ebl_inksent = 드라이브에 올린 시각 · ebl_inkmt = 마지막으로 본 파일 시각 */
+const IFILE='ebl-ink.json';
+const jget=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k)||'')||d; }catch(e){ return d; } };
+function inkStamp(id){ if(!id)return; const m=jget('ebl_inkat',{}); m[id]=Date.now(); try{ localStorage.setItem('ebl_inkat',JSON.stringify(m)); }catch(e){} }
+async function inkSync(at){
+  try{ saveINK.now(); }catch(e){}
+  const loc=jget('ebl_inkat',{}), sent=jget('ebl_inksent',{}), seen=localStorage.getItem('ebl_inkmt')||'';
+  const dirty=Object.keys(loc).filter(id=>(loc[id]||0)>(sent[id]||0));
+  const q=encodeURIComponent(`name='${IFILE}' and trashed=false`);
+  const fr=await dv(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)&pageSize=1`,at);
+  const f=((await fr.json()).files||[])[0]||null;
+  if(!dirty.length&&(!f||f.modifiedTime===seen)) return 0;          // 양쪽 다 그대로
+  let remote={v:1,b:{}};
+  if(f){ try{ remote=await (await dv(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,at)).json()||remote; }catch(e){ throw new Error('필기 받기 실패'); } }
+  remote.b=remote.b||{};
+  let got=0, up=0;
+  for(const id of Object.keys(remote.b)){
+    const e=remote.b[id]; if(!e||(e.at||0)<=(loc[id]||0))continue;
+    await DB.put('kv','ink:'+id,e.d||{}); loc[id]=e.at; sent[id]=e.at; got++;
+    if(inkKey===id){ INK=e.d||{}; try{ paintAllInk(); paintPenBadge(); }catch(x){} }
+  }
+  for(const id of dirty){
+    if((loc[id]||0)<=((remote.b[id]||{}).at||0))continue;
+    let d={}; try{ d=(await DB.get('kv','ink:'+id))||{}; }catch(e){ continue; }
+    remote.b[id]={at:loc[id],d}; up++;
+  }
+  let mt=f?f.modifiedTime:'';
+  if(up){
+    const body=JSON.stringify(remote);
+    if(f){ const r=await dv(`https://www.googleapis.com/upload/drive/v3/files/${f.id}?uploadType=media&fields=modifiedTime`,at,
+        {method:'PATCH',headers:{'Content-Type':'application/json'},body}); mt=(await r.json()).modifiedTime||''; }
+    else{ const B='ebi'+Date.now(), meta=JSON.stringify({name:IFILE,parents:['appDataFolder']});
+      const multi=`--${B}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${B}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${B}--`;
+      const r=await dv(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime`,at,
+        {method:'POST',headers:{'Content-Type':'multipart/related; boundary='+B},body:multi}); mt=(await r.json()).modifiedTime||''; }
+    Object.keys(remote.b).forEach(id=>{ if(loc[id]&&remote.b[id].at===loc[id])sent[id]=loc[id]; });
+  }
+  try{ localStorage.setItem('ebl_inkat',JSON.stringify(loc)); localStorage.setItem('ebl_inksent',JSON.stringify(sent));
+       localStorage.setItem('ebl_inkmt',mt); }catch(e){}
+  if(got||up) log('필기 맞추기 — 받음 '+got+' · 올림 '+up+'권');
+  return got+up;
+}
 async function loadINK(id){
   inkKey=id; INK={};
   try{ INK=(await DB.get('kv','ink:'+id))||{}; }catch(e){ INK={}; }
@@ -6308,7 +6359,8 @@ function startComic(b,z,imgs,parent){
   curB=b; noMark=false; KIND='comic';
   openShell(b);
   Object.assign(CM,{z,b,pages:imgs,n:imgs.length,end:false,zoom:false,parent:parent||null});
-  let i=Number(localStorage.getItem('ebl_cpg_'+b.i));
+  const rc=RD[b.i]&&RD[b.i].cp;
+  let i=Number(rc!=null?rc:localStorage.getItem('ebl_cpg_'+b.i));   // v55.5 — 다른 기기에서 보던 쪽
   if(isNaN(i)||i<0||i>=CM.n){ const p=pctOf(b); i=p>0&&p<0.99?Math.max(0,Math.round(p*CM.n)-1):0; }
   CM.i=i;
   markRead(b.i,null);
@@ -6399,6 +6451,7 @@ function comicFoot(){
   if(!CM.b)return;
   const last=Math.min(CM.n,CM.i+CM.span);
   try{ localStorage.setItem('ebl_cpg_'+CM.b.i,String(CM.i)); }catch(e){}
+  if(!noMark){ const r=RD[CM.b.i]||(RD[CM.b.i]={}); if(r.cp!==CM.i){ r.cp=CM.i; r.pt=Date.now(); } }
   if(!noMark)markRead(CM.b.i, last/CM.n, last>=CM.n);
   $('#rfoot').textContent=`${CM.i+1}${CM.span>1?'-'+(CM.i+CM.span):''} / ${CM.n}`
     +(noMark?'  ·  기록 안 함':(stOf(CM.b)==='done'?'  ·  다 읽음':''))+'  ·  '+(CM.b.t||'');
