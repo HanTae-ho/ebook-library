@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.5';
+const BUILD='v55.6';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -2009,12 +2009,32 @@ const nameC=t=>coreT(t).replace(/0+(?=\d)/g,'');
 function nameHit(x,y){ if(x===y)return true; if(y.includes(x))return x.length>=3;
   if(x.includes(y)){ if((y.length>=3&&x.endsWith(y))||y.length>=x.length*0.6)return true;
     return y.length>=3&&x.startsWith(y)&&/^[a-z0-9]+$/.test(x.slice(y.length)); }
-  if(dice(x,y)>=0.5)return true; const a=x.replace(/\d/g,''), b=y.replace(/\d/g,'');
+  if(dice(x,y)>=(Math.min(x.length,y.length)<=4?0.67:0.5))return true; const a=x.replace(/\d/g,''), b=y.replace(/\d/g,'');   // v55.6 — 짧은 이름은 더 엄하게 ('단편1' ↔ '진단편')
   if(a.length>=4&&b.includes(a))return true;
   return a.length>=3&&b.length>=3&&dice(a,b)>=0.5; }
+/* v55.6 — 스크립트 v19.11 과 같은 판정
+   · 시리즈 꼬리말 ('23분만에 독파하는 고전 멘토링' 처럼 여러 책이 똑같이 단 부제) 은 빼고 견줌
+   · '1984.0' (시트가 숫자로 바꾼 제목) 은 '.0' 을 떼고 · 영어 제목 파일 ↔ 한글 번역 제목은 견줄 수 없으니 딴 책으로 보지 않음 */
+const NAME_TAG_SEED=['23분만에 독파하는 고전 멘토링'];
+let NAME_TAGS=null;
+function nameTags(){
+  if(NAME_TAGS)return NAME_TAGS;
+  const T={}; NAME_TAG_SEED.forEach(x=>T[nameC(x)]=1); const by={};
+  BOOKS.forEach(b=>{ const t=(b._0&&b._0.t)||b.t; const ps=String(t||'').split(NAME_SEP).map(x=>nameC(x)).filter(Boolean); if(ps.length<2)return;
+    for(let k=1;k<ps.length;k++){ if(ps[k].length<4)continue; (by[ps[k]]=by[ps[k]]||new Set()).add(ps[0].replace(/\d+/g,'')); } });
+  Object.keys(by).forEach(k=>{ if(by[k].size>=3)T[k]=1; });
+  return (NAME_TAGS=T);
+}
+function latinTitle(fn){ const t=String(fn||'').replace(/\.[A-Za-z0-9]{2,5}$/,''); if(/[가-힣]/.test(t))return false;
+  const w=t.split(/[\s_\-.,]+/).filter(x=>/^[A-Za-z']{2,}$/.test(x)); return w.length>=2&&w.join('').length>=8; }
 function nameOff(matched,file){
-  const whole=String(matched||''), y=nameC(file); if(nameC(whole).length<2||y.length<2)return false;
-  const parts=whole.split(NAME_SEP).map(x=>x.trim()).filter(Boolean);
+  const whole0=String(matched||'').replace(/^(\d+)\.0$/,'$1');
+  if(latinTitle(file)&&/[가-힣]/.test(whole0))return false;
+  const y=nameC(file); if(nameC(whole0).length<2||y.length<2)return false;
+  const TAG=nameTags();
+  let parts=whole0.split(NAME_SEP).map(x=>x.trim()).filter(Boolean);
+  if(parts.length>1){ const keep=parts.filter(x=>!TAG[nameC(x)]); if(keep.length)parts=keep; }
+  const whole=parts.join(' - ');
   const V={}; let subVol=false;
   parts.forEach((x,k)=>{ const v=volOf(x); if(!v)return; if(k===0)V[v]=1;
     else if(Number(v)<=12&&coreT(x).replace(/\d/g,'').length<=6){ V[v]=1; subVol=true; } });
@@ -2026,6 +2046,7 @@ function nameOff(matched,file){
 const SETRE=/^\s*\[세트\]|\[세트\]|세트\s*\]|\(전\s*\d+\s*권\)|전\s*\d+\s*권\s*(세트)?\s*$|\s세트\s*$/;
 function metaApply(){
   if(!P.meta)P.meta='sure';
+  NAME_TAGS=null;   // v55.6 — 새 목록이면 꼬리말을 다시 셈
   let hid=0;
   BOOKS.forEach(b=>{
     if(!b._0){ const o={}; META_KEYS.forEach(k=>{ if(b[k]!=null)o[k]=b[k]; }); b._0=o; }
