@@ -1539,7 +1539,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.6';
+const BUILD='v55.7';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -8419,10 +8419,13 @@ function updApply(){ if(!UPD.pending)return;
 async function updCheck(){ try{ if(UPD.reg)await UPD.reg.update(); }catch(e){} }
 async function updLatest(){ try{ const t=await (await fetch('sw.js?'+Date.now(),{cache:'no-store'})).text();
   const m=/ebl-(v[\w.]+)/.exec(t); UPD.latest=m?m[1]:''; }catch(e){ UPD.latest=''; } return UPD.latest; }
+/* v55.7 — 판 번호 크기 비교 ('v55.10' > 'v55.9') */
+function verCmp(a,b){ const x=String(a||'').replace(/^v/,'').split('.').map(Number), y=String(b||'').replace(/^v/,'').split('.').map(Number);
+  for(let i=0;i<Math.max(x.length,y.length);i++){ const d=(x[i]||0)-(y[i]||0); if(d)return d>0?1:-1; } return 0; }
 async function paintVer(){ const el=$('#verLine'); if(!el)return; el.textContent=`지금 ${BUILD} · 새 버전 확인 중…`;
   const v=await updLatest();
   if(!v){ el.textContent=`지금 ${BUILD} · 인터넷이 안 돼 확인하지 못했습니다`; return; }
-  if(v===BUILD){ el.textContent=`지금 ${BUILD} · 최신입니다. 새 버전은 저절로 받아 바뀝니다`; return; }
+  if(v===BUILD||verCmp(v,BUILD)<0){ el.textContent=`지금 ${BUILD} · 최신입니다. 새 버전은 저절로 받아 바뀝니다`; return; }   // v55.7 — 서버가 잠깐 예전 판을 줘도 '새 판'이라 하지 않음
   el.textContent=`지금 ${BUILD} · 새 ${v} 를 받는 중 — 설정을 닫으면 바뀝니다`; updCheck(); }
 if('serviceWorker' in navigator){
   UPD.hadCtl=!!navigator.serviceWorker.controller;
