@@ -7,7 +7,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v57';
+const BUILD='v57.1';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -223,9 +223,9 @@ function onGis(){
   gisReady=true; log('로그인 모듈 준비');
   try{ tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:cfg('cid'), scope:SCOPE,
-    callback:r=>{ if(r.error){ AUTHWHY='조용히 받기 실패 · '+r.error;
+    callback:r=>{ AUTHBUSY=0; if(r.error){ AUTHWHY='조용히 받기 실패 · '+r.error;
         log('로그인 실패: '+r.error); markLogin(false); paintLogin();
-        (needToken._ng||(()=>{}))(new Error(r.error)); return; }
+        const ng=needToken._ng; needToken._ok=needToken._ng=null; (ng||(()=>{}))(new Error(r.error)); return; }
       TOKEN=r.access_token;
       const a=AUTH.get();
       a.t=TOKEN;
@@ -233,8 +233,16 @@ function onGis(){
       a.e=Date.now()+(Math.max(60,Number(r.expires_in)||3600)-120)*1000;
       AUTH.set(a);
       AUTHWHY='이어감 · '+Math.round((a.e-Date.now())/60000)+'분 남음';
-      log('로그인 성공'); markLogin(true); whoAmI(); paintLogin();
-      (needToken._ok||(()=>{}))(TOKEN); }});
+      log('로그인 성공'); markLogin(true); whoAmI(); paintLogin(); tapOff();
+      const ok=needToken._ok; needToken._ok=needToken._ng=null; AUTHBUSY=0; (ok||(()=>{}))(TOKEN); },
+    /* v57.1 — 창이 막히거나(사용자가 누르지 않았을 때) 닫히면 여기로 옵니다.
+       전에는 이 연결이 없어, 막혀도 까닭이 안 남고 기다리던 일이 그대로 멈췄습니다. */
+    error_callback:e=>{ const t=(e&&e.type)||'unknown';
+      AUTHWHY=t==='popup_failed_to_open'?'구글 창이 막혔습니다 — 화면을 한 번 누르면 다시 받습니다'
+             :t==='popup_closed'?'구글 창이 닫혔습니다 — 🔑 를 눌러 주세요':'다시 받기 실패 · '+t;
+      log('로그인 창: '+t); AUTHBUSY=0; markLogin(false); paintLogin();
+      if(t==='popup_failed_to_open')tapArm();
+      const ng=needToken._ng; needToken._ok=needToken._ng=null; (ng||(()=>{}))(new Error(AUTHWHY)); }});
   }catch(e){ gisReady=false; log('로그인 모듈 시작 실패: '+e.message); }
 
   const a=AUTH.get();
@@ -245,17 +253,43 @@ function onGis(){
     if(a.t)AUTH.drop();            // 시간이 다 된 표는 그 자리에서 버립니다
     markLogin(false);
     // 전에 들어온 적이 있으면 조용히 새 표를 받아둡니다
-    if(a.h||a.t){ log('조용히 다시 받는 중… (계정 '+(a.h||'모름')+')'); quietLogin(); }
+    /* v57.1 — 켜자마자 창을 띄우면 브라우저(특히 아이패드)가 막습니다.
+       화면을 처음 누를 때 받습니다 — 예전에 동의했으므로 창이 잠깐 떴다 저절로 닫힙니다. */
+    if(a.h||a.t){ AUTHWHY='표가 만료됐습니다 — 화면을 처음 누를 때 다시 받습니다'; log('로그인: 처음 누를 때 다시 받습니다 (계정 '+(a.h||'모름')+')'); tapArm(); }
   }
   paintLogin();
 }
 /* 화면도 안 뜨고 누를 것도 없는 재발급 */
+let AUTHBUSY=0;                              // 창을 띄운 시각 — 겹쳐 띄우지 않게
 function quietLogin(){
-  if(!tokenClient||TOKEN)return;
+  if(!tokenClient||(TOKEN&&tokenLive()))return;
+  if(AUTHBUSY&&Date.now()-AUTHBUSY<20000)return;
   const req={prompt:''}; const h=AUTH.get().h; if(h)req.hint=h;
+  AUTHBUSY=Date.now();
   try{ tokenClient.requestAccessToken(req); }
-  catch(e){ log('조용히 받기 실패: '+(e.message||e)); }
+  catch(e){ AUTHBUSY=0; log('조용히 받기 실패: '+(e.message||e)); }
 }
+/* v57.1 — '처음 누를 때 다시 받기'.
+   구글 창은 사용자가 누른 그 순간에만 열 수 있어, 누름을 한 번 기다립니다.
+   🔑 · '지금 로그인' 은 스스로 받으므로 여기서는 건너뜁니다. 인터넷이 없으면 기다리기만 합니다. */
+let TAPARM=false;
+function tapHit(e){
+  if(TOKEN&&tokenLive()){ tapOff(); return; }
+  const t=e&&e.target; if(t&&t.closest&&t.closest('#btnLogin,#btnLogin2,#btnForget'))return;
+  if(navigator.onLine===false||!tokenClient)return;
+  tapOff(); quietLogin();
+}
+function tapArm(){ if(TAPARM)return; TAPARM=true;
+  document.addEventListener('click',tapHit,true); document.addEventListener('touchend',tapHit,true); }
+function tapOff(){ if(!TAPARM)return; TAPARM=false;
+  document.removeEventListener('click',tapHit,true); document.removeEventListener('touchend',tapHit,true); }
+/* 앱을 오래 뒤로 보냈다 돌아오면(아이패드는 앱을 끄지 않고 재워 둠) 표가 끝나 있을 수 있습니다 */
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!gisReady)return;
+  const a=AUTH.get(); if(!(a.h||a.t)||tokenLive())return;
+  if(TOKEN){ TOKEN=''; AUTH.drop(); }
+  markLogin(false); AUTHWHY='표가 만료됐습니다 — 화면을 처음 누를 때 다시 받습니다'; paintLogin(); tapArm();
+});
 /* 어느 계정으로 들어왔는지 한 번만 알아둡니다.
    드라이브가 알려주므로 권한을 더 받을 필요가 없습니다. */
 async function whoAmI(){
@@ -293,10 +327,13 @@ function needToken(inter){ return new Promise((ok,ng)=>{
   if(TOKEN)return ok(TOKEN);
   if(!cfg('cid'))return ng(new Error('구글 클라이언트 ID 가 비어 있습니다.\n🛠 관리 에서 넣어주세요.'));
   if(!gisReady||!tokenClient)return ng(new Error('로그인 모듈이 아직 안 왔습니다.\n인터넷을 확인하고 잠시 후 🔑 를 눌러주세요.'));
+  if(needToken._ng)needToken._ng(new Error('다른 로그인 요청으로 바뀌었습니다'));   // v57.1 — 앞선 요청이 영영 기다리지 않게
   needToken._ok=ok; needToken._ng=ng;
   const req={prompt:inter?'consent':''};
   const h=AUTH.get().h; if(h)req.hint=h;      // 계정이 여럿이어도 안 물어봅니다
-  tokenClient.requestAccessToken(req); }); }
+  AUTHBUSY=Date.now(); tapOff();
+  try{ tokenClient.requestAccessToken(req); }
+  catch(e){ AUTHBUSY=0; needToken._ok=needToken._ng=null; ng(e); } }); }
 
 /* ── 색인 ── */
 /* 아직 아무것도 없는 기기에서, 구글 계정만으로 설정을 가져옵니다.
