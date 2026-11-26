@@ -3,7 +3,7 @@
    책 파일과 색인은 IndexedDB 가 따로 맡습니다. */
 
 /* 고칠 때마다 이 번호를 올리면 옛 캐시가 버려집니다 */
-const V = 'ebl-v55.7';
+const V = 'ebl-v56';
 const SHELL = ['./', './index.html', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-32.png'];
 
@@ -25,7 +25,8 @@ self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
 
   // 구글 API·드라이브·Apps Script 는 절대 캐시하지 않습니다
-  if (u.hostname.endsWith('googleapis.com') ||
+  // v56 — 글꼴 CSS(fonts.googleapis.com)는 아래 CDN 처럼 담아 두어 인터넷이 없어도 고른 글꼴이 나오게 합니다
+  if ((u.hostname.endsWith('googleapis.com') && u.hostname !== 'fonts.googleapis.com') ||
       u.hostname.endsWith('google.com') ||
       u.hostname.endsWith('googleusercontent.com')) return;
 

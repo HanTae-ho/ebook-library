@@ -671,6 +671,30 @@
   #tocList button.d1{padding-left:18px;font-size:13px} #tocList button.d2{padding-left:32px;font-size:12.5px}
   #tocList button.on{color:var(--acc);font-weight:600}
   #tocList .p{color:var(--dim);font-size:11px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+  /* v56 — 목차 손보기 */
+  #tocList button .x{flex:0 0 auto;font-size:11.5px;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:2px 8px;margin-left:6px}
+  #tocList button.gone>span:first-child{color:var(--dim);text-decoration:line-through}
+  #tocList button.man>span:first-child::after{content:' ✎';color:var(--acc);font-size:11px}
+  #tocEdBar{display:none;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+  #tocEdBar.on{display:flex}
+  #tocEdBar button{flex:1 1 auto;padding:8px 10px;border-radius:9px;border:1px solid var(--line);font-size:12.5px}
+  #tocEdBar .note{flex:1 1 100%;font-size:11.5px;color:var(--dim);line-height:1.5}
+  /* v56 — 읽기 화면 위 막대 꾸미기 */
+  #rbar .rb-off{display:none !important}
+  #rbarList .hr{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line)}
+  #rbarList .hr.off .nm{color:var(--dim);text-decoration:line-through}
+  #rbarList .hr .nm{flex:1 1 auto;font-size:13.5px;min-width:0}
+  #rbarList .hr button.mv{width:34px;height:32px;border-radius:8px;border:1px solid var(--line);font-size:14px}
+  #rbarList .hr button.mv:disabled{opacity:.3}
+  #rbarList .hr button.tg{min-width:58px;height:32px;border-radius:8px;border:1px solid var(--line);font-size:12.5px}
+  #rbarList .hr button.tg.on{background:var(--acc);border-color:var(--acc);color:#0b1220;font-weight:600}
+  #selFont{width:100%;height:38px;margin-top:6px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--tx);padding:0 8px}
+  /* v56 — 오늘의 밑줄 */
+  #hHl .hlc{margin:0 12px 8px;padding:12px 14px;border-radius:12px;background:var(--panel);border-left:4px solid #ffe14d;cursor:pointer}
+  #hHl .hlc .q{font-size:14px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  #hHl .hlc .m{font-size:12.5px;color:var(--dim);margin-top:6px;white-space:pre-wrap}
+  #hHl .hlc .b{font-size:11.5px;color:var(--dim);margin-top:6px}
+  .tag.stop{color:#c9d1db;left:auto;right:4px;top:auto;bottom:4px}
   #tocNone{color:var(--dim);font-size:12.5px;line-height:1.7;padding:6px 2px;white-space:pre-wrap}
   #hlNone{color:var(--dim);font-size:12.5px;line-height:1.7;padding:6px 2px}
   #memoTx{width:100%;min-height:110px;padding:11px;border-radius:10px;
@@ -722,6 +746,7 @@
         <button data-v="folder">폴더</button>
         <button data-v="reading">읽는 중</button>
         <button data-v="done">다 읽음</button>
+        <button data-v="stop" id="tabStop" style="display:none">중단</button>
         <button data-v="saved">받아둔</button>
       </div>
       <input id="q" type="search" placeholder="제목 · 저자 · 분류로 검색" autocomplete="off">
@@ -765,6 +790,7 @@
     <div id="hRow2"></div>
     <div id="hSaved"></div>
     <div id="hDone"></div>
+    <div id="hHl"></div>
     <div id="hBoard"></div>
 
     <div class="hlinks" id="hLinks">
@@ -895,6 +921,10 @@
       <button data-v="light">밝게</button><button data-v="sepia">세피아</button><button data-v="night">어둡게</button>
       <button data-v="eink">E-Ink</button>
     </div></div>
+  <div class="grp"><div class="lb">보기 설정 기억 <span style="opacity:.7" id="bkpNote">· 종이색·글자 설정</span></div>
+    <div class="seg" id="segBkp">
+      <button data-v="0">모든 책 같이</button><button data-v="1">이 책만 따로</button>
+    </div></div>
   <!-- PDF 는 종이가 고정이라 글자 설정이 듣지 않습니다. 배율만 둡니다. -->
   <div class="grp k-pdf"><div class="lb">보는 방법</div>
     <div class="seg" id="segPnav">
@@ -922,7 +952,21 @@
   <div class="grp k-text"><div class="lb">글꼴</div>
     <div class="seg" id="segFont">
       <button data-v="">책 기본</button><button data-v="sans">고딕</button><button data-v="serif">명조</button>
-    </div></div>
+    </div>
+    <select id="selFont" aria-label="다른 글꼴">
+      <option value="">다른 글꼴 고르기…</option>
+      <option value="nmj">나눔명조</option>
+      <option value="nserif">본명조 (Noto Serif)</option>
+      <option value="gowun">고운바탕</option>
+      <option value="hahm">함렛</option>
+      <option value="pret">프리텐다드</option>
+      <option value="ngo">나눔고딕</option>
+      <option value="gdodum">고운돋움</option>
+      <option value="mine" id="optMine" disabled>내 글꼴 (아직 없음)</option>
+    </select>
+    <div class="seg" style="margin-top:6px"><button id="fontMine">내 글꼴 파일 넣기</button><button id="fontMineDel" style="display:none">내 글꼴 지우기</button></div>
+    <input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2,font/*" style="display:none">
+    <div class="note" style="font-size:11.5px;color:var(--dim);line-height:1.5;margin-top:4px">다른 글꼴은 고를 때 처음 한 번만 받아 옵니다 (인터넷 필요). 내 글꼴은 이 기기에만 담깁니다.</div></div>
   <div class="grp k-text"><div class="lb">글자 굵기</div>
     <div class="seg" id="segFw">
       <button data-v="">보통</button><button data-v="500">조금 굵게</button><button data-v="600">굵게</button>
@@ -962,6 +1006,9 @@
     </div>
     <div class="seg" style="margin-top:6px"><button id="keyShow">단축키 보기</button></div>
     <div id="keyHelp" style="display:none"></div></div>
+  <div class="grp"><div class="lb">위 막대 단추 <span style="opacity:.7">· 숨겨도 단축키는 그대로 됩니다</span></div>
+    <div id="rbarList"></div>
+    <div class="seg" style="margin-top:6px"><button id="rbarReset">처음 상태로</button></div></div>
   <div class="grp"><div class="lb">아래 줄 (쪽 · 진도 · 제목)</div>
     <div class="seg" id="segFoot">
       <button data-v="0">보이기</button><button data-v="1">숨기기</button>
@@ -970,6 +1017,7 @@
     <div class="seg">
       <button id="mkReading">읽는 중으로</button>
       <button id="mkDone">다 읽음으로</button>
+      <button id="mkStop">중단으로</button>
     </div>
     <div class="seg" style="margin-top:6px">
       <button id="mkClear">읽은 기록 지우기</button>
@@ -1057,7 +1105,12 @@
 </div>
 
 <div class="pan" id="panToc">
-  <h4><span id="tocTitle">목차</span> <button id="tocClose">닫기</button></h4>
+  <h4><span id="tocTitle">목차</span> <span><button id="tocEdit" style="display:none;margin-right:12px">손보기</button><button id="tocClose">닫기</button></span></h4>
+  <div id="tocEdBar">
+    <button id="tocAddTop">＋ 지금 화면 맨 위 줄을 장으로</button>
+    <button id="tocReset">처음 목록으로</button>
+    <div class="note">줄 오른쪽 [빼기]로 목차에서 뺍니다. 뺀 줄은 흐리게 남아 [넣기]로 되살릴 수 있습니다. 원본 파일은 그대로이고, 기기끼리 맞춥니다.</div>
+  </div>
   <div id="tocNone"></div>
   <div id="tocList"></div>
 </div>
@@ -1186,6 +1239,7 @@
 
     <div class="sect">내 기록 내려받기</div>
     <div class="btns"><button id="btnExport">파일로 받기 (JSON + 마크다운)</button></div>
+    <div class="btns"><button id="btnExportCsv">표로 받기 (엑셀 · 구글 시트)</button></div>
     <p class="note">읽은 기록·형광펜·메모·책갈피·별점·독서 시간을 파일 둘로 받아 둡니다.
       주소·토큰 같은 설정은 넣지 않습니다.</p>
 
@@ -1539,7 +1593,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v55.7';
+const BUILD='v56';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -1597,7 +1651,26 @@ const P = Object.assign({
 if(!P.fmt) P.fmt={ epub:true, pdf:true, etc:false };
 if(P.fmt.comic===undefined) P.fmt.comic=true;   // v36 — 만화·ZIP 은 처음부터 보입니다
 if(!Array.isArray(P.pins)) P.pins=[];
-const savePref=()=>localStorage.setItem('ebl_pref',JSON.stringify(P));
+/* v56 — 책마다 보기 설정
+   BKP[책ID] = {theme,fs,lh,ls,pd,pv,font,fw} — 이 기기에만 (보기 설정은 기기끼리 맞추지 않습니다).
+   따로 기억하는 책을 여는 동안 P 에는 그 책 값이 들어가고, 모든 책 공통 값은 BKG 에 잠시 맡깁니다.
+   저장할 때는 공통 값만 ebl_pref 에 적고, 바뀐 책 값은 BKP 에 적습니다. */
+const BKPK=['theme','fs','lh','ls','pd','pv','font','fw'];
+let BKP={}; try{ BKP=JSON.parse(localStorage.getItem('ebl_bkp')||'{}')||{}; }catch(e){ BKP={}; }
+let BKG=null, BKID='';
+const bkpPick=o=>{ const r={}; BKPK.forEach(k=>{ if(o[k]!==undefined)r[k]=o[k]; }); return r; };
+const saveBKP=()=>{ try{ localStorage.setItem('ebl_bkp',JSON.stringify(BKP)); }catch(e){} };
+const savePref=()=>{
+  let o=P;
+  if(BKG&&BKID&&BKP[BKID]){ BKP[BKID]=bkpPick(P); saveBKP(); o=Object.assign({},P,BKG); }
+  localStorage.setItem('ebl_pref',JSON.stringify(o));
+};
+function bkpEnter(id){
+  if(BKG){ Object.assign(P,BKG); BKG=null; }
+  BKID=id||'';
+  if(BKID&&BKP[BKID]){ BKG=bkpPick(P); Object.assign(P,BKP[BKID]); }
+}
+function bkpLeave(){ if(BKG){ Object.assign(P,BKG); BKG=null; } BKID=''; }
 
 /* 최근 검색어 — 같은 말을 되풀이해 치지 않도록 */
 let RQ=[]; try{ RQ=JSON.parse(localStorage.getItem('ebl_rq')||'[]'); }catch(e){ RQ=[]; }
@@ -2108,14 +2181,17 @@ function markRead(id,p,forceDone,forceReading){
   const wasDone=!!r.f;
   if(p!=null && !isNaN(p)){ const np=Math.max(0,Math.min(1,p)); if(np!==r.p||forceDone||forceReading) r.pt=Date.now(); r.p=np; }
   r.t = Date.now();
-  if(forceDone){ r.f=1; r.pt=Date.now(); }
-  if(forceReading){ r.f=0; r.pt=Date.now(); if(r.p>=DONE_AT) r.p=0.99; }
+  if(forceDone){ r.f=1; r.pt=Date.now(); delete r.s; delete r.sp; }
+  if(forceReading){ r.f=0; r.pt=Date.now(); if(r.p>=DONE_AT) r.p=0.99; delete r.s; delete r.sp; }
+  else if(r.s && (r.p||0) > (r.sp||0)+0.03){ delete r.s; delete r.sp; }   // v56 — 중단한 책을 3% 넘게 더 읽어 나가면 '읽는 중'으로 (열기만 해서는 그대로)
   else if((r.p||0) >= DONE_AT) r.f=1;
   saveRD();
   if(r.f&&!forceReading&&NEXTVOL){ try{ nextVolOffer(id); }catch(e){} }
   if(r.f&&!forceReading&&!wasDone&&curB&&curB.i===id){ try{ rvAsk(id); }catch(e){} }
 }
-const stOf = b => { const r=RD[b.i]; if(!r) return ''; return r.f ? 'done' : 'reading'; };
+const stOf = b => { const r=RD[b.i]; if(!r) return ''; return r.f ? 'done' : r.s ? 'stop' : 'reading'; };
+/* v56 — 읽다가 그만둔 책. '읽는 중'에서 빠지고 '중단' 칸에 모입니다 */
+function markStop(id){ const r=RD[id]||(RD[id]={}); r.s=1; r.sp=r.p||0; r.f=0; r.t=r.pt=Date.now(); saveRD(); syncSoon(); }
 const pctOf = b => { const r=RD[b.i]; return r&&r.p ? r.p : 0; };
 
 /* 예전 버전에서 남긴 '읽던 위치'를 읽은 기록으로 옮깁니다 */
@@ -2180,6 +2256,7 @@ function match(b){
   if(TAB==='recent'  && !RD[b.i])            return false;   // 한 번이라도 연 책
   if(TAB==='reading' && stOf(b)!=='reading') return false;
   if(TAB==='done'    && stOf(b)!=='done')    return false;
+  if(TAB==='stop'    && stOf(b)!=='stop')    return false;
   if(TAB==='saved'   && !saved.has(b.i))     return false;
   if(TAB==='new'     && !b.g)                return false;   // 담긴 날이 있는 것만
   // 내 서가 — 대·중·소 어느 칸에 있든 이름이 같으면 걸립니다
@@ -2198,7 +2275,7 @@ function filter0(){
   const k=norm($('#q').value), out=[];
   // 최근·읽는 중·다 읽음 칸은 최근 읽은 순, 새로 담긴 책은 담긴 순
   const s = TAB==='new' ? 'g'
-          : (TAB==='recent'||TAB==='reading'||TAB==='done') ? 'r' : P.sort;
+          : (TAB==='recent'||TAB==='reading'||TAB==='done'||TAB==='stop') ? 'r' : P.sort;
   // '최근 읽은 순'은 읽을 때마다 바뀌므로 미리 만들어 둘 수 없습니다.
   // 대신 대상이 몇십 권뿐이라 그때그때 줄 세워도 빠릅니다.
   if(s==='r'){
@@ -2272,6 +2349,7 @@ function card(b){
   const st=stOf(b), pc=pctOf(b);
   if(st==='done'){ w.classList.add('fin');
     w.insertAdjacentHTML('beforeend','<div class="tag done">다 읽음</div>'); }
+  else if(st==='stop') w.insertAdjacentHTML('beforeend','<div class="tag stop">중단</div>');
   else if(st==='reading'&&pc>0)
     w.insertAdjacentHTML('beforeend',`<div class="pbar"><i style="width:${Math.round(pc*100)}%"></i></div>`);
   const t=document.createElement('div'); t.className='ti'; t.textContent=b.t||'';
@@ -2279,7 +2357,7 @@ function card(b){
   if(P.mode==='l'){
     const m=document.createElement('div'); m.className='meta';
     const s=document.createElement('div'); s.className='sub';
-    const mark = st==='done' ? '다 읽음' : (st==='reading'&&pc>0 ? Math.round(pc*100)+'%' : '');
+    const mark = st==='done' ? '다 읽음' : st==='stop' ? '중단 '+Math.round(pc*100)+'%' : (st==='reading'&&pc>0 ? Math.round(pc*100)+'%' : '');
     s.textContent=[mark,b.p,String(b.d||'').slice(0,4),b.s||b.m||b.b,x].filter(Boolean).join(' · ');
     m.append(t,a,s); d.append(w,m);
   } else d.append(w,t,a);
@@ -2392,14 +2470,59 @@ async function getBook(b){
 let book=null,rend=null,curB=null;
 let noMark=false;   // 이 책은 닫을 때까지 읽은 기록을 남기지 않습니다
 let KIND='epub';    // 지금 열린 것이 epub / pdf / txt 중 무엇인지
+/* v56 — 글꼴. 고를 때만 받아 옵니다 (구글 글꼴은 화면에 나온 글자 조각만 받습니다).
+   EPUB 은 책 안쪽(iframe)에도 같은 글꼴 링크를 넣어야 합니다 — fontInto(문서). */
+const FONTS={
+  nmj:   {n:'나눔명조',   fam:"'Nanum Myeongjo',serif",       css:'https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap'},
+  nserif:{n:'본명조',     fam:"'Noto Serif KR',serif",        css:'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap'},
+  gowun: {n:'고운바탕',   fam:"'Gowun Batang',serif",         css:'https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap'},
+  hahm:  {n:'함렛',       fam:"'Hahmlet',serif",              css:'https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;500;600;700&display=swap'},
+  pret:  {n:'프리텐다드', fam:"'Pretendard Variable',Pretendard,-apple-system,sans-serif", css:'https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css'},
+  ngo:   {n:'나눔고딕',   fam:"'Nanum Gothic',sans-serif",    css:'https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap'},
+  gdodum:{n:'고운돋움',   fam:"'Gowun Dodum',sans-serif",     css:'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap'},
+  mine:  {n:'내 글꼴',    fam:"'EBL Mine',serif"}
+};
+let MINEURL='', MINEN='';
+function fontFam(txt){
+  if(P.font==='sans') return txt?'-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif':'-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif';
+  if(P.font==='serif') return txt?'"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif':'"Apple SD Gothic Neo","Nanum Myeongjo",serif';
+  const f=FONTS[P.font]; if(!f) return '';
+  if(P.font==='mine'&&!MINEURL) return '';
+  return f.fam;
+}
+function fontInto(doc){
+  try{ if(!doc||!doc.head) return;
+    const f=FONTS[P.font];
+    if(f&&f.css){ let l=doc.getElementById('eblFont');
+      if(!l){ l=doc.createElement('link'); l.id='eblFont'; l.rel='stylesheet'; doc.head.appendChild(l); }
+      if(l.getAttribute('href')!==f.css) l.setAttribute('href',f.css); }
+    if(P.font==='mine'&&MINEURL&&!doc.getElementById('eblMine')){
+      const st=doc.createElement('style'); st.id='eblMine';
+      st.textContent=`@font-face{font-family:'EBL Mine';src:url(${MINEURL});font-display:swap}`;
+      doc.head.appendChild(st); }
+  }catch(e){}
+}
+function fontAll(){ fontInto(document); try{ if(rend) rend.getContents().forEach(c=>fontInto(c.document)); }catch(e){} }
+async function mineLoad(){
+  try{ const v=await DB.get('kv','font:mine'); if(!v||!v.buf) return false;
+    if(MINEURL) URL.revokeObjectURL(MINEURL);
+    MINEURL=URL.createObjectURL(new Blob([v.buf],{type:v.type||'font/ttf'})); MINEN=v.name||'';
+    $$('#eblMine').forEach(x=>x.remove());
+    return true; }catch(e){ return false; }
+}
+function paintFontUi(){
+  const sel=$('#selFont'); if(!sel) return;
+  sel.value=FONTS[P.font]?P.font:'';
+  const om=$('#optMine'); if(om){ om.disabled=!MINEURL; om.textContent=MINEURL?('내 글꼴 — '+(MINEN||'파일')):'내 글꼴 (아직 없음)'; }
+  const d=$('#fontMineDel'); if(d) d.style.display=MINEURL?'':'none';
+}
 function paperCss(){
   const c={light:{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'},
            sepia:{bg:'#f6efe2',fg:'#3b3228',a:'#8a5a1f'},
            night:{bg:'#15181c',fg:'#c7ccd4',a:'#7fb3ff'},
            eink:{bg:'#ffffff',fg:'#000000',a:'#000000'}}[P.theme]
          ||{bg:'#ffffff',fg:'#16181c',a:'#1a56b8'};
-  const fam = P.font==='sans' ? '-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
-            : P.font==='serif'? '"Apple SD Gothic Neo","Nanum Myeongjo",serif' : '';
+  const fam = fontFam(false);
   // 좌우 여백은 바깥 틀(#page)에서 줍니다. 여기서 padding 을 주면 단 나누기가 어긋납니다.
   const body={ background:c.bg+' !important', color:c.fg+' !important',
     'padding-left':'0 !important', 'padding-right':'0 !important',
@@ -2417,6 +2540,7 @@ function paperCss(){
     'a':{color:c.a+' !important'} };
 }
 function applyRead(){
+  try{ if(FONTS[P.font]) fontAll(); }catch(e){}
   document.body.classList.remove('sepia','night','eink');
   if(P.theme!=='light')document.body.classList.add(P.theme);
   document.body.classList.toggle('nofoot',!!P.nofoot);
@@ -2432,9 +2556,7 @@ function applyRead(){
   if(tb){ tb.style.letterSpacing=P.ls?(P.ls/100)+'em':'';
     tb.style.fontSize=(15*P.fs/100).toFixed(1)+'px';
     tb.style.lineHeight=(P.lh/100);
-    tb.style.fontFamily=P.font==='sans'
-      ? '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif'
-      : P.font==='serif' ? '"Apple SD Gothic Neo",AppleMyungjo,"Nanum Myeongjo",serif' : '';
+    tb.style.fontFamily=fontFam(true);
     tb.style.fontWeight=P.fw?String(P.fw):'';
     if(KIND==='txt'&&tpos>=0){ const m1=th.scrollHeight-th.clientHeight; if(m1>0)th.scrollTop=tpos*m1; } }
   $('#vZoom').textContent=P.zoom+'%'; $('#rgZoom').value=P.zoom;
@@ -2452,6 +2574,7 @@ function applyRead(){
   $('#vLs').textContent=P.ls?(P.ls>0?'+':'')+(P.ls/100).toFixed(2)+'em':'보통'; $('#rgLs').value=P.ls||0;
   $('#vPd').textContent=P.pd+'%'; $('#vPv').textContent=P.pv+'px'; $('#vTap').textContent=P.tap+'%';
   segSet('#segTheme',P.theme); segSet('#segFont',P.font); segSet('#segNav',P.nav);
+  try{ paintFontUi(); segSet('#segBkp',BKG?1:0); $('#bkpNote').textContent=BKG?'· 지금 이 책만의 설정입니다':'· 종이색·글자 설정'; }catch(e){}
   segSet('#segFw',P.fw||''); segSet('#segFoot',P.nofoot||0); segSet('#segClean',P.tclean||0); segSet('#segJunk',P.junk||0); segSet('#segResume',P.resume||0); segSet('#segWheel',P.wheel||'page'); segSet('#segSideBtn',P.sidebtn||'page'); paintJunkN();
   $('#rgFs').value=P.fs; $('#rgLh').value=P.lh; $('#rgPd').value=P.pd;
   $('#rgPv').value=P.pv; $('#rgTap').value=P.tap;
@@ -2508,6 +2631,7 @@ async function showReader(b,buf){
   openShell(b);
   book=ePub(buf);
   rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
+  try{ rend.hooks.content.register(c=>fontInto(c.document)); }catch(e){}   // v56 — 고른 글꼴을 책 안쪽에도
   try{ book.coverUrl().then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{}); }catch(e){}
   applyRead();
   const cfi=(RD[b.i]&&RD[b.i].c)||localStorage.getItem('ebl_pos_'+b.i);   // v55.5 — 다른 기기에서 읽던 자리
@@ -3461,6 +3585,7 @@ function localState(){
            pins:P.pins||[], rq:RQ, rv:RV,
            goal:P.goal||0, goalY:P.goalY||0, goalAt:Number(localStorage.getItem('ebl_goalat')||0),
            jp:P.jpat||[], jpAt:Number(localStorage.getItem('ebl_jpatat')||0),
+           tc:TCE,
            shr:P.shareRead?1:0, shrAt:Number(localStorage.getItem('ebl_shrat')||0),
            mates:MATES, matesAt:Number(localStorage.getItem('ebl_matesat')||0),
            pinsAt:Number(localStorage.getItem('ebl_pinsat')||0),
@@ -3477,6 +3602,8 @@ function mergeState(a,b){
     Object.entries(m||{}).forEach(([k,v])=>{ if(!(k in o)||v>o[k])o[k]=v; }); }));
   if((a.goalAt||0)>=(b.goalAt||0)){ out.goal=a.goal; out.goalY=a.goalY; out.goalAt=a.goalAt||0; } else { out.goal=b.goal; out.goalY=b.goalY; out.goalAt=b.goalAt||0; }
   if((a.jpAt||0)>=(b.jpAt||0)){ out.jp=a.jp; out.jpAt=a.jpAt||0; } else { out.jp=b.jp; out.jpAt=b.jpAt||0; }
+  out.tc={};   // v56 — 목차 손보기: 책마다 나중에 고친 쪽
+  [a.tc,b.tc].forEach(T=>Object.entries(T||{}).forEach(([k,v])=>{ if(v&&(!out.tc[k]||(v.at||0)>(out.tc[k].at||0)))out.tc[k]=v; }));
   if((a.shrAt||0)>=(b.shrAt||0)){ out.shr=a.shr; out.shrAt=a.shrAt||0; } else { out.shr=b.shr; out.shrAt=b.shrAt||0; }
   if((a.matesAt||0)>=(b.matesAt||0)){ out.mates=a.mates; out.matesAt=a.matesAt||0; } else { out.mates=b.mates; out.matesAt=b.matesAt||0; }
   out.rv={};
@@ -3504,7 +3631,7 @@ function mergeState(a,b){
     if(!pick)return;
     /* v55.5 — 책을 열기만 해도 t 는 새로 찍힙니다. 진도·위치·다 읽음은 실제로 쪽을 넘긴 시각(pt)이 나중인 쪽에서 */
     if(x&&y){ const prog=(y.pt||0)>(x.pt||0)?y:(x.pt||0)>(y.pt||0)?x:pick;
-      if(prog!==pick){ pick=Object.assign({},pick); ['p','f','c','cp','pt'].forEach(k=>{ if(prog[k]===undefined)delete pick[k]; else pick[k]=prog[k]; }); } }
+      if(prog!==pick){ pick=Object.assign({},pick); ['p','f','c','cp','pt','s','sp'].forEach(k=>{ if(prog[k]===undefined)delete pick[k]; else pick[k]=prog[k]; }); } }
     const gone=out.rdel[id]||0;
     if(gone && gone>=(pick.t||0))return;      // 지운 뒤로 안 읽었으면 되살리지 않습니다
     out.rd[id]=pick;
@@ -3545,6 +3672,7 @@ function applyState(s){
   if(Array.isArray(s.smart)){ P.smart=s.smart;
     try{ localStorage.setItem('ebl_smartat',String(s.smartAt||0)); }catch(e){} }
   P.pins=s.pins||[]; RQ=s.rq||[];
+  if(s.tc){ const ch=JSON.stringify(s.tc)!==JSON.stringify(TCE); TCE=s.tc; saveTCE(); if(ch)TOCS=null; }
   if(s.rv){ RV=s.rv; saveRV(); }
   if(s.shrAt&&s.shrAt>Number(localStorage.getItem('ebl_shrat')||0)){ P.shareRead=s.shr?1:0;
     try{ localStorage.setItem('ebl_shrat',String(s.shrAt)); }catch(e){} }
@@ -4133,6 +4261,7 @@ function onTxtScroll(){
 
 /* 리더 껍데기 — 어떤 형식이든 공통 */
 function openShell(b){
+  try{ bkpEnter(b&&b.i); }catch(e){}                 // v56 — 이 책만 따로 기억한 보기 설정
   setTimeout(()=>{ try{ applyRuler(); }catch(e){} },80);
   selbarOff(); clearOv(); $('#resumeBar')&&$('#resumeBar').classList.remove('on');
   $('#library').style.display='none'; $('#reader').style.display='flex';
@@ -4226,10 +4355,37 @@ function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} t
   pdfIO=null; pdfDoc=null; pdfBusy.clear();
   $('#pdf').innerHTML=''; $('#pdf').onscroll=null;
   $('#txt').innerHTML=''; $('#txt').onscroll=null;
-  book=null; rend=null; curB=null; paintTabs(); render(true);
+  book=null; rend=null; curB=null; try{ bkpLeave(); }catch(e){} TOCED=false; paintTabs(); render(true);
   try{ rpopOff(); }catch(e){}
   try{ if(IDX.pending)setTimeout(()=>idxCheck(true),1500); }catch(e){}
   try{ if(UPD.pending)setTimeout(updApply,800); }catch(e){} }
+
+/* ══════════ v56 — 읽기 화면 위 막대 꾸미기 ══════════
+   P.rbar = {order:[키], hide:{키:1}} — 이 기기만. '‹ 서재' 와 'Aa' 는 늘 보입니다 (Aa 에서 다시 켤 수 있게). */
+const RBK=[ {k:'pen',id:'btnPen',n:'펜 (PDF 필기)'}, {k:'draw',id:'btnDraw',n:'긋기'}, {k:'tts',id:'btnTts',n:'🔊 읽어주기'},
+  {k:'find',id:'btnFind',n:'🔍 이 책에서 찾기'}, {k:'toc',id:'btnToc',n:'목차'}, {k:'bm',id:'btnBm',n:'🔖 책갈피'}, {k:'hl',id:'btnHl',n:'메모 목록'} ];
+function rbarCfg(){ const b=P.rbar||{}, known=RBK.map(x=>x.k);
+  const order=(b.order||[]).filter(k=>known.includes(k)); known.forEach(k=>{ if(!order.includes(k))order.push(k); });
+  return {order, hide:Object.assign({},b.hide||{})}; }
+function applyRbar(){
+  const bar=$('#rbar'), aa=$('#btnAa'); if(!bar||!aa)return; const c=rbarCfg();
+  c.order.forEach(k=>{ const h=RBK.find(x=>x.k===k), el=h&&$('#'+h.id); if(!el)return;
+    bar.insertBefore(el,aa); el.classList.toggle('rb-off',!!c.hide[k]); });
+}
+function rbarSave(c){ P.rbar={order:c.order,hide:c.hide}; savePref(); applyRbar(); paintRbarList(); }
+function paintRbarList(){
+  const L=$('#rbarList'); if(!L)return; L.innerHTML=''; const c=rbarCfg();
+  c.order.forEach((k,idx)=>{ const h=RBK.find(x=>x.k===k); if(!h)return; const off=!!c.hide[k];
+    const r=document.createElement('div'); r.className='hr'+(off?' off':'');
+    r.innerHTML=`<span class="nm">${esc(h.n)}</span>`;
+    const up=document.createElement('button'); up.className='mv'; up.textContent='↑'; up.disabled=idx===0; up.setAttribute('aria-label',h.n+' 앞으로');
+    up.onclick=()=>{ c.order.splice(idx,1); c.order.splice(idx-1,0,k); rbarSave(c); };
+    const dn=document.createElement('button'); dn.className='mv'; dn.textContent='↓'; dn.disabled=idx===c.order.length-1; dn.setAttribute('aria-label',h.n+' 뒤로');
+    dn.onclick=()=>{ c.order.splice(idx,1); c.order.splice(idx+1,0,k); rbarSave(c); };
+    const tg=document.createElement('button'); tg.className='tg'+(off?'':' on'); tg.textContent=off?'숨김':'보임';
+    tg.onclick=()=>{ if(off)delete c.hide[k]; else c.hide[k]=1; rbarSave(c); };
+    r.append(up,dn,tg); L.appendChild(r); });
+}
 
 /* ── 설정판 ── */
 function segSet(sel,v){ $$(sel+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v))); }
@@ -4253,7 +4409,7 @@ function openPanBook(b){
   $('#pbT').textContent=b.t||'제목 없음';
   const st=stOf(b), pc=pctOf(b);
   $('#pbS').textContent=[b.a, (b.x||'').toUpperCase(),
-    st==='done'?'다 읽음':(st==='reading'?(pc>0?Math.round(pc*100)+'% 읽음':'읽는 중'):''),
+    st==='done'?'다 읽음':st==='stop'?'중단 · '+Math.round(pc*100)+'%':(st==='reading'?(pc>0?Math.round(pc*100)+'% 읽음':'읽는 중'):''),
     saved.has(b.i)?'받아둠':''].filter(Boolean).join(' · ');
 
   paintPbRv(b);
@@ -4269,6 +4425,10 @@ function openPanBook(b){
   if(st!=='done') add('다 읽음으로 표시','',()=>{ markRead(b.i,1,true);
     toast('다 읽음으로 표시했습니다'); paintTabs(); render(true); });
   else add('읽는 중으로 되돌리기','',()=>{ markRead(b.i,null,false,true);
+    toast('읽는 중으로 되돌렸습니다'); paintTabs(); render(true); });
+  if(st==='reading') add('중단으로 표시','읽다가 그만둔 책 — 읽는 중에서 빠집니다',()=>{ markStop(b.i);
+    toast('중단으로 표시했습니다'); paintTabs(); render(true); });
+  else if(st==='stop') add('중단 풀기 (읽는 중으로)','',()=>{ markRead(b.i,null,false,true);
     toast('읽는 중으로 되돌렸습니다'); paintTabs(); render(true); });
   if(RD[b.i]) add('읽은 기록 지우기','이 책만. 목록에서 빠지고 진도도 사라집니다',
     ()=>{ clearRead(b.i); toast('읽은 기록을 지웠습니다'); paintTabs(); render(true); },'warn');
@@ -4301,7 +4461,40 @@ $('#btnView').onclick=()=>{ segSet('#segMode',P.mode); segSet('#segSize',P.size)
   segSet('#segSort',P.sort); segSet('#segCat',P.cat); segFmtPaint(); pan('#panView',true); };
 
 seg('#segTheme','theme',applyRead);
-seg('#segFont','font',applyRead);
+seg('#segFont','font',()=>{ paintFontUi(); applyRead(); });
+/* v56 — 보기 설정을 이 책만 따로 */
+$$('#segBkp button').forEach(x=>x.onclick=()=>{
+  if(!curB)return; const on=x.dataset.v==='1';
+  if(on&&!BKG){ BKP[curB.i]=bkpPick(P); saveBKP(); BKG=bkpPick(P); BKID=curB.i;
+    toast('이 책만 따로 기억합니다\n지금부터 바꾸는 종이색·글자는 이 책에만 남습니다',3500); }
+  else if(!on&&BKG){ delete BKP[curB.i]; saveBKP(); Object.assign(P,BKG); BKG=null; savePref();
+    toast('모든 책 공통 설정으로 돌아갑니다'); }
+  applyRead(); });
+/* v56 — 글꼴 고르기 */
+$('#selFont').onchange=async()=>{ const v=$('#selFont').value;
+  if(!v){ paintFontUi(); return; }
+  if(v==='mine'&&!MINEURL){ if(!(await mineLoad())){ toast('내 글꼴 파일을 먼저 넣어 주세요'); paintFontUi(); return; } }
+  P.font=v; savePref(); segSet('#segFont',P.font); applyRead();
+  if(FONTS[v]&&FONTS[v].css&&!navigator.onLine) toast('인터넷이 없어 글꼴을 받지 못할 수 있습니다\n한 번 받은 글꼴은 다음부터 됩니다',4000); };
+$('#fontMine').onclick=()=>$('#fontFile').click();
+$('#fontFile').onchange=async e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f)return;
+  if(f.size>30*1024*1024){ toast('글꼴 파일이 너무 큽니다 (30MB 까지)'); return; }
+  try{ const buf=await f.arrayBuffer();
+    // 정말 글꼴인지 먼저 확인합니다
+    try{ const ff=new FontFace('EBL Test',buf); await ff.load(); }catch(x){ toast('글꼴 파일로 읽지 못했습니다\nTTF · OTF · WOFF 파일을 골라 주세요',4500); return; }
+    await DB.put('kv','font:mine',{buf,name:f.name.replace(/\.[^.]+$/,''),type:f.type||'font/ttf',at:Date.now()});
+    await mineLoad(); P.font='mine'; savePref(); segSet('#segFont',P.font); applyRead();
+    toast('내 글꼴을 넣었습니다\n「'+MINEN+'」 · 이 기기에만 담깁니다',3500);
+  }catch(x){ toast('글꼴을 담지 못했습니다\n'+(x.message||x),5000); } };
+$('#fontMineDel').onclick=async()=>{ if(!confirm('이 기기에 넣은 내 글꼴을 지웁니다.'))return;
+  try{ await DB.del('kv','font:mine'); }catch(e){}
+  if(MINEURL)URL.revokeObjectURL(MINEURL); MINEURL=''; MINEN=''; $$('#eblMine').forEach(x=>x.remove());
+  if(P.font==='mine'){ P.font=''; savePref(); segSet('#segFont',P.font); }
+  applyRead(); toast('내 글꼴을 지웠습니다'); };
+mineLoad().then(ok=>{ try{ paintFontUi(); if(ok&&P.font==='mine'&&readerOn())applyRead(); }catch(e){} });
+/* v56 — 위 막대 꾸미기 */
+try{ applyRbar(); paintRbarList(); }catch(e){}
+$('#rbarReset').onclick=()=>{ P.rbar={order:RBK.map(x=>x.k),hide:{}}; savePref(); applyRbar(); paintRbarList(); toast('위 막대를 처음 상태로 되돌렸습니다'); };
 seg('#segNav','nav',applyRead);
 seg('#segPnav','pnav',()=>{ if(KIND==='pdf'&&pdfDoc)buildPdf(); });
 seg('#segMode','mode',()=>render(true));
@@ -4330,7 +4523,7 @@ $('#pgGo').onclick=()=>{ if(KIND!=='pdf'||!pdfDoc)return;
 
 /* ── 상태 탭 ── */
 function counts(){
-  const n={ '':0, recent:0, reading:0, done:0, saved:0, new:0 };
+  const n={ '':0, recent:0, reading:0, done:0, stop:0, saved:0, new:0 };
   try{ markDups(); }catch(e){}
   BOOKS.forEach(b=>{
     if(!P.fmt[fmtKey(b)]) return;
@@ -4351,6 +4544,7 @@ function paintTabs(){
     const base=x.dataset.lb||(x.dataset.lb=x.textContent.trim());
     x.innerHTML = base + (v&&n[v]!=null ? ` <span class="n">${n[v].toLocaleString()}</span>` : '');
   });
+  const ts=$('#tabStop'); if(ts) ts.style.display=(n.stop||TAB==='stop')?'':'none';   // v56 — 중단한 책이 있을 때만
 }
 function goTab(v){
   TAB=v; localStorage.setItem('ebl_tab',TAB);
@@ -4554,6 +4748,7 @@ function buildHome(){
     '받아둔 책이 없습니다. 책을 열면 그 기기에 자동으로 담깁니다.', homeSize('saved'));
   hsec($('#hDone'), '다 읽은 책', 'done', byRead(vis.filter(b=>stOf(b)==='done')), n.done,
     '아직 다 읽은 책이 없습니다.', homeSize('done'));
+  try{ paintHomeHl(); }catch(e){ log('오늘의 밑줄 실패: '+(e.message||e)); }
   // v48 — '새로 담긴 책' 은 위의 분야 태그 칸(#hNewB)으로 옮겼습니다
   try{ paintLibHome(vis,n); }catch(e){ log('도서관 홈 그리기 실패: '+(e.message||e)); }
   try{ applyHomeLayout(); }catch(e){ log('홈 배치 실패: '+(e.message||e)); }
@@ -4818,11 +5013,13 @@ var HK=[
   {k:'recent', id:'hRow2',   n:'최근 본 책',     sz:[12,24], u:'권'},
   {k:'saved',  id:'hSaved',  n:'받아둔 책',     sz:[12,24], u:'권'},
   {k:'done',   id:'hDone',   n:'다 읽은 책',     sz:[12,24], u:'권'},
+  {k:'hl',     id:'hHl',     n:'오늘의 밑줄',    sz:[1,3,5], u:'개', h:'예전에 그은 형광펜을 날마다 몇 개씩 다시 보여 줍니다'},
   {k:'board',  id:'hBoard',  n:'알림판'},
   {k:'q',      id:'hqWrap',  n:'최근 검색어'},
   {k:'links',  id:'hLinks',  n:'바로가기', h:'전체 둘러보기 · 모은 형광펜 · 독서 달력'}
 ];
-var HK_DEF_SIZE={reading:12,today:3,new:12,themes:3,rank:5,picks:4,recent:12,saved:12,done:12};
+var HK_DEF_SIZE={reading:12,today:3,new:12,themes:3,rank:5,picks:4,recent:12,saved:12,done:12,hl:3};
+var HK_DEF_OFF={hl:1};   // v56 — 새로 생긴 칸 가운데 처음엔 꺼 두는 것 (홈 꾸미기에서 켬)
 function famHomeDef(){ const rows=(FAM||[]).filter(x=>x['종류']==='homedef'&&!x['지움']).sort((a,b)=>Number(b['언제'])-Number(a['언제']));
   if(!rows.length)return null; try{ return JSON.parse(rows[0]['값']||'null'); }catch(e){ return null; } }
 function homeCfg(){
@@ -4831,7 +5028,9 @@ function homeCfg(){
   let order=(base.order||[]).filter(k=>known.includes(k));
   known.forEach(k=>{ if(!order.includes(k)){ const at=known.indexOf(k); // 새로 생긴 칸은 처음 모양의 자리 근처에
     let pos=order.length; for(let j=at-1;j>=0;j--){ const p=order.indexOf(known[j]); if(p>=0){ pos=p+1; break; } } order.splice(pos,0,k); } });
-  return { order, hide:Object.assign({},base.hide||{}), size:Object.assign({},HK_DEF_SIZE,base.size||{}) };
+  const hide=Object.assign({},base.hide||{});
+  Object.keys(HK_DEF_OFF).forEach(k=>{ if(!(base.order||[]).includes(k)) hide[k]=1; });   // 아직 만져 본 적 없는 새 칸은 꺼 둠
+  return { order, hide, size:Object.assign({},HK_DEF_SIZE,base.size||{}) };
 }
 function homeSize(k){ try{ return homeCfg().size[k]||HK_DEF_SIZE[k]||12; }catch(e){ return HK_DEF_SIZE[k]||12; } }
 function applyHomeLayout(){
@@ -5296,8 +5495,11 @@ function exportMd(){
   md+=`올해 다 읽은 책 ${yearDone(y)}권 · 연속 ${streak()}일\n\n## 다 읽은 책\n\n`;
   Object.entries(RD).filter(([,r])=>r&&r.f).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
     const v=RV[id]; md+=`- ${day(r.t)}  ${nm(id)}${v&&v.s?'  '+starStr(v.s):''}${v&&v.t?' — '+v.t:''}  (읽은 시간 ${shortDur(bookSec(id))})\n`; });
+  md+=`\n## 읽다가 그만둔 책\n\n`;
+  Object.entries(RD).filter(([,r])=>r&&!r.f&&r.s).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
+    md+=`- ${nm(id)}  ${Math.round((r.p||0)*100)}%  (${day(r.t)})\n`; });
   md+=`\n## 읽는 중\n\n`;
-  Object.entries(RD).filter(([,r])=>r&&!r.f).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
+  Object.entries(RD).filter(([,r])=>r&&!r.f&&!r.s).sort((a,b)=>(b[1].t||0)-(a[1].t||0)).forEach(([id,r])=>{
     md+=`- ${nm(id)}  ${Math.round((r.p||0)*100)}%  (${day(r.t)})\n`; });
   md+=`\n## 형광펜 · 메모 · 책갈피\n`;
   Object.entries(HL).forEach(([id,a])=>{ if(!a||!a.length)return;
@@ -5312,6 +5514,26 @@ $('#btnExport').onclick=()=>{
   dlFile(`우리도서관_내기록_${stamp}.json`,JSON.stringify(st,null,1),'application/json');
   setTimeout(()=>dlFile(`우리도서관_내기록_${stamp}.md`,exportMd(),'text/markdown'),600);
   toast('파일 두 개를 내려받습니다 (JSON · 마크다운)');
+};
+
+/* v56 — 표로 받기: 책마다 한 줄 (엑셀·구글 시트에서 바로 열림, 한글 깨짐 막는 BOM 포함) */
+$('#btnExportCsv').onclick=()=>{
+  const byId=new Map((BOOKS_ALL.length?BOOKS_ALL:BOOKS).map(b=>[b.i,b]));
+  const q=v=>{ v=String(v==null?'':v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const rows=[['제목','저자','출판사','분류','형식','상태','진도(%)','마지막으로 읽은 날','읽은 시간(분)','별점','한 줄 평','형광펜','메모','책갈피']];
+  const ids=new Set([...Object.keys(RD),...Object.keys(HL),...Object.keys(RV||{})]);
+  [...ids].map(id=>({id,r:RD[id]||{}})).sort((a,b)=>(b.r.t||0)-(a.r.t||0)).forEach(({id,r})=>{
+    const b=byId.get(id)||{}, v=(RV||{})[id]||{}, h=HL[id]||[];
+    const st=r.f?'다 읽음':r.s?'중단':(r.t?'읽는 중':'');
+    let nh=0,nm=0,nb=0; h.forEach(o=>{ if(isBm(o))nb++; else { nh++; if(o.n)nm++; } });
+    const bt=b.t||((h.find(o=>o.bt)||{}).bt)||id;
+    let sec=0; try{ sec=bookSec(id)||0; }catch(e){}
+    rows.push([bt,b.a||'',b.p||'',[b.b,b.m,b.s].filter(Boolean).join(' > '),(b.x||'').toUpperCase(),st,
+      r.t?Math.round((r.p||0)*100):'', r.t?dkey(r.t):'', sec?Math.round(sec/60):'', v.s||'', v.t||'', nh||'', nm||'', nb||'']);
+  });
+  const csv='\uFEFF'+rows.map(r=>r.map(q).join(',')).join('\r\n');
+  dlFile(`우리도서관_독서기록_${dkey().replace(/-/g,'')}.csv`,csv,'text/csv;charset=utf-8');
+  toast(`${rows.length-1}권을 표로 내려받습니다`);
 };
 
 /* ══════════ v44 — 식구 ══════════
@@ -7173,18 +7395,64 @@ const TOC_RE=new RegExp('^[ \\t\\u3000]*(?:'
   +'|[<\\[【〈《][^\\]>】〉》\\n]{0,20}(?:[0-9]|화|장|외전|프롤로그|에필로그)[^\\]>】〉》\\n]{0,20}[>\\]】〉》]\\s*$'
   +'|[-=]{1,5}\\s*[0-9]+\\s*[-=]{1,5}\\s*$'
   +')','i');
-function txtToc(){
+/* v56 — 목차 손보기 (TXT)
+   TCE[책ID] = {at:고친 때, a:[넣은 줄의 시작 글자 위치], r:[뺀 줄의 시작 글자 위치]}
+   TXTRAW 의 글자 위치는 줄 잇기·쓰레기 문구 지우기를 해도 변하지 않으므로 그대로 이름표로 씁니다.
+   기기끼리 맞춥니다 (책마다 나중에 고친 쪽). */
+let TCE={}; try{ TCE=JSON.parse(localStorage.getItem('ebl_tce')||'{}')||{}; }catch(e){ TCE={}; }
+const saveTCE=()=>{ try{ localStorage.setItem('ebl_tce',JSON.stringify(TCE)); }catch(e){} };
+let TOCED=false;      // 목차 창이 손보기 모드인가
+function txtLineAt(ls){ const T=TXTRAW; let e=T.indexOf('\n',ls); if(e<0)e=T.length;
+  return T.slice(ls,e).replace(/[\r\u200B]/g,'').trim(); }
+function txtToc(withGone){
   const T=TXTRAW, out=[]; let off=0;
+  const ed=(curB&&TCE[curB.i])||null, rm=new Set((ed&&ed.r)||[]), ad=new Set((ed&&ed.a)||[]);
   const lines=T.split('\n');
   for(const ln of lines){
     const t=ln.replace(/[\r\u200B]/g,'').trim();
-    if(t&&t.length<=50&&TOC_RE.test(t)){
-      out.push({t, d:0, go:off+ln.indexOf(t.charAt(0)), at:T.length?off/T.length:0});
+    if(t&&t.length<=50&&TOC_RE.test(t)&&!ad.has(off)){
+      const x={t, d:0, ls:off, go:off+ln.indexOf(t.charAt(0)), at:T.length?off/T.length:0};
+      if(rm.has(off)){ if(withGone){ x.gone=1; out.push(x); } }
+      else out.push(x);
       if(out.length>=3000)break;
     }
     off+=ln.length+1;
   }
+  ad.forEach(ls=>{ if(ls<0||ls>=T.length)return; const t=txtLineAt(ls); if(!t)return;
+    const raw=T.slice(ls,ls+200), k=raw.indexOf(t.charAt(0));
+    const x={t:t.length>50?t.slice(0,50)+'…':t, d:0, ls, go:ls+(k<0?0:k), at:T.length?ls/T.length:0, man:1};
+    if(rm.has(ls)){ if(withGone){ x.gone=1; out.push(x); } } else out.push(x); });
+  out.sort((a,b)=>a.ls-b.ls);
   return out;
+}
+function tceSet(fn){
+  if(!curB)return; const id=curB.i, e=TCE[id]||{a:[],r:[]};
+  fn(e); e.a=[...new Set(e.a)]; e.r=[...new Set(e.r)]; e.at=Date.now();
+  if(!e.a.length&&!e.r.length){ TCE[id]={a:[],r:[],at:e.at}; } else TCE[id]=e;
+  saveTCE(); TOCS=null; syncSoon(); paintToc();
+}
+/* 지금 화면 맨 위(위 막대 바로 아래)에 보이는 줄의 시작 글자 위치.
+   글자 마디를 차례로 재어, 아랫변이 그 높이를 처음 넘는 글자를 찾습니다 (화면 위에 덮인 창에 휘둘리지 않게 좌표로 찍지 않음). */
+function txtTopLine(){
+  const host=$('#txt'), body=$('#txt .body'); if(!host||!body)return -1;
+  const hb=host.getBoundingClientRect(), bar=$('#rbar'), br=bar?bar.getBoundingClientRect():null;
+  let y0=hb.top+4;
+  if(br&&br.height&&getComputedStyle(bar).display!=='none'&&br.bottom>hb.top) y0=Math.max(y0,br.bottom+2);
+  const rg=document.createRange(), w=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+  const bot=(c,i,j)=>{ rg.setStart(c,i); rg.setEnd(c,j); const r=rg.getBoundingClientRect(); return r.height?r.bottom:-1e9; };
+  let n=0, c, off=-1;
+  while(c=w.nextNode()){
+    const L=c.nodeValue.length; if(!L)continue;
+    if(bot(c,0,L)<y0){ n+=L; continue; }
+    let lo=0, hi=L-1;                       // 아랫변이 y0 이상인 첫 글자
+    while(lo<hi){ const m=(lo+hi)>>1; if(bot(c,m,m+1)>=y0) hi=m; else lo=m+1; }
+    off=n+lo; break;
+  }
+  if(off<0){ const m=host.scrollHeight-host.clientHeight; off=Math.floor((m>0?host.scrollTop/m:0)*TXTRAW.length); }
+  const T=TXTRAW; let ls=T.lastIndexOf('\n',Math.max(0,off-1))+1;
+  // 빈 줄이면 아래로 내려가 첫 글줄
+  for(let k=0;k<30&&ls<T.length&&!txtLineAt(ls);k++){ const e=T.indexOf('\n',ls); if(e<0)break; ls=e+1; }
+  return ls;
 }
 async function epubToc(){
   try{
@@ -7215,7 +7483,7 @@ async function pdfToc(){
 }
 async function getToc(){
   if(TOCS)return TOCS;
-  TOCS = KIND==='txt' ? txtToc() : KIND==='pdf' ? await pdfToc() : await epubToc();
+  TOCS = KIND==='txt' ? txtToc(false) : KIND==='pdf' ? await pdfToc() : await epubToc();
   return TOCS;
 }
 /* 지금 읽는 자리에 해당하는 목차 줄 */
@@ -7258,12 +7526,15 @@ function tocGo(x){
 }
 async function paintToc(){
   const list=$('#tocList'), none=$('#tocNone');
+  const te=$('#tocEdit'); if(te){ te.style.display=KIND==='txt'?'':'none'; te.textContent=TOCED?'다 고침':'손보기'; te.classList.toggle('good',TOCED); }
+  if(KIND!=='txt')TOCED=false;
+  $('#tocEdBar').classList.toggle('on',TOCED);
   list.innerHTML=''; none.style.display='block'; none.textContent='목차를 찾는 중…';
-  const a=await getToc();
+  const a=TOCED?txtToc(true):await getToc();
   $('#tocTitle').textContent=a.length?`목차 (${a.length})`:'목차';
   if(!a.length){
     none.textContent = KIND==='txt'
-      ? '목차로 삼을 줄을 찾지 못했습니다.\n「제1장 · 1화 · 프롤로그 · Chapter 1 · [3화]」 같은 짧은 줄이 있으면 목차가 됩니다.'
+      ? '목차로 삼을 줄을 찾지 못했습니다.\n「제1장 · 1화 · 프롤로그 · Chapter 1 · [3화]」 같은 짧은 줄이 있으면 목차가 됩니다.\n위의 [손보기]로 장 제목 줄을 직접 넣을 수 있습니다.'
       : KIND==='pdf' ? '이 PDF 에는 목차(책갈피)가 들어 있지 않습니다.\n위 막대의 🔖 로 직접 표시해 두실 수 있습니다.'
       : '이 책에는 목차가 들어 있지 않습니다.';
     return;
@@ -7275,6 +7546,13 @@ async function paintToc(){
     b.className=(x.d?'d'+x.d:'')+(i===now?' on':'');
     const w = KIND==='pdf' ? (x.go?x.go+'쪽':'') : (x.at!=null?Math.round(x.at*100)+'%':'');
     b.innerHTML=`<span>${esc(x.t)}</span><span class="p">${esc(w)}</span>`;
+    if(TOCED){ if(x.gone)b.classList.add('gone'); if(x.man)b.classList.add('man');
+      const k=document.createElement('span'); k.className='x'; k.textContent=x.gone?'넣기':'빼기';
+      k.onclick=ev=>{ ev.stopPropagation(); const ls=x.ls;
+        tceSet(e=>{ if(x.gone){ e.r=e.r.filter(v=>v!==ls); }
+                    else if(x.man){ e.a=e.a.filter(v=>v!==ls); }
+                    else e.r.push(ls); }); };
+      b.appendChild(k); }
     b.onclick=()=>tocGo(x);
     f.appendChild(b);
   });
@@ -7284,6 +7562,15 @@ async function paintToc(){
 PANS.push('#panToc');
 $('#btnToc').onclick=()=>{ pan('#panToc',true); paintToc(); };
 $('#tocClose').onclick=panOff;
+$('#tocEdit').onclick=()=>{ TOCED=!TOCED; paintToc(); };
+$('#tocAddTop').onclick=()=>{ if(KIND!=='txt')return; const ls=txtTopLine();
+  if(ls<0){ toast('줄을 찾지 못했습니다'); return; }
+  const t=txtLineAt(ls); if(!t){ toast('빈 줄입니다 — 장 제목 줄이 화면 맨 위에 오게 해 주세요'); return; }
+  const auto=t.length<=50&&TOC_RE.test(t);       // 원래 목차로 잡히는 줄이면 '뺀 표시'만 지우면 됩니다
+  tceSet(e=>{ e.r=e.r.filter(v=>v!==ls); if(!auto)e.a.push(ls); });
+  toast('목차에 넣었습니다\n「'+(t.length>30?t.slice(0,30)+'…':t)+'」'); };
+$('#tocReset').onclick=()=>{ if(!curB)return; if(!confirm('이 책의 목차를 처음 찾은 대로 되돌립니다.'))return;
+  tceSet(e=>{ e.a=[]; e.r=[]; }); };
 
 /* ══════════ 탐색기 (폴더 보기) ══════════
    드라이브에 정리해 둔 폴더를 그대로 둘러봅니다.
@@ -7670,6 +7957,43 @@ function paintBmList(){
 }
 $$('#hlTab button').forEach(x=>x.onclick=()=>{ HLTAB=x.dataset.v; paintHl(); });
 
+/* ══════════ v56 — 오늘의 밑줄 ══════════
+   예전에 그은 형광펜을 날마다 몇 개씩 다시 보여 줍니다 (오래 안 본 것부터 — 간격 두고 다시 보기).
+   ebl_hlday = {d:날짜, ids:[오늘 고른 것]} · ebl_hlseen = {형광펜번호: 마지막으로 보여 준 날}  — 이 기기만 */
+let HLDAY_N=0;
+function paintHomeHl(){
+  const host=$('#hHl'); if(!host)return; host.innerHTML='';
+  const c=homeCfg(); if(c.hide.hl){ return; }
+  const N=homeSize('hl')||3, today=dkey();
+  const byId=new Map(BOOKS.map(b=>[b.i,b]));
+  const all=[]; Object.entries(HL).forEach(([bk,arr])=>(arr||[]).forEach(o=>{ if(o&&!isBm(o)&&o.t&&String(o.t).trim().length>=4)all.push({o,bk}); }));
+  if(!all.length){ host.innerHTML='<div class="hh"><b>오늘의 밑줄</b></div><div class="hlc" style="cursor:default;border-left-color:var(--line)"><div class="b">아직 그은 형광펜이 없습니다. 책을 읽다가 마음에 드는 글을 그으면 여기에 날마다 다시 나옵니다.</div></div>'; return; }
+  const lj=(k)=>{ try{ return JSON.parse(localStorage.getItem(k)||'{}')||{}; }catch(e){ return {}; } };
+  const seen=lj('ebl_hlseen'), day=lj('ebl_hlday');
+  const has=new Set(all.map(x=>x.o.i));
+  let ids=(day.d===today&&HLDAY_N===(day.n||0))?(day.ids||[]).filter(i=>has.has(i)):[];
+  if(ids.length<Math.min(N,all.length)){
+    const cand=all.filter(x=>!ids.includes(x.o.i))
+      .sort((a,b)=>((seen[a.o.i]||'')<(seen[b.o.i]||'')?-1:(seen[a.o.i]||'')>(seen[b.o.i]||'')?1:((a.o.at||0)-(b.o.at||0))));
+    // 오래 안 본 것 가운데서 조금 섞어 고릅니다 (늘 같은 순서가 되지 않게)
+    const pool=cand.slice(0,Math.max(N*4,12)); let seed=0; for(const ch of today+HLDAY_N)seed=(seed*31+ch.charCodeAt(0))>>>0;
+    while(ids.length<N&&pool.length){ seed=(seed*1103515245+12345)>>>0; ids.push(pool.splice(seed%pool.length,1)[0].o.i); }
+    ids.forEach(i=>seen[i]=today);
+    try{ localStorage.setItem('ebl_hlseen',JSON.stringify(seen)); localStorage.setItem('ebl_hlday',JSON.stringify({d:today,n:HLDAY_N,ids})); }catch(e){}
+  }
+  const hh=document.createElement('div'); hh.className='hh';
+  hh.innerHTML='<b>오늘의 밑줄</b>'+(all.length>N?'<button id="hHlMore">다른 밑줄 ›</button>':'');
+  host.appendChild(hh);
+  ids.slice(0,N).forEach(id=>{ const x=all.find(y=>y.o.i===id); if(!x)return;
+    const b=byId.get(x.bk), bt=(b&&b.t)||x.o.bt||'(목록에 없는 책)';
+    const d=document.createElement('div'); d.className='hlc'; d.style.borderLeftColor=COLS[x.o.col]||COLS.y;
+    d.innerHTML=`<div class="q">${esc(x.o.t)}</div>`+(x.o.n?`<div class="m">${esc(x.o.n)}</div>`:'')
+      +`<div class="b">${esc(bt)}${x.o.at?'  ·  '+esc(dayOf(x.o.at)):''}</div>`;
+    d.onclick=()=>hlAllGo(x.o,x.bk,b);
+    host.appendChild(d); });
+  const mb=$('#hHlMore'); if(mb) mb.onclick=e=>{ e.stopPropagation(); HLDAY_N++; paintHomeHl(); };
+}
+
 /* ══════════ 모은 형광펜 · 책갈피 ══════════
    모든 책에 그은 것을 한곳에서 찾고, 누르면 그 책 그 자리로 갑니다.
    읽은 기록처럼 각자의 것만 보입니다 (식구 것은 안 보입니다). */
@@ -7812,6 +8136,7 @@ function paintPin(){
 }
 $('#mkDone').onclick=()=>{ if(!curB)return; markRead(curB.i,1,true);
   toast('다 읽음으로 표시했습니다'); };
+$('#mkStop').onclick=()=>{ if(!curB)return; markStop(curB.i); panOff(); toast('중단으로 표시했습니다\n다시 읽어 나가면 저절로 읽는 중이 됩니다',3500); };
 $('#mkReading').onclick=()=>{ if(!curB)return; markRead(curB.i,null,false,true);
   toast('읽는 중으로 되돌렸습니다'); };
 /* 내용만 확인하려고 열어본 책을 목록에서 빼는 자리 */
