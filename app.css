@@ -718,3 +718,33 @@
   #toast{position:fixed;left:50%;bottom:calc(var(--sb) + 22px);transform:translateX(-50%);
     background:#222831f2;border:1px solid var(--line);padding:11px 16px;border-radius:10px;
     font-size:13px;z-index:90;display:none;max-width:88%;text-align:center;white-space:pre-wrap;color:var(--tx)}
+/* v57 — 자동 넘김 막대 */
+#autobar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 58px);z-index:7;display:none;align-items:center;gap:6px;
+  padding:6px 8px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 6px 24px #0005}
+#autobar.on{display:flex}
+#autobar button{min-width:38px;height:34px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--tx);font-size:15px}
+#autobar #autoSpd{min-width:76px;text-align:center;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+#rbar #btnAuto.good{background:var(--acc);border-color:var(--acc);color:#0b1220}
+/* v57 — 책 지도 */
+#bookMap .bmS{font-size:12px;color:var(--dim);margin:0 0 8px}
+#bookMap .bmr{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:2px 8px;padding:7px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+#bookMap .bmr.cur .t{color:var(--acc);font-weight:600}
+#bookMap .bmr .t{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bookMap .bmr .n{grid-row:1 / span 2;grid-column:2;align-self:center;text-align:right;font-size:11px;color:var(--dim)}
+#bookMap .bmr .bar{position:relative;height:12px;border-radius:6px;background:var(--line);overflow:visible}
+#bookMap .bmr .bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--acc);opacity:.45}
+#bookMap .bmr .bar>b{position:absolute;top:-2px;width:8px;height:16px;margin-left:-4px;border-radius:3px;border:1px solid #0004;cursor:pointer}
+#bookMap .bmr .bar>b.memo{border:2px solid var(--tx)}
+#bookMap .bmr .bar>b.bm{background:none !important;border:none;width:10px;margin-left:-5px}
+#bookMap .bmr .bar>b.bm::before{content:'🔖';font-size:11px;position:absolute;top:-1px;left:-1px}
+/* v57 — 이 저자의 책 · 같은 시리즈 */
+#plBody .plh{font-size:12px;color:var(--dim);margin:12px 2px 4px;font-weight:600}
+#plBody .plr{display:flex;width:100%;align-items:center;gap:10px;text-align:left;padding:10px 6px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--tx)}
+#plBody .plr .t{flex:1 1 auto;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#plBody .plr .m{flex:0 0 auto;font-size:11.5px;color:var(--dim)}
+#plBody .plr.cur .t{color:var(--acc)}
+/* v57 — 읽기 기록 */
+#rstat{margin:10px 0 4px}
+#rstat .rh{font-size:13px;font-weight:600;margin:4px 0}
+#rstat .rr{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+#rstat .rr b{font-weight:600;font-variant-numeric:tabular-nums}

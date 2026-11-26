@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>서재</title>
-<link rel="stylesheet" href="app.css?v=56.1">
+<link rel="stylesheet" href="app.css?v=57">
 </head>
 <body>
 
@@ -131,11 +131,17 @@
     <button class="ib" id="btnToc" title="목차">목차</button>
     <button class="ib" id="btnBm" title="책갈피 꽂기·빼기">🔖</button>
     <button class="ib" id="btnHl" title="형광펜·메모·책갈피 목록">메모</button>
+    <button class="ib" id="btnAuto" title="자동 넘김 (A)" aria-label="자동 넘김">▶</button>
     <button class="ib" id="btnAa">Aa</button>
   </div>
   <div id="rfoot"></div>
   <div id="ruler"><div class="rt"></div><div class="rbd"><span class="rh" title="끌어서 옮기기">≡</span></div><div class="rb"></div></div>
   <div id="ttsov"></div>
+  <div id="autobar" aria-label="자동 넘김">
+    <button id="autoPlay" title="멈춤·다시">⏸</button>
+    <button id="autoSlow" title="느리게">−</button><span id="autoSpd"></span><button id="autoFast" title="빠르게">+</button>
+    <button id="autoStop" title="끝내기">끝</button>
+  </div>
   <div id="ttsbar">
     <button id="ttsPrev" title="앞 문장">⏮</button>
     <button id="ttsPlay" class="big" title="읽기 / 멈춤">▶</button>
@@ -182,6 +188,7 @@
   <button class="col" data-c="p" style="background:#ffa8c8"></button>
   <div class="sep"></div>
   <button class="tx" id="selMemo">메모</button>
+  <button class="tx" id="selAll" style="display:none" title="이 책 전체에서 같은 글귀를 한꺼번에 칠합니다">모두 칠하기</button>
   <button class="tx" id="selCopy">복사</button>
   <button class="tx" id="selFind" title="이 책에서 찾기">찾기</button>
   <button class="tx" id="selTr" title="번역 (구글)">번역</button>
@@ -351,7 +358,7 @@
     <select id="ttsVoice" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--tx)"></select></div>
   <div class="grp"><div class="lb"><span>빠르기</span><span id="vTtsRate"></span></div>
     <input type="range" id="rgTtsRate" min="50" max="250" step="10"></div>
-  <div class="grp"><div class="lb">대사 목소리 <span style="opacity:.7">· “ ” 「 」 『 』 ‘ ’ 안의 말</span></div>
+  <div class="grp"><div class="lb">대사 목소리 <span style="opacity:.7">· “ ” 「 」 『 』 안의 말 (‘ ’ 도, 속마음을 따로 하지 않으면)</span></div>
     <div class="seg" id="segDual">
       <button data-v="0">서술과 같이</button><button data-v="1">대사는 따로</button>
     </div>
@@ -360,6 +367,19 @@
       <div class="lb" style="margin-top:8px"><span>대사 높낮이</span><span id="vPitch2"></span></div>
       <input type="range" id="rgPitch2" min="70" max="160" step="5">
     </div></div>
+  <div class="grp"><div class="lb">속마음 목소리 <span style="opacity:.7">· ‘ ’ ' ' 안의 말 (켜지 않으면 대사처럼)</span></div>
+    <div class="seg" id="segInner">
+      <button data-v="0">대사와 같이</button><button data-v="1">속마음은 따로</button>
+    </div>
+    <div id="innerBox" style="margin-top:8px">
+      <select id="ttsVoice3" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--tx)"></select>
+      <div class="lb" style="margin-top:8px"><span>속마음 높낮이</span><span id="vPitch3"></span></div>
+      <input type="range" id="rgPitch3" min="60" max="150" step="5">
+    </div></div>
+  <div class="grp"><div class="lb"><span>쉼 — 문장 사이</span><span id="vGapS"></span></div>
+    <input type="range" id="rgGapS" min="0" max="1500" step="100">
+    <div class="lb" style="margin-top:6px"><span>쉼 — 문단 사이</span><span id="vGapP"></span></div>
+    <input type="range" id="rgGapP" min="0" max="3000" step="100"></div>
   <div class="grp"><div class="lb">한자</div>
     <div class="seg" id="segHanja">
       <button data-v="1">한글 음으로 읽기</button><button data-v="0">그대로</button>
@@ -386,6 +406,8 @@
 
 <div class="pan" id="panToc">
   <h4><span id="tocTitle">목차</span> <span><button id="tocEdit" style="display:none;margin-right:12px">손보기</button><button id="tocClose">닫기</button></span></h4>
+  <div class="seg" id="tocMode" style="margin:0 0 8px"><button data-v="toc" class="on">목차</button><button data-v="map">책 지도</button></div>
+  <div id="bookMap"></div>
   <div id="tocEdBar">
     <button id="tocAddTop">＋ 지금 화면 맨 위 줄을 장으로</button>
     <button id="tocReset">처음 목록으로</button>
@@ -420,6 +442,14 @@
     <button id="memoDel">지우기</button>
     <button id="memoOk" class="on">저장</button>
   </div>
+  <div class="seg" style="margin-top:8px;display:none" id="memoGrpBox"><button id="memoGrpDel">같이 칠한 곳 모두 지우기</button></div>
+</div>
+
+<!-- v57 — 이 저자의 책 · 같은 시리즈 -->
+<div class="pan" id="panList">
+  <h4><span id="plT"></span> <button data-close>닫기</button></h4>
+  <div class="note" id="plS" style="font-size:12px;color:var(--dim);margin:-4px 0 8px"></div>
+  <div id="plBody"></div>
 </div>
 
 <!-- 책 하나에 대한 손질 (표지를 길게 누르면) -->
@@ -757,6 +787,7 @@
     <div class="note" id="calSum"></div>
     <div id="calGrid"></div>
     <div id="calDay"></div>
+    <div id="rstat"></div>
     <div class="note">책을 펼쳐 두고 손을 댄 시간만 셉니다. 5분 넘게 아무것도 안 하면 멈춥니다.
       '기록 안 함' 으로 연 책은 세지 않습니다. 각자의 기록만 보입니다.</div>
     <div class="btns"><button id="calClose" class="pri">닫기</button></div>
@@ -865,18 +896,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
-<script src="js/01-core.js?v=56.1"></script>
-<script src="js/02-books.js?v=56.1"></script>
-<script src="js/03-reader.js?v=56.1"></script>
-<script src="js/04-group-sync.js?v=56.1"></script>
-<script src="js/05-pdf-txt.js?v=56.1"></script>
-<script src="js/06-panels.js?v=56.1"></script>
-<script src="js/07-home.js?v=56.1"></script>
-<script src="js/08-family.js?v=56.1"></script>
-<script src="js/09-reader-extra.js?v=56.1"></script>
-<script src="js/10-comic-tts.js?v=56.1"></script>
-<script src="js/11-shelves.js?v=56.1"></script>
-<script src="js/12-app.js?v=56.1"></script>
+<script src="js/01-core.js?v=57"></script>
+<script src="js/02-books.js?v=57"></script>
+<script src="js/03-reader.js?v=57"></script>
+<script src="js/04-group-sync.js?v=57"></script>
+<script src="js/05-pdf-txt.js?v=57"></script>
+<script src="js/06-panels.js?v=57"></script>
+<script src="js/07-home.js?v=57"></script>
+<script src="js/08-family.js?v=57"></script>
+<script src="js/09-reader-extra.js?v=57"></script>
+<script src="js/10-comic-tts.js?v=57"></script>
+<script src="js/11-shelves.js?v=57"></script>
+<script src="js/12-app.js?v=57"></script>
+<script src="js/13-engine-plus.js?v=57"></script>
+<script src="js/14-library-plus.js?v=57"></script>
 <!-- 구글 로그인은 우리 파일(onGis 가 있는 01-core)을 다 불러온 뒤에 -->
 <script src="https://accounts.google.com/gsi/client" async defer onload="onGis()"></script>
 </body>

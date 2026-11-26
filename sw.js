@@ -3,12 +3,12 @@
    책 파일과 색인은 IndexedDB 가 따로 맡습니다. */
 
 /* 고칠 때마다 이 번호를 올리면 옛 캐시가 버려집니다 */
-const V = 'ebl-v56.1';
+const V = 'ebl-v57';
 /* v56.1 — 앱이 여러 파일로 나뉨. index.html 이 부르는 주소(?v=판)와 똑같이 적어야 캐시가 맞습니다.
    파일을 더하거나 판을 올릴 때는 index.html 의 ?v= 와 여기 Q 를 함께 바꿉니다. */
-const Q = '?v=56.1';
+const Q = '?v=57';
 const JS = ['01-core','02-books','03-reader','04-group-sync','05-pdf-txt','06-panels','07-home',
-  '08-family','09-reader-extra','10-comic-tts','11-shelves','12-app'];
+  '08-family','09-reader-extra','10-comic-tts','11-shelves','12-app','13-engine-plus','14-library-plus'];
 const SHELL = ['./', './index.html', './manifest.json', './app.css' + Q, ...JS.map(n => './js/' + n + '.js' + Q),
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-32.png'];
 

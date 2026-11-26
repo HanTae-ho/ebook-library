@@ -4,10 +4,14 @@
 /* ══════════ v56 — 읽기 화면 위 막대 꾸미기 ══════════
    P.rbar = {order:[키], hide:{키:1}} — 이 기기만. '‹ 서재' 와 'Aa' 는 늘 보입니다 (Aa 에서 다시 켤 수 있게). */
 const RBK=[ {k:'pen',id:'btnPen',n:'펜 (PDF 필기)'}, {k:'draw',id:'btnDraw',n:'긋기'}, {k:'tts',id:'btnTts',n:'🔊 읽어주기'},
-  {k:'find',id:'btnFind',n:'🔍 이 책에서 찾기'}, {k:'toc',id:'btnToc',n:'목차'}, {k:'bm',id:'btnBm',n:'🔖 책갈피'}, {k:'hl',id:'btnHl',n:'메모 목록'} ];
+  {k:'find',id:'btnFind',n:'🔍 이 책에서 찾기'}, {k:'toc',id:'btnToc',n:'목차'}, {k:'bm',id:'btnBm',n:'🔖 책갈피'}, {k:'hl',id:'btnHl',n:'메모 목록'},
+  {k:'auto',id:'btnAuto',n:'▶ 자동 넘김'} ];
+const RB_DEF_OFF={auto:1};   // v57 — 새로 생긴 단추 가운데 처음엔 숨겨 두는 것
 function rbarCfg(){ const b=P.rbar||{}, known=RBK.map(x=>x.k);
   const order=(b.order||[]).filter(k=>known.includes(k)); known.forEach(k=>{ if(!order.includes(k))order.push(k); });
-  return {order, hide:Object.assign({},b.hide||{})}; }
+  const hide=Object.assign({},b.hide||{});
+  Object.keys(RB_DEF_OFF).forEach(k=>{ if(!(b.order||[]).includes(k)) hide[k]=1; });
+  return {order, hide}; }
 function applyRbar(){
   const bar=$('#rbar'), aa=$('#btnAa'); if(!bar||!aa)return; const c=rbarCfg();
   c.order.forEach(k=>{ const h=RBK.find(x=>x.k===k), el=h&&$('#'+h.id); if(!el)return;
@@ -76,6 +80,7 @@ function openPanBook(b){
   if(saved.has(b.i)) add('받아둔 파일 지우기','읽은 기록은 그대로 남습니다',
     async()=>{ try{ await DB.del('books',b.i); saved.delete(b.i); }catch(e){}
       toast('파일을 지웠습니다'); paintTabs(); render(true); },'warn');
+  try{ pbMore(b,add); }catch(e){ log('저자·시리즈 단추 실패: '+(e.message||e)); }   // v57
   add(rvOf(b.i)?'별점 · 한 줄 평 고치기':'별점 · 한 줄 평 남기기','',()=>openRv(b));
   if(hlOf(b.i).length) add('형광펜·메모를 옵시디언으로','이 책에 그은 것을 노트로',()=>openOb(b));
   if(b.u) add('드라이브에서 열기','',()=>window.open(b.u,'_blank','noopener'));
@@ -135,7 +140,7 @@ $('#fontMineDel').onclick=async()=>{ if(!confirm('이 기기에 넣은 내 글�
 mineLoad().then(ok=>{ try{ paintFontUi(); if(ok&&P.font==='mine'&&readerOn())applyRead(); }catch(e){} });
 /* v56 — 위 막대 꾸미기 */
 try{ applyRbar(); paintRbarList(); }catch(e){}
-$('#rbarReset').onclick=()=>{ P.rbar={order:RBK.map(x=>x.k),hide:{}}; savePref(); applyRbar(); paintRbarList(); toast('위 막대를 처음 상태로 되돌렸습니다'); };
+$('#rbarReset').onclick=()=>{ P.rbar={order:RBK.map(x=>x.k),hide:Object.assign({},RB_DEF_OFF)}; savePref(); applyRbar(); paintRbarList(); toast('위 막대를 처음 상태로 되돌렸습니다'); };
 seg('#segNav','nav',applyRead);
 seg('#segPnav','pnav',()=>{ if(KIND==='pdf'&&pdfDoc)buildPdf(); });
 seg('#segMode','mode',()=>render(true));

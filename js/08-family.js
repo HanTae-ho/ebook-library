@@ -1,5 +1,5 @@
 /* 우리 도서관 — js/08-family.js
-   식구 · 별점 · 옵시디언 · 전집 ZIP · 읽어주기 2 · 글 선택
+   식구 · 별점 · 옵시디언 · 전집 ZIP · 글 선택
    ※ 모든 파일이 같은 전역을 나눠 씁니다. index.html 에 적힌 순서(01 → 12)대로 불러와야 합니다. */
 /* ══════════ v44 — 식구 ══════════
    ① 서로의 서재  기본 끔. 켠 사람만 모임 칸에 한 줄(kind:'read', id:'read-번호') —
@@ -352,73 +352,7 @@ function nextVolOffer(id){
   $('#resumeGo').onclick=()=>{ $('#resumeBar').classList.remove('on'); closeReader(); setTimeout(()=>nv.nx.open(nv.items),60); };
 }
 
-/* ══════════ v40 — 읽어주기 2: 대사 목소리 · 한자 읽기 ══════════
-   한자 음은 hanja-eum.js (npm hanja 1.1.5, MIT) — 처음 필요할 때 한 번만 받습니다.
-   화면의 글은 바꾸지 않습니다 (형광펜 자리를 지키려고). 읽어주기와 글 고르기 막대에서만 씁니다. */
-const HANJA_RE=/[㐀-䶿一-鿿豈-﫿]/;
-function hanjaReady(){
-  if(window.HANJA_EUM)return Promise.resolve();
-  if(hanjaReady._p)return hanjaReady._p;
-  return (hanjaReady._p=new Promise((ok,ng)=>{
-    const sc=document.createElement('script'); sc.src='./hanja-eum.js';
-    sc.onload=()=>window.HANJA_EUM?ok():ng(new Error('비어 있음'));
-    sc.onerror=()=>{ hanjaReady._p=null; ng(new Error('hanja-eum.js 를 불러오지 못했습니다')); };
-    document.head.appendChild(sc); }));
-}
-function hanjaOf(ch){
-  const c=ch.codePointAt(0);
-  for(const [a,str] of (window.HANJA_EUM||[])){ if(c>=a&&c<a+str.length){ const r=str[c-a]; return r==='·'?'':r; } }
-  return '';
-}
-/* 두음 법칙 — 한자 낱말의 첫 글자, 그리고 모음·ㄴ 받침 뒤의 렬·률 */
-function dueum(h,first,prev){
-  const code=h.charCodeAt(0)-0xAC00; if(code<0||code>11171)return h;
-  let L=Math.floor(code/588), V=Math.floor(code%588/28), T=code%28;
-  const mk=()=>String.fromCharCode(0xAC00+L*588+V*28+T);
-  if((h==='렬'||h==='률')&&prev){ const pc=prev.charCodeAt(0)-0xAC00; const pt=pc>=0&&pc<=11171?pc%28:-1;
-    if(pt===0||pt===4){ L=11; return mk(); } }
-  if(!first)return h;
-  const iy=[2,6,7,12,17,20];                    // ㅑ ㅕ ㅖ ㅛ ㅠ ㅣ
-  if(L===2&&iy.includes(V)){ L=11; return mk(); }               // 녀→여
-  if(L===5&&iy.includes(V)){ L=11; return mk(); }               // 려→여
-  if(L===5){ L=2; return mk(); }                                // 라→나
-  return h;
-}
-/* 음이 여럿인 글자 가운데 낱말 안에서 거의 늘 다른 음으로 읽는 것 (사전에는 첫 음만 있습니다) */
-const HANJA_IN={'率':'률'};                 // 비율·확률·효율 (첫머리 率先 은 솔)
-function hanjaRead(t){
-  if(!HANJA_RE.test(t)||!window.HANJA_EUM)return t;
-  const cs=[...t]; let out='', run=false, prev='';
-  for(let i=0;i<cs.length;i++){ const ch=cs[i];
-    if(HANJA_RE.test(ch)){ let h=hanjaOf(ch);
-      if(run&&HANJA_IN[ch])h=HANJA_IN[ch];
-      // 不 은 ㄷ·ㅈ 앞에서 '부' (不足 부족, 不動 부동)
-      if(ch==='不'&&i+1<cs.length){ const n=hanjaOf(cs[i+1]); const L=n?Math.floor((n.charCodeAt(0)-0xAC00)/588):-1; if(L===3||L===12)h='부'; }
-      if(h){ const r=dueum(h,!run,prev); out+=r; prev=r; run=true; continue; } }
-    out+=ch; run=false; prev='';
-  }
-  return out;
-}
-/* 괄호 안 한자가 바로 앞 한글과 같은 음이면 겹쳐 읽지 않습니다: 學校(학교) → 학교, 학교(學校) → 학교 */
-const _hr=hanjaRead;
-hanjaRead=function(t){
-  if(!HANJA_RE.test(t))return t;
-  t=t.replace(/([가-힣]{1,8})\s*[(（]([㐀-鿿豈-﫿]{1,8})[)）]/g,(m,k,h)=>_hr(h)===k?k:m)
-     .replace(/([㐀-鿿豈-﫿]{1,8})\s*[(（]([가-힣]{1,8})[)）]/g,(m,h,k)=>_hr(h)===k?k:m);
-  return _hr(t);
-};
-seg('#segDual','ttsDual',()=>{ $('#dualBox').style.display=P.ttsDual?'':'none'; TTS.dirty=true; });
-seg('#segHanja','ttsHanja',()=>{ if(P.ttsHanja)hanjaReady().catch(()=>toast('한자 사전을 받지 못했습니다')); });
-$('#ttsVoice2').onchange=()=>{ P.ttsVoice2=$('#ttsVoice2').value; savePref(); };
-$('#rgPitch2').oninput=()=>{ P.ttsPitch2=Number($('#rgPitch2').value); savePref(); $('#vPitch2').textContent=(P.ttsPitch2/100).toFixed(2); };
-/* 글 고르기 막대 — 한자를 고르면 음을 함께 보입니다 */
-function selHanjaPv(){
-  const t=PICK&&PICK.t; if(!t||!HANJA_RE.test(t))return;
-  const go=()=>{ if(!PICK||PICK.t!==t)return;
-    const r=hanjaRead(t.replace(/\s+/g,' ').slice(0,40)); const el=$('#selpv');
-    if(el&&r!==t)el.textContent='"'+t.replace(/\s+/g,' ').slice(0,40)+'"  →  '+r; };
-  window.HANJA_EUM?go():hanjaReady().then(go).catch(()=>{});
-}
+/* (v57) 읽어주기 2 — 대사 목소리 · 한자 읽기 는 js/10-comic-tts.js 끝으로 옮김 (읽어주기와 한곳에) */
 
 /* ══════════ v39 — 글 선택 메뉴 · 이 책에서 찾기 · 단축키 · 마우스 ══════════ */
 function selWord(){ return PICK&&PICK.t ? PICK.t.replace(/\s+/g,' ').trim().slice(0,60) : ''; }

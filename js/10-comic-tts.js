@@ -1,5 +1,5 @@
 /* 우리 도서관 — js/10-comic-tts.js
-   만화 뷰어 · 읽어주기
+   만화 뷰어 · 읽어주기 · 읽어주기 2(대사·속마음 목소리, 한자 읽기, 쉼)
    ※ 모든 파일이 같은 전역을 나눠 씁니다. index.html 에 적힌 순서(01 → 12)대로 불러와야 합니다. */
 /* ══════════ v35 — 만화 뷰어 (CBZ · ZIP) ══════════
    ★ ZIP 을 통째로 받지 않습니다.
@@ -498,6 +498,8 @@ function splitChunks(text){
 /* v40 — 대사 구간 찾기. 여는 따옴표에서 닫는 따옴표까지 (빈 줄을 넘지 않고 600자 안).
    " 는 열고 닫는 모양이 같아 번갈아 셉니다. 영어의 ' (don't) 를 피하려고 ' 는 쓰지 않습니다. */
 const QPAIR={'“':'”','「':'」','『':'』','‘':'’','"':'"','《':'》'};
+/* v57 — 세 번째 값이 2 면 속마음(‘ ’ · ' '), 1 이면 대사.
+   ' 는 속마음 목소리를 켰을 때만, 앞이 빈칸·문장부호이고 안에 한글이 있을 때만 셉니다 (영어 don't 를 피하려고). */
 function quoteSpans(text){
   const sp=[]; let i=0;
   while(i<text.length){
@@ -505,7 +507,12 @@ function quoteSpans(text){
     if(cl&&ch!=='《'){
       let j=i+1, lim=Math.min(text.length,i+600);
       while(j<lim&&text[j]!==cl){ if(text[j]==='\n'&&text[j+1]==='\n')break; j++; }
-      if(j<lim&&text[j]===cl){ sp.push([i,j+1]); i=j+1; continue; }
+      if(j<lim&&text[j]===cl){ sp.push([i,j+1,ch==='‘'?2:1]); i=j+1; continue; }
+    }
+    if(ch==="'"&&P.ttsInner&&(i===0||/[\s(“"「『,.…!?—\-]/.test(text[i-1]))){
+      let j=i+1, lim=Math.min(text.length,i+300);
+      while(j<lim&&text[j]!=="'"&&text[j]!=='\n')j++;
+      if(j<lim&&text[j]==="'"&&j-i>2&&/[가-힣]/.test(text.slice(i+1,j))){ sp.push([i,j+1,2]); i=j+1; continue; }
     }
     i++;
   }
@@ -522,7 +529,7 @@ function splitQuotes(text,chunks){
       const q=sp[j];
       if(!q||q[0]>=c.e){ out.push({s,e:c.e}); break; }
       if(q[0]>s){ out.push({s,e:q[0]}); s=q[0]; continue; }
-      const e=Math.min(c.e,q[1]); out.push({s,e,q:1}); s=e; if(e>=q[1])j++;
+      const e=Math.min(c.e,q[1]); out.push({s,e,q:q[2]||1}); s=e; if(e>=q[1])j++;
     }
   });
   return out;
@@ -640,12 +647,21 @@ function ttsSpeak(){
   const u=new SpeechSynthesisUtterance(say);
   u.lang='ko-KR'; u.rate=P.ttsRate||1;
   let v=pickVoice();
-  if(c.q&&P.ttsDual){
+  if(c.q===2&&P.ttsInner){                      // v57 — 속마음
+    const v3=VOICES.find(x=>x.voiceURI===P.ttsVoice3); if(v3)v=v3;
+    u.pitch=(P.ttsPitch3||90)/100;
+  } else if(c.q&&P.ttsDual){
     const v2=VOICES.find(x=>x.voiceURI===P.ttsVoice2); if(v2)v=v2;
     u.pitch=(P.ttsPitch2||115)/100;
   }
   if(v){ u.voice=v; u.lang=v.lang; }
-  u.onend=()=>{ if(my!==TTS.gen||!TTS.playing)return; TTS.k++; ttsSpeak(); };
+  u.onend=()=>{ if(my!==TTS.gen||!TTS.playing)return; TTS.k++;
+    // v57 — 쉼: 문단이 바뀌면 문단 쉼, 문장이 끝나면 문장 쉼 (둘 다 0 이면 예전처럼 바로)
+    const nx=TTS.chunks[TTS.k]; let gap=0;
+    if(nx&&(P.ttsGapS||P.ttsGapP)){ const mid=TTS.text.slice(c.e,nx.s);
+      if(/\n/.test(mid)) gap=P.ttsGapP||0; else if(/[.!?。…]["”’」』']?$/.test(c.t)) gap=P.ttsGapS||0; }
+    if(!gap){ ttsSpeak(); return; }
+    const g=TTS.gen; setTimeout(()=>{ if(g===TTS.gen&&TTS.playing)ttsSpeak(); },gap); };
   u.onerror=e=>{ if(my!==TTS.gen||!TTS.playing)return;
     if(e&&(e.error==='interrupted'||e.error==='canceled'))return;
     log('읽어주기 오류: '+(e&&e.error)); TTS.k++; setTimeout(ttsSpeak,200); };
@@ -742,6 +758,7 @@ function paintTtsPan(){
   VOICES.forEach(v=>{ const o=document.createElement('option'); o.value=v.voiceURI;
     o.textContent=v.name+(v.localService===false?' (온라인)':''); if(v.voiceURI===P.ttsVoice2)o.selected=true; s2.appendChild(o); });
   segSet('#segDual',P.ttsDual||0); $('#dualBox').style.display=P.ttsDual?'':'none';
+  try{ ttsPan57(); }catch(e){}
   $('#rgPitch2').value=P.ttsPitch2||115; $('#vPitch2').textContent=((P.ttsPitch2||115)/100).toFixed(2);
   segSet('#segHanja',P.ttsHanja??1);
   const left=TTS.until?Math.ceil((TTS.until-Date.now())/60000):0;
@@ -760,3 +777,86 @@ $('#rgTtsRate').oninput=()=>setRate(Number($('#rgTtsRate').value)/100);
 $$('#segTimer button').forEach(b=>b.onclick=()=>{ const m=Number(b.dataset.v);
   TTS.until=m?Date.now()+m*60000:0; segSet('#segTimer',m); paintTts(); });
 
+/* ══════════ v40 — 읽어주기 2: 대사 목소리 · 한자 읽기 ══════════
+   한자 음은 hanja-eum.js (npm hanja 1.1.5, MIT) — 처음 필요할 때 한 번만 받습니다.
+   화면의 글은 바꾸지 않습니다 (형광펜 자리를 지키려고). 읽어주기와 글 고르기 막대에서만 씁니다. */
+const HANJA_RE=/[㐀-䶿一-鿿豈-﫿]/;
+function hanjaReady(){
+  if(window.HANJA_EUM)return Promise.resolve();
+  if(hanjaReady._p)return hanjaReady._p;
+  return (hanjaReady._p=new Promise((ok,ng)=>{
+    const sc=document.createElement('script'); sc.src='./hanja-eum.js';
+    sc.onload=()=>window.HANJA_EUM?ok():ng(new Error('비어 있음'));
+    sc.onerror=()=>{ hanjaReady._p=null; ng(new Error('hanja-eum.js 를 불러오지 못했습니다')); };
+    document.head.appendChild(sc); }));
+}
+function hanjaOf(ch){
+  const c=ch.codePointAt(0);
+  for(const [a,str] of (window.HANJA_EUM||[])){ if(c>=a&&c<a+str.length){ const r=str[c-a]; return r==='·'?'':r; } }
+  return '';
+}
+/* 두음 법칙 — 한자 낱말의 첫 글자, 그리고 모음·ㄴ 받침 뒤의 렬·률 */
+function dueum(h,first,prev){
+  const code=h.charCodeAt(0)-0xAC00; if(code<0||code>11171)return h;
+  let L=Math.floor(code/588), V=Math.floor(code%588/28), T=code%28;
+  const mk=()=>String.fromCharCode(0xAC00+L*588+V*28+T);
+  if((h==='렬'||h==='률')&&prev){ const pc=prev.charCodeAt(0)-0xAC00; const pt=pc>=0&&pc<=11171?pc%28:-1;
+    if(pt===0||pt===4){ L=11; return mk(); } }
+  if(!first)return h;
+  const iy=[2,6,7,12,17,20];                    // ㅑ ㅕ ㅖ ㅛ ㅠ ㅣ
+  if(L===2&&iy.includes(V)){ L=11; return mk(); }               // 녀→여
+  if(L===5&&iy.includes(V)){ L=11; return mk(); }               // 려→여
+  if(L===5){ L=2; return mk(); }                                // 라→나
+  return h;
+}
+/* 음이 여럿인 글자 가운데 낱말 안에서 거의 늘 다른 음으로 읽는 것 (사전에는 첫 음만 있습니다) */
+const HANJA_IN={'率':'률'};                 // 비율·확률·효율 (첫머리 率先 은 솔)
+function hanjaRead(t){
+  if(!HANJA_RE.test(t)||!window.HANJA_EUM)return t;
+  const cs=[...t]; let out='', run=false, prev='';
+  for(let i=0;i<cs.length;i++){ const ch=cs[i];
+    if(HANJA_RE.test(ch)){ let h=hanjaOf(ch);
+      if(run&&HANJA_IN[ch])h=HANJA_IN[ch];
+      // 不 은 ㄷ·ㅈ 앞에서 '부' (不足 부족, 不動 부동)
+      if(ch==='不'&&i+1<cs.length){ const n=hanjaOf(cs[i+1]); const L=n?Math.floor((n.charCodeAt(0)-0xAC00)/588):-1; if(L===3||L===12)h='부'; }
+      if(h){ const r=dueum(h,!run,prev); out+=r; prev=r; run=true; continue; } }
+    out+=ch; run=false; prev='';
+  }
+  return out;
+}
+/* 괄호 안 한자가 바로 앞 한글과 같은 음이면 겹쳐 읽지 않습니다: 學校(학교) → 학교, 학교(學校) → 학교 */
+const _hr=hanjaRead;
+hanjaRead=function(t){
+  if(!HANJA_RE.test(t))return t;
+  t=t.replace(/([가-힣]{1,8})\s*[(（]([㐀-鿿豈-﫿]{1,8})[)）]/g,(m,k,h)=>_hr(h)===k?k:m)
+     .replace(/([㐀-鿿豈-﫿]{1,8})\s*[(（]([가-힣]{1,8})[)）]/g,(m,h,k)=>_hr(h)===k?k:m);
+  return _hr(t);
+};
+seg('#segDual','ttsDual',()=>{ $('#dualBox').style.display=P.ttsDual?'':'none'; TTS.dirty=true; });
+seg('#segHanja','ttsHanja',()=>{ if(P.ttsHanja)hanjaReady().catch(()=>toast('한자 사전을 받지 못했습니다')); });
+$('#ttsVoice2').onchange=()=>{ P.ttsVoice2=$('#ttsVoice2').value; savePref(); };
+$('#rgPitch2').oninput=()=>{ P.ttsPitch2=Number($('#rgPitch2').value); savePref(); $('#vPitch2').textContent=(P.ttsPitch2/100).toFixed(2); };
+/* v57 — 속마음 목소리 · 쉼 */
+function ttsPan57(){
+  const s3=$('#ttsVoice3'); if(!s3)return; s3.innerHTML='<option value="">서술과 같은 목소리 (높낮이만 바꿈)</option>';
+  VOICES.forEach(v=>{ const o=document.createElement('option'); o.value=v.voiceURI;
+    o.textContent=v.name+(v.localService===false?' (온라인)':''); if(v.voiceURI===P.ttsVoice3)o.selected=true; s3.appendChild(o); });
+  segSet('#segInner',P.ttsInner||0); $('#innerBox').style.display=P.ttsInner?'':'none';
+  $('#rgPitch3').value=P.ttsPitch3||90; $('#vPitch3').textContent=((P.ttsPitch3||90)/100).toFixed(2);
+  const gs=P.ttsGapS||0, gp=P.ttsGapP||0;
+  $('#rgGapS').value=gs; $('#vGapS').textContent=gs?(gs/1000).toFixed(1)+'초':'없음';
+  $('#rgGapP').value=gp; $('#vGapP').textContent=gp?(gp/1000).toFixed(1)+'초':'없음';
+}
+seg('#segInner','ttsInner',()=>{ $('#innerBox').style.display=P.ttsInner?'':'none'; TTS.dirty=true; });
+$('#ttsVoice3').onchange=()=>{ P.ttsVoice3=$('#ttsVoice3').value; savePref(); };
+$('#rgPitch3').oninput=()=>{ P.ttsPitch3=Number($('#rgPitch3').value); savePref(); $('#vPitch3').textContent=(P.ttsPitch3/100).toFixed(2); };
+$('#rgGapS').oninput=()=>{ P.ttsGapS=Number($('#rgGapS').value); savePref(); ttsPan57(); };
+$('#rgGapP').oninput=()=>{ P.ttsGapP=Number($('#rgGapP').value); savePref(); ttsPan57(); };
+/* 글 고르기 막대 — 한자를 고르면 음을 함께 보입니다 */
+function selHanjaPv(){
+  const t=PICK&&PICK.t; if(!t||!HANJA_RE.test(t))return;
+  const go=()=>{ if(!PICK||PICK.t!==t)return;
+    const r=hanjaRead(t.replace(/\s+/g,' ').slice(0,40)); const el=$('#selpv');
+    if(el&&r!==t)el.textContent='"'+t.replace(/\s+/g,' ').slice(0,40)+'"  →  '+r; };
+  window.HANJA_EUM?go():hanjaReady().then(go).catch(()=>{});
+}

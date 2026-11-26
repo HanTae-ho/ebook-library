@@ -166,7 +166,7 @@ async function showReader(b,buf){
   openShell(b);
   book=ePub(buf);
   rend=book.renderTo('page',{width:'100%',height:'100%',flow:'paginated',spread:'none'});
-  try{ rend.hooks.content.register(c=>fontInto(c.document)); }catch(e){}   // v56 — 고른 글꼴을 책 안쪽에도
+  try{ rend.hooks.content.register(c=>{ fontInto(c.document); try{ autoIframe(c.document); }catch(e){} }); }catch(e){}   // v56 글꼴 · v57 자동 넘김 멈춤
   try{ book.coverUrl().then(u=>{ if(u)saveCover(b.i,u); }).catch(()=>{}); }catch(e){}
   applyRead();
   const cfi=(RD[b.i]&&RD[b.i].c)||localStorage.getItem('ebl_pos_'+b.i);   // v55.5 — 다른 기기에서 읽던 자리
@@ -250,6 +250,7 @@ let PICKBOX=null;  // 그은 글이 화면에서 차지하는 자리
 const MENU_H=52;          // 사파리 메뉴가 차지하는 높이쯤
 function selbarAt(){
   const b=$('#selbar'); b.classList.add('on');
+  try{ selAllShow(); }catch(e){}
   $('#selpv').textContent = PICK&&PICK.t ? '"'+PICK.t.replace(/\s+/g,' ').slice(0,40)+'"' : '';
   try{ selHanjaPv(); }catch(e){}
   b.style.bottom='auto';
@@ -295,6 +296,7 @@ let memoId=null;
 function openMemo(id){
   const o=hlGet(id); if(!o)return;
   memoId=id;
+  try{ memoGrpShow(o); }catch(e){}
   $('#memoQ').textContent=o.t||'';
   $('#memoTx').value=o.n||'';
   pan('#panMemo',true);

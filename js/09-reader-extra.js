@@ -197,6 +197,7 @@ const KEYHELP=[
   ['C','목차'],
   ['[  ]','글자 작게 · 크게'],
   ['R','읽기 자 켜기·끄기'],
+  ['A','자동 넘김 켜기·멈춤'],
   ['Esc','열린 판 닫기 → 한 번 더 누르면 책 닫기'],
 ];
 function readerKey(e){
@@ -221,6 +222,7 @@ function readerKey(e){
   else if(k==='t'||k==='T') ttsKey();
   else if(k==='m'||k==='M') $('#btnHl').click();
   else if(k==='c'||k==='C') $('#btnToc').click();
+  else if(k==='a'||k==='A') autoToggle();   // v57 — 자동 넘김
   else if(k==='r'||k==='R'){ P.ruler=P.ruler?0:1; savePref(); applyRuler(); toast(P.ruler?'읽기 자를 켰습니다':'읽기 자를 껐습니다',1000); }
   else if(k==='['||k===']'){ P.fs=Math.max(70,Math.min(220,P.fs+(k===']'?5:-5))); savePref(); applyRead(); toast('글자 '+P.fs+'%',900); }
   else done=false;

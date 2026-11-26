@@ -587,7 +587,7 @@ function bindSwipe(doc){
 /* 바깥 문서에는 '밀어서 넘기기'만, 시작할 때 한 번만 붙입니다 */
 bindSwipe(document);
 function toggleBars(){ $('#rbar').classList.toggle('hide'); $('#rfoot').classList.toggle('hide'); }
-function closeReader(){ try{ setTimeout(()=>readPush(false),1500); }catch(e){} try{ $('#ruler').classList.remove('on'); document.body.classList.remove('rfocus'); }catch(e){} ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
+function closeReader(){ try{ autoOff(); }catch(e){} try{ setTimeout(()=>readPush(false),1500); }catch(e){} try{ $('#ruler').classList.remove('on'); document.body.classList.remove('rfocus'); }catch(e){} ttsStop(); comicFree(); $('#comic').innerHTML=''; $('#comic').style.display='none'; saveRD.now(); saveHL.now(); saveINK.now(); saveDAYS.now(); setPen(false); syncSoon();
   selbarOff(); clearOv();
   $('#drawPager').classList.remove('on'); $('#drawTip').classList.remove('on');
   TXTRAW=''; TXTC=''; TOCS=null; epubC=null; EPLOC=null; caretWarned=false; INK={}; inkKey=''; penDrag=null;
