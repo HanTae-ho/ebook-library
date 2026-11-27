@@ -7,7 +7,7 @@
         종이색 / 글자크기 / 줄간격 / 여백 / 글꼴 / 넘김방식·폭
         표지크기 / 목록·격자 / 정렬 / 분류 기준(계층·대·중·소·폴더)
    ============================================================ */
-const BUILD='v57.1';
+const BUILD='v57.2';
 
 /* 이 파일은 깃허브에 공개돼 있습니다.
    그래서 주소·토큰·폴더는 여기 두지 않습니다.
@@ -225,7 +225,7 @@ function onGis(){
     client_id:cfg('cid'), scope:SCOPE,
     callback:r=>{ AUTHBUSY=0; if(r.error){ AUTHWHY='조용히 받기 실패 · '+r.error;
         log('로그인 실패: '+r.error); markLogin(false); paintLogin();
-        const ng=needToken._ng; needToken._ok=needToken._ng=null; (ng||(()=>{}))(new Error(r.error)); return; }
+        const ng=needToken._ng; needToken._ok=needToken._ng=null; const er=new Error(r.error); er.oauth=r.error; (ng||(()=>{}))(er); return; }
       TOKEN=r.access_token;
       const a=AUTH.get();
       a.t=TOKEN;
@@ -234,15 +234,22 @@ function onGis(){
       AUTH.set(a);
       AUTHWHY='이어감 · '+Math.round((a.e-Date.now())/60000)+'분 남음';
       log('로그인 성공'); markLogin(true); whoAmI(); paintLogin(); tapOff();
+      try{ const k=$('#blkSheet'); if(k&&k.dataset.why==='login')k.classList.remove('on'); }catch(e){}   // v57.2
       const ok=needToken._ok; needToken._ok=needToken._ng=null; AUTHBUSY=0; (ok||(()=>{}))(TOKEN); },
     /* v57.1 — 창이 막히거나(사용자가 누르지 않았을 때) 닫히면 여기로 옵니다.
-       전에는 이 연결이 없어, 막혀도 까닭이 안 남고 기다리던 일이 그대로 멈췄습니다. */
+       v57.2 — 아이패드는 로그인이 잘 끝나도 '창 닫힘' 을 함께 보낼 때가 있어,
+       닫힘은 3초 기다렸다가 그 사이 표가 오지 않았을 때만 실패로 봅니다. */
     error_callback:e=>{ const t=(e&&e.type)||'unknown';
-      AUTHWHY=t==='popup_failed_to_open'?'구글 창이 막혔습니다 — 화면을 한 번 누르면 다시 받습니다'
-             :t==='popup_closed'?'구글 창이 닫혔습니다 — 🔑 를 눌러 주세요':'다시 받기 실패 · '+t;
-      log('로그인 창: '+t); AUTHBUSY=0; markLogin(false); paintLogin();
-      if(t==='popup_failed_to_open')tapArm();
-      const ng=needToken._ng; needToken._ok=needToken._ng=null; (ng||(()=>{}))(new Error(AUTHWHY)); }});
+      const fail=()=>{
+        if(TOKEN&&tokenLive())return;                 // 그 사이 받았으면 실패가 아님
+        AUTHWHY=t==='popup_failed_to_open'?'구글 창이 막혔습니다 — 화면을 한 번 누르면 다시 받습니다'
+               :t==='popup_closed'?'구글 창이 닫혔습니다 — 🔑 를 눌러 주세요':'다시 받기 실패 · '+t;
+        log('로그인 창: '+t); AUTHBUSY=0; markLogin(false); paintLogin();
+        if(t==='popup_failed_to_open')tapArm();
+        const ng=needToken._ng; needToken._ok=needToken._ng=null;
+        const er=new Error(AUTHWHY); er.popup=true; (ng||(()=>{}))(er); };
+      if(t==='popup_closed'){ log('로그인 창: 닫힘 신호 — 3초 기다림'); setTimeout(fail,3000); }
+      else fail(); }});
   }catch(e){ gisReady=false; log('로그인 모듈 시작 실패: '+e.message); }
 
   const a=AUTH.get();
@@ -321,6 +328,8 @@ function paintLogin(){
   const a=AUTH.get();
   el.textContent='  ·  '+(a.h||'계정 모름')+'  ·  '+(AUTHWHY||'—');
 }
+/* v57.2 — 조용히 받기가 안 되면 동의 화면으로. 다만 창 문제(막힘·닫힘)였으면 다시 띄워도 또 막히므로 그대로 실패 */
+function needTokenAny(){ return needToken(false).catch(e=>{ if(e&&e.popup)throw e; if(TOKEN&&tokenLive())return TOKEN; return needToken(true); }); }
 function needToken(inter){ return new Promise((ok,ng)=>{
   // 시간이 다 된 표는 미리 버립니다. 들고 있다가 401 을 맞느니 낫습니다.
   if(TOKEN&&!tokenLive()){ TOKEN=''; AUTH.drop(); markLogin(false); }

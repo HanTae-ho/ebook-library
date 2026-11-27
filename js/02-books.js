@@ -414,7 +414,7 @@ const SRC={
   drive:{ name:'구글 드라이브',
     async open(b,sig){
       busy(true,'구글 로그인 확인 중…','',0);
-      const at=await needToken(false).catch(()=>needToken(true));
+      const at=await needTokenAny();
       busy(true,'책을 받는 중…',b.z?b.z+'MB':'',0);
       const url=`https://www.googleapis.com/drive/v3/files/${b.i}?alt=media&supportsAllDrives=true`;
       const res=await fetch(url,{headers:{Authorization:'Bearer '+at},signal:sig});

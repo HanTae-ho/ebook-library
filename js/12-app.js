@@ -178,6 +178,7 @@ function showBlocked(why){
     : '아직 <b>명단에 없는 계정</b>입니다.<br>'
       + '아래에서 액세스를 요청하시면, 승인과 함께 명단에도 올라갑니다.';
   $('#blkAsk').style.display = fol ? '' : 'none';
+  $('#blkSheet').dataset.why=why;
   $('#blkSheet').classList.add('on');
 }
 $('#blkClose').onclick=()=>$('#blkSheet').classList.remove('on');
@@ -198,9 +199,11 @@ $('#blkSend').onclick=async()=>{
 $('#btnLogin').onclick=async()=>{
   if(!gisReady)onGis();                     // 눌렀을 때 한 번 더
   // 조용히 되면 화면을 안 띄웁니다. 안 될 때만 동의 화면으로.
-  try{ await needToken(false).catch(()=>needToken(true)); toast('로그인됐습니다'); }
+  try{ await needTokenAny(); toast('로그인됐습니다'); }
   catch(e){ const m=e.message||String(e); log('로그인 실패: '+m);
-    if(/모듈/.test(m)) toast(m,5000); else showBlocked('login'); }
+    if(TOKEN&&tokenLive()){ toast('로그인됐습니다'); return; }          // v57.2 — 이미 들어와 있으면 막힘 창을 띄우지 않음
+    if(e&&e.oauth&&/access_denied|unauthorized|admin_policy|org_internal/i.test(e.oauth)) showBlocked('login');   // 구글이 실제로 거부했을 때만
+    else toast(m,5000); }
 };
 $('#btnClose').onclick=closeReader;
 /* 좌우 넘기기 — EPUB 이든 '한 쪽씩 보는' PDF 든 같은 손놀림 */
@@ -693,7 +696,7 @@ $('#btnPullCfg').onclick=async()=>{
 };
 $('#btnLogin2').onclick=async()=>{
   if(!gisReady)onGis();
-  try{ await needToken(false).catch(()=>needToken(true)); toast('로그인됐습니다'); }
+  try{ await needTokenAny(); toast('로그인됐습니다'); }
   catch(e){ toast(e.message||String(e),5000); }
   paintLogin();
 };

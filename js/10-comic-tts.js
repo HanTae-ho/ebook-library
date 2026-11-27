@@ -101,7 +101,7 @@ async function innerSrc(z,en){
 }
 function memSrc(ab){ const u=ab instanceof Uint8Array?ab:new Uint8Array(ab); return { size:u.length, mem:u, read:async(a,b)=>u.subarray(a,b) }; }
 async function driveSrc(b){
-  let at=await needToken(false).catch(()=>needToken(true));
+  let at=await needTokenAny();
   const base=`https://www.googleapis.com/drive/v3/files/${b.i}`;
   const m=await fetch(base+'?fields=size&supportsAllDrives=true',{headers:{Authorization:'Bearer '+at}});
   if(m.status===401||m.status===403){ throw new Error('이 파일을 볼 권한이 없습니다'); }
@@ -111,7 +111,7 @@ async function driveSrc(b){
     if(z<=a)return new Uint8Array(0);
     const ac=new AbortController();
     const r=await fetch(base+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+at,Range:`bytes=${a}-${z-1}`},signal:ac.signal});
-    if(r.status===401&&!again){ TOKEN=''; at=await needToken(false).catch(()=>needToken(true)); return read(a,z,true); }
+    if(r.status===401&&!again){ TOKEN=''; at=await needTokenAny(); return read(a,z,true); }
     if(r.status===206)return new Uint8Array(await r.arrayBuffer());
     if(r.status===200){                      // 부분 받기를 거절하고 통째로 보내려 함
       if(size>40*1048576){ ac.abort(); throw new Error('드라이브가 부분 받기를 거절했습니다'); }

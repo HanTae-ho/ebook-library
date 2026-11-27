@@ -493,7 +493,7 @@ async function buildExp(inter){
     else if(navigator.onLine===false) why='인터넷이 없어 색인으로 보여 드립니다';
     if(!why){
       let at=tokenNow();
-      if(!at&&inter){ try{ at=await needToken(false).catch(()=>needToken(true)); }catch(e){ at=''; } }
+      if(!at&&inter){ try{ at=await needTokenAny(); }catch(e){ at=''; } }
       if(seq!==EXSEQ)return;
       // 기억해 둔 목록이 있으면 먼저 보여줍니다
       const ids=EXPATH.every(c=>c.i);
